@@ -6,12 +6,15 @@ import { leagueFor } from '../core/pvp/PvpRules';
 import { AVATAR_IMAGES } from './troopIcons';
 import type { PanelType } from '../App';
 
+import { getKingdomConfig } from '../config/KingdomsConfig';
+
 const Badge: React.FC<{ n: number }> = ({ n }) => (n > 0 ? <span className="hud-badge">{n}</span> : null);
 
 /** Clash-style overlay: profile top-left, resources top-right, attack bottom-left, menus bottom-right. */
 export const Hud: React.FC<{ onOpen: (p: PanelType) => void; compact?: boolean }> = ({ onOpen, compact }) => {
   const { state, buyBuilder } = useGame();
   const league = leagueFor(state.trophies);
+  const kingdomInfo = getKingdomConfig(state.playerKingdom);
   const freeBuilders = VillageManager.freeBuilders(state);
   const builderCost = VillageManager.nextBuilderCost(state);
   const claimable = GameConfig.quests.filter(q => QuestManager.canClaimQuest(state, q.id)).length;
@@ -24,7 +27,7 @@ export const Hud: React.FC<{ onOpen: (p: PanelType) => void; compact?: boolean }
           <img src={AVATAR_IMAGES[state.playerAvatar]} alt="" />
           <div className="flex-col">
             <b>{state.playerName || 'Héroe'}</b>
-            <span>🏰 Ayuntamiento Nv.{state.level}</span>
+            <span>{kingdomInfo.icon} Ayunt. Nv.{state.level}</span>
           </div>
         </div>
         <div className="hud-trophies">{league.icon} {state.trophies} 🏆</div>

@@ -129,11 +129,18 @@ export class VillageManager {
         return null;
     }
 
+    static upgradeDuration(b: PlacedBuilding, kingdom?: string): number {
+        const base = buildTimeSeconds(b.type, b.level);
+        if (kingdom === 'emerald') return Math.max(1, Math.round(base * 0.8));
+        return base;
+    }
+
     static startUpgrade(state: GameState, uid: string, now = Date.now()): GameState {
         const b = this.get(state, uid);
         if (!b || this.upgradeBlocker(state, b)) return state;
         const cost = this.upgradeCost(b);
-        const until = now + buildTimeSeconds(b.type, b.level) * 1000;
+        const durationSec = this.upgradeDuration(b, state.playerKingdom);
+        const until = now + durationSec * 1000;
         return {
             ...state,
             coins: state.coins - cost,
@@ -187,9 +194,11 @@ export class VillageManager {
         if (this.buildBlocker(state, type)) return { state, uid: null };
         const spot = this.findFreeSpot(state, type)!;
         const uid = newUid(type);
+        const baseSec = buildTimeSeconds(type, 0);
+        const durationSec = state.playerKingdom === 'emerald' ? Math.max(1, Math.round(baseSec * 0.8)) : baseSec;
         const building: PlacedBuilding = {
             uid, type, level: 0, x: spot.x, z: spot.z, stored: 0,
-            upgradingUntil: now + buildTimeSeconds(type, 0) * 1000,
+            upgradingUntil: now + durationSec * 1000,
         };
         return {
             state: { ...state, coins: state.coins - (BUILDINGS[type].buildCost || 0), village: [...state.village, building] },
@@ -201,13 +210,15 @@ export class VillageManager {
 
     static produce(state: GameState, seconds: number): GameState {
         if (seconds <= 0 || !state.village.some(b => b.type === 'goldmine')) return state;
+        const rateMult = state.playerKingdom === 'golden' ? 1.3 : 1.0;
+        const capMult = state.playerKingdom === 'golden' ? 1.3 : 1.0;
         return {
             ...state,
             village: state.village.map(b => {
                 if (b.type !== 'goldmine' || b.level <= 0) return b;
-                const cap = mineCapacity(b.level);
+                const cap = Math.round(mineCapacity(b.level) * capMult);
                 if (b.stored >= cap) return b;
-                return { ...b, stored: Math.min(cap, b.stored + mineRatePerSecond(b.level) * seconds) };
+                return { ...b, stored: Math.min(cap, b.stored + mineRatePerSecond(b.level) * rateMult * seconds) };
             }),
         };
     }

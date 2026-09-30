@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, type MouseEvent } from 'react';
 import { useGame } from '../core/GameContext';
 import type { AvatarType, KingdomType } from '../core/GameState';
 import { EffectManager } from '../core/EffectManager';
+import { KINGDOMS_CONFIG } from '../config/KingdomsConfig';
 
 const AVATARS: { id: AvatarType; icon: string; name: string }[] = [
   { id: 'warrior', icon: '/assets/heroes/warrior.jpg', name: 'Guerrero' },
@@ -189,15 +190,15 @@ export const CharacterCreation: React.FC = () => {
 
       {/* Step 2: Choose Kingdom */}
       {step === 2 && (
-        <div className="flex-col gap-4 animate-pop" style={{ alignItems: 'center', width: '100%' }}>
+        <div className="flex-col gap-3 animate-pop" style={{ alignItems: 'center', width: '100%', maxWidth: '440px' }}>
           <h1 className="title-clash" style={{ fontSize: '24px', color: 'var(--accent-gold)' }}>
             Elige tu Reino
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
-            ¿Dónde fundarás tu imperio?
+          <p style={{ color: 'var(--text-secondary)', fontSize: '13px', textAlign: 'center' }}>
+            Cada reino define el paisaje 3D de tu aldea y te otorga bendiciones exclusivas
           </p>
 
-          <div className="kingdom-grid">
+          <div className="kingdom-grid" style={{ width: '100%' }}>
             {KINGDOMS.map(k => (
               <div
                 key={k.id}
@@ -211,11 +212,77 @@ export const CharacterCreation: React.FC = () => {
             ))}
           </div>
 
-          <div className="flex-row gap-2" style={{ width: '100%', maxWidth: '340px', marginTop: '8px' }}>
+          {/* Active Kingdom Perk Card */}
+          {(() => {
+            const currentKingdom = KINGDOMS_CONFIG[kingdom];
+            return (
+              <div
+                className="glass-panel animate-pop flex-col gap-2"
+                style={{
+                  width: '100%',
+                  border: '2px solid rgba(255, 215, 0, 0.4)',
+                  padding: '12px 14px',
+                  background: 'rgba(20, 10, 40, 0.85)',
+                }}
+              >
+                <div className="flex-row justify-between" style={{ alignItems: 'center' }}>
+                  <div className="flex-row gap-2" style={{ alignItems: 'center' }}>
+                    <span style={{ fontSize: '24px' }}>{currentKingdom.icon}</span>
+                    <div className="flex-col">
+                      <b style={{ color: 'var(--accent-gold)', fontSize: '14px' }}>{currentKingdom.name}</b>
+                      <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{currentKingdom.subtitle}</span>
+                    </div>
+                  </div>
+                  <span style={{ fontSize: '11px', color: '#7bed9f', fontWeight: 700 }}>
+                    {kingdom === 'frost' ? '❄️ Cordillera de Hielo' : kingdom === 'golden' ? '🏜️ Dunas Doradas' : '🌲 Bosque Ancestral'}
+                  </span>
+                </div>
+
+                <div className="flex-col gap-1" style={{ marginTop: '4px' }}>
+                  {currentKingdom.attributes.map((attr, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        borderRadius: '8px',
+                        padding: '6px 10px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '2px',
+                      }}
+                    >
+                      <div className="flex-row justify-between" style={{ alignItems: 'center' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 700, color: '#fff' }}>
+                          {attr.icon} {attr.title}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: '10px',
+                            fontWeight: 800,
+                            color: '#ffd700',
+                            background: 'rgba(255, 215, 0, 0.15)',
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                          }}
+                        >
+                          {attr.highlight}
+                        </span>
+                      </div>
+                      <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                        {attr.description}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
+          <div className="flex-row gap-2" style={{ width: '100%', maxWidth: '340px', marginTop: '4px' }}>
             <button
               className="btn-primary"
               onClick={() => setStep(1)}
-              style={{ flex: 1, padding: '14px' }}
+              style={{ flex: 1, padding: '12px' }}
             >
               ← Atrás
             </button>
@@ -223,23 +290,10 @@ export const CharacterCreation: React.FC = () => {
               className="btn-upgrade"
               onClick={handleComplete}
               disabled={!canGoNext()}
-              style={{ flex: 2, padding: '14px', fontSize: '16px' }}
+              style={{ flex: 2, padding: '12px', fontSize: '15px' }}
             >
-              ⚔️ ¡Comenzar Aventura!
+              ⚔️ ¡Fundar Reino!
             </button>
-          </div>
-
-          {/* Preview */}
-          <div className="glass-panel" style={{ width: '100%', maxWidth: '340px', marginTop: '8px', textAlign: 'center' }}>
-            <div style={{ marginBottom: '4px', display: 'flex', justifyContent: 'center' }}>
-              <img src={AVATARS.find(a => a.id === avatar)?.icon} alt="Avatar" style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--accent-gold)' }} />
-            </div>
-            <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--accent-gold)' }}>
-              {name || '???'}
-            </div>
-            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-              {KINGDOMS.find(k => k.id === kingdom)?.name}
-            </div>
           </div>
         </div>
       )}

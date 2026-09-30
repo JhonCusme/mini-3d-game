@@ -333,6 +333,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const completeAttack = (opponent: VillageSnapshot, result: PvpBattleResult): PvpOutcome => {
         const current = stateRef.current;
         const outcome = computeOutcome(result, current.trophies, opponent.trophies, opponent.lootableCoins);
+        // Golden Kingdom: +20% bonus gold loot on successful raids
+        if (current.playerKingdom === 'golden' && outcome.coinsStolen > 0) {
+            outcome.coinsStolen = Math.round(outcome.coinsStolen * 1.2);
+        }
         AnalyticsManager.trackBattle(result.won ? 'win' : 'loss', `pvp_${opponent.playerId}`, 0, 0);
         if (result.won) AudioManager.playVictory();
         updateAndSave((prev) => PvpManager.applyAttack(prev, result, outcome));

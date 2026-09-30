@@ -121,9 +121,13 @@ export class AttackSim {
         this.defDmgMult = (1 + this.defGod.attackBonus) * (1 + up('attackPower', village.attackLevel));
         this.defUnitDmgMult = hero(village.heroLevel) * this.defDmgMult;
 
+        const isFrostVillage = village.kingdom === 'frost';
+        const villageHpMult = isFrostVillage ? 1.25 : 1.0;
+        const wallHpMult = isFrostVillage ? 1.30 : 1.0;
+
         for (const b of layoutOf(village)) {
             const size = BUILDINGS[b.type].size;
-            const maxHp = Math.round(buildingHp(b.type, b.level) * (1 + this.defGod.hpBonus));
+            const maxHp = Math.round(buildingHp(b.type, b.level) * (1 + this.defGod.hpBonus) * villageHpMult);
             this.buildings.push({
                 id: this.nextId++, type: b.type, level: b.level, x: b.x + size / 2, z: b.z + size / 2, size,
                 hp: maxHp, maxHp, destroyed: false, cooldown: 0, aim: 0,
@@ -132,7 +136,7 @@ export class AttackSim {
         this.totalBuildings = this.buildings.length;
 
         if (village.wallsLevel > 0) {
-            const wallHp = Math.round((150 + village.wallsLevel * 120) * (1 + this.defGod.wallBonus));
+            const wallHp = Math.round((150 + village.wallsLevel * 120) * (1 + this.defGod.wallBonus) * wallHpMult);
             for (let i = -VILLAGE_HALF; i < VILLAGE_HALF; i++) {
                 for (const [x, z, h] of [[i + 0.5, -WALL_EDGE, true], [i + 0.5, WALL_EDGE, true], [-WALL_EDGE, i + 0.5, false], [WALL_EDGE, i + 0.5, false]] as const) {
                     this.walls.push({ id: this.nextId++, x, z, horizontal: h, hp: wallHp, maxHp: wallHp, destroyed: false });
@@ -432,6 +436,21 @@ export class AttackSim {
         const stats = UNIT_STATS[u.type];
         u.cooldown -= dt;
 
+        // Kingdom bonuses:
+        // Frost village cold aura slows attackers (15% slower speed and attack)
+        // Emerald army increases attacker march speed by 10%
+        let speedMult = 1.0;
+        let cooldownMult = 1.0;
+        if (u.side === 'attacker') {
+            if (this.village.kingdom === 'frost') {
+                speedMult *= 0.85;
+                cooldownMult *= 1.15;
+            }
+            if (this.army.kingdom === 'emerald') {
+                speedMult *= 1.10;
+            }
+        }
+
         // Healers: heal the most hurt ally in range, follow the army
         if (stats.healer) {
             const allies = this.units.filter(o => !o.dead && o.side === u.side && o.id !== u.id && !UNIT_STATS[o.type].healer);
@@ -441,14 +460,14 @@ export class AttackSim {
                 if (Math.hypot(a.x - u.x, a.z - u.z) <= stats.range && ratio < worst) { hurt = a; worst = ratio; }
             }
             if (hurt && u.cooldown <= 0) {
-                u.cooldown = 1;
+                u.cooldown = 1 * cooldownMult;
                 hurt.hp = Math.min(hurt.maxHp, hurt.hp + 25 * (u.side === 'attacker' ? this.atkHpMult : 1));
                 this.addEffect('heal', hurt.x, hurt.z, 0.6);
             }
             // follow closest ally
             let lead: SimUnit | null = null, ld = Infinity;
             for (const a of allies) { const d = Math.hypot(a.x - u.x, a.z - u.z); if (d < ld) { lead = a; ld = d; } }
-            if (lead && ld > 2) this.moveTowards(u, lead.x, lead.z, stats.speed * dt);
+            if (lead && ld > 2) this.moveTowards(u, lead.x, lead.z, stats.speed * dt * speedMult);
             return;
         }
 
@@ -461,12 +480,12 @@ export class AttackSim {
         const reach = stats.range + (u.targetKind === 'building' ? (t as SimBuilding).size / 2 : u.targetKind === 'wall' ? 0.3 : 0.3);
         const dist = Math.hypot(t.x - u.x, t.z - u.z);
         if (dist > reach) {
-            this.moveTowards(u, t.x, t.z, stats.speed * dt);
+            this.moveTowards(u, t.x, t.z, stats.speed * dt * speedMult);
             return;
         }
         u.heading = Math.atan2(t.x - u.x, t.z - u.z);
         if (u.cooldown > 0) return;
-        u.cooldown = 1;
+        u.cooldown = 1 * cooldownMult;
 
         const mult = u.side === 'attacker' ? this.atkDmgMult : this.defUnitDmgMult;
         const crit = u.side === 'attacker' && (this.rng() < this.atkCrit || u.buffUntil > this.time) ? 2 : 1;

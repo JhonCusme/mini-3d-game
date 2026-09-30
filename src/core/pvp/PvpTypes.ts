@@ -40,6 +40,7 @@ export interface AttackArmy {
     attackLevel: number;
     armorLevel: number;
     critLevel: number;
+    kingdom?: KingdomType;
 }
 
 export interface BattleRound {

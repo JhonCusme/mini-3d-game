@@ -58,6 +58,7 @@ export class PvpManager {
             attackLevel: state.upgrades.attackPower || 0,
             armorLevel: state.upgrades.troopHealth || 0,
             critLevel: state.upgrades.critRate || 0,
+            kingdom: state.playerKingdom,
         };
     }
 

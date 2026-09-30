@@ -2,11 +2,14 @@ import { useState } from 'react';
 import { useGame } from '../core/GameContext';
 import { useAuth } from '../core/AuthContext';
 
+import { getKingdomConfig } from '../config/KingdomsConfig';
+
 export const SettingsScreen = () => {
   const { state, toggleMute, resetGame } = useGame();
   const { user, logout } = useAuth();
   const [muted, setMuted] = useState(localStorage.getItem('mini_kingdom_muted') === 'true');
   const [confirmReset, setConfirmReset] = useState(false);
+  const kingdomInfo = getKingdomConfig(state.playerKingdom);
 
   const handleToggleMute = () => {
     const isNowMuted = toggleMute();
@@ -41,6 +44,29 @@ export const SettingsScreen = () => {
           <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
             Nivel {state.level} · Prestigio ⭐{state.prestigeLevel}
           </span>
+          <span style={{ fontSize: '12px', color: 'var(--accent-gold)', marginTop: '4px', background: 'rgba(255,215,0,0.1)', padding: '2px 8px', borderRadius: '6px' }}>
+            {kingdomInfo.icon} {kingdomInfo.name}
+          </span>
+        </div>
+      </div>
+
+      {/* Kingdom Attributes */}
+      <div className="glass-panel flex-col gap-2">
+        <div className="flex-row justify-between" style={{ alignItems: 'center' }}>
+          <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--accent-gold)' }}>
+            {kingdomInfo.icon} Atributos de tu Aldea ({kingdomInfo.name})
+          </span>
+        </div>
+        <div className="flex-col gap-1">
+          {kingdomInfo.attributes.map((attr, idx) => (
+            <div key={idx} style={{ background: 'rgba(255, 255, 255, 0.05)', padding: '6px 10px', borderRadius: '8px', fontSize: '11px' }}>
+              <div className="flex-row justify-between">
+                <b style={{ color: '#fff' }}>{attr.icon} {attr.title}</b>
+                <span style={{ color: '#ffd700', fontWeight: 700 }}>{attr.highlight}</span>
+              </div>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '10px', marginTop: '2px' }}>{attr.description}</p>
+            </div>
+          ))}
         </div>
       </div>
 

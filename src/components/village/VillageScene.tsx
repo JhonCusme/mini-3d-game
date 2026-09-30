@@ -5,6 +5,8 @@ import { MOUSE, TOUCH, type Group } from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { BUILDINGS, mineCapacity } from '../../config/BuildingsConfig';
 import type { PlacedBuilding } from '../../core/GameState';
+import type { KingdomType } from '../../core/GameState';
+import { getKingdomConfig, type KingdomVisualTheme } from '../../config/KingdomsConfig';
 import { BuildingModel, Scaffolding } from './BuildingModels';
 import { VillageTerrain, Walls } from './VillageTerrain';
 
@@ -50,12 +52,19 @@ export const RtsControls: React.FC<{ enabled?: boolean }> = ({ enabled = true })
   );
 };
 
-export const SceneLights: React.FC = () => (
+export const SceneLights: React.FC<{ theme?: KingdomVisualTheme }> = ({ theme }) => (
   <>
-    <hemisphereLight args={['#dff2ff', '#4f7a3a', 0.7]} />
+    <hemisphereLight
+      args={[
+        theme?.hemisphereSky || '#dff2ff',
+        theme?.hemisphereGround || '#4f7a3a',
+        0.75,
+      ]}
+    />
     <directionalLight
       position={[18, 30, 10]}
-      intensity={1.6}
+      intensity={theme?.lightIntensity || 1.6}
+      color={theme?.lightColor || '#ffffff'}
       castShadow
       shadow-mapSize={[2048, 2048]}
       shadow-camera-left={-20}
@@ -77,6 +86,7 @@ interface VillageSceneProps {
   now: number;
   selectedUid: string | null;
   moving: { uid: string; x: number; z: number; valid: boolean } | null;
+  kingdom?: KingdomType;
   onSelect: (uid: string | null) => void;
   onMoveTo: (x: number, z: number) => void;
   onCollect: (uid: string) => void;
@@ -161,8 +171,11 @@ const BuildingNode: React.FC<{
 };
 
 export const VillageScene: React.FC<VillageSceneProps> = ({
-  village, wallsLevel, now, selectedUid, moving, onSelect, onMoveTo, onCollect,
+  village, wallsLevel, now, selectedUid, moving, kingdom = 'emerald', onSelect, onMoveTo, onCollect,
 }) => {
+  const kingdomInfo = getKingdomConfig(kingdom);
+  const theme = kingdomInfo.visual;
+
   const groundPoint = (e: ThreeEvent<PointerEvent | MouseEvent>) => {
     const b = moving && village.find(v => v.uid === moving.uid);
     if (!b) return;
@@ -172,9 +185,9 @@ export const VillageScene: React.FC<VillageSceneProps> = ({
 
   return (
     <Canvas shadows camera={{ position: CAMERA_POSITION, fov: 38 }} className="village-canvas">
-      <color attach="background" args={['#9fd8ff']} />
-      <fog attach="fog" args={['#9fd8ff', 55, 110]} />
-      <SceneLights />
+      <color attach="background" args={[theme.skyColor]} />
+      <fog attach="fog" args={[theme.fogColor, theme.fogNear, theme.fogFar]} />
+      <SceneLights theme={theme} />
       <RtsControls enabled={!moving} />
 
       <group
@@ -182,9 +195,9 @@ export const VillageScene: React.FC<VillageSceneProps> = ({
         onPointerDown={e => { if (moving) groundPoint(e); }}
         onPointerMove={e => { if (moving && e.buttons) groundPoint(e); }}
       >
-        <VillageTerrain showGrid={!!moving} />
+        <VillageTerrain showGrid={!!moving} kingdom={kingdom} />
       </group>
-      <Walls level={wallsLevel} />
+      <Walls level={wallsLevel} kingdom={kingdom} />
 
       {village.map(b => (
         <BuildingNode

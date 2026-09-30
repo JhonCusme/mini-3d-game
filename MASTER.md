@@ -35,6 +35,10 @@
 - [x] Mina de oro que produce con el tiempo (también con el juego cerrado) y se recoge tocando la moneda.
 - [x] Construir defensas nuevas desde el botón 🔨.
 - [x] Guarnición: tropas que se quedan defendiendo la aldea.
+- [x] **Biomas 3D dinámicos según el Reino elegido**:
+  - **Montaña de Hielo**: cumbres montañosas nevadas en el horizonte, pinos alpinos nevados, ventisca de nieve cayendo en 3D, murallas glaciares y atributos (+25% HP a defensas/murallas y aura helada que ralentiza un 15% a los invasores).
+  - **Desierto Dorado**: océano de dunas de arena, monolitos de arenisca roja, palmeras, tormenta de arena dorada flotante y atributos (+30% producción/capacidad de oro en la mina y +20% de botín extra en saqueos).
+  - **Bosque Esmeralda**: colinas verdes, árboles ancestrales colosales, brisa de esporas mágicas y atributos (20% de reducción en tiempo de constructores y +30% de velocidad de regeneración de energía).
 
 ### Tropas, héroe y Dioses
 - [x] 6 tropas: Infantería, Arqueros, Caballería, Magos (voladores), Catapultas (anti-murallas) y Sanadores.

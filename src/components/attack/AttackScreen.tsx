@@ -17,6 +17,8 @@ import { VillageTerrain, Walls } from '../village/VillageTerrain';
 import { BuildingActor, EffectActor, ProjectileActor, UnitActor } from './AttackActors';
 import { AVATAR_IMAGES, TROOP_ICONS } from '../troopIcons';
 
+import { getKingdomConfig } from '../../config/KingdomsConfig';
+
 const TROOP_IDS = Object.keys(GameConfig.troops) as TroopId[];
 const TAP_TOLERANCE = 8;
 
@@ -39,7 +41,7 @@ const SimWorld: React.FC<{ sim: AttackSim; running: boolean; onTick: () => void 
 
   return (
     <>
-      <Walls level={sim.village.wallsLevel} broken={broken} />
+      <Walls level={sim.village.wallsLevel} broken={broken} kingdom={sim.village.kingdom} />
       {sim.buildings.map(b => <BuildingActor key={b.id} b={b} />)}
       {sim.units.filter(u => !u.dead).map(u => <UnitActor key={u.id} u={u} />)}
       {sim.projectiles.map(p => <ProjectileActor key={p.id} p={p} />)}
@@ -150,16 +152,19 @@ export const AttackScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => 
   const mm = Math.floor(timeLeft / 60), ss = Math.floor(timeLeft % 60).toString().padStart(2, '0');
   const god = state.attackGod ? GameConfig.gods[state.attackGod] : null;
 
+  const oppKingdom = getKingdomConfig(opponent?.kingdom);
+  const oppTheme = oppKingdom.visual;
+
   return createPortal(
     <div className="attack-screen">
       {sim && opponent && (
         <Canvas shadows camera={{ position: [0, 30, 30], fov: 40 }} className="village-canvas">
-          <color attach="background" args={['#a8d8f0']} />
-          <fog attach="fog" args={['#a8d8f0', 55, 110]} />
-          <SceneLights />
+          <color attach="background" args={[oppTheme.skyColor]} />
+          <fog attach="fog" args={[oppTheme.fogColor, oppTheme.fogNear, oppTheme.fogFar]} />
+          <SceneLights theme={oppTheme} />
           <RtsControls />
           <group onClick={onGroundTap}>
-            <VillageTerrain seed={hashString(opponent.playerId) % 1000} tint="#7cc35a" />
+            <VillageTerrain seed={hashString(opponent.playerId) % 1000} kingdom={opponent.kingdom} />
           </group>
           <NoDeployZone visible={!!selected && selected !== 'spell' && !sim.finished} />
           <SimWorld key={seedRef.current} sim={sim} running={!outcome} onTick={onTick} />
@@ -175,6 +180,9 @@ export const AttackScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => 
               <img src={AVATAR_IMAGES[opponent.avatar]} alt="" />
               <div className="flex-col">
                 <b>{opponent.name}</b>
+                <span style={{ fontSize: '11px', color: 'var(--accent-gold)' }}>
+                  {oppKingdom.icon} {oppKingdom.name}
+                </span>
                 <span>{leagueFor(opponent.trophies).icon} {opponent.trophies} 🏆 · Nv.{opponent.level}</span>
               </div>
             </div>

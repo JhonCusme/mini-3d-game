@@ -154,6 +154,7 @@ export const VillageScreen: React.FC<{ buildOpen: boolean; onCloseBuild: () => v
         now={now}
         selectedUid={selectedUid}
         moving={moving}
+        kingdom={state.playerKingdom}
         onSelect={setSelectedUid}
         onMoveTo={onMoveTo}
         onCollect={collect}

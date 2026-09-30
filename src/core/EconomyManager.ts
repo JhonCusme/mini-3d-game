@@ -6,15 +6,19 @@ export class EconomyManager {
     static tick(state: GameState): GameState {
         const newState = { ...state };
 
-        // Energy regeneration logic
+        // Energy regeneration logic (Emerald Kingdom regenerates 30% faster)
+        const regenTickMs = newState.playerKingdom === 'emerald'
+            ? Math.round(GameConfig.energyRegenTickMs * 0.7)
+            : GameConfig.energyRegenTickMs;
+
         if (newState.energy < GameConfig.maxEnergy) {
             const timeSinceLastUpdate = Date.now() - (newState.lastEnergyUpdate || Date.now());
-            const energyToRecover = Math.floor(timeSinceLastUpdate / GameConfig.energyRegenTickMs);
+            const energyToRecover = Math.floor(timeSinceLastUpdate / regenTickMs);
             
             if (energyToRecover > 0) {
                 newState.energy = Math.min(GameConfig.maxEnergy, newState.energy + energyToRecover);
                 // Update lastEnergyUpdate leaving the remainder
-                newState.lastEnergyUpdate = Date.now() - (timeSinceLastUpdate % GameConfig.energyRegenTickMs);
+                newState.lastEnergyUpdate = Date.now() - (timeSinceLastUpdate % regenTickMs);
             }
         } else {
             newState.lastEnergyUpdate = Date.now();
