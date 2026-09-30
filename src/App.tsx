@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
+import { AuthProvider, useAuth } from './core/AuthContext';
 import { GameProvider, useGame } from './core/GameContext';
 import './index.css';
 
+import { LoadingScreen } from './components/LoadingScreen';
+import { AuthScreen } from './components/AuthScreen';
 import { MapScreen } from './components/MapScreen';
 import { QuestScreen } from './components/QuestScreen';
 import { StoreScreen } from './components/StoreScreen';
@@ -69,6 +72,29 @@ const GameApp: React.FC = () => {
   );
 };
 
+const MainFlow: React.FC = () => {
+  const [resourceDownloaded, setResourceDownloaded] = useState(false);
+  const { user, isLoading } = useAuth();
+
+  // 1. Initial screen: resource download progress & Clash animation
+  if (!resourceDownloaded) {
+    return <LoadingScreen onLoaded={() => setResourceDownloaded(true)} />;
+  }
+
+  // 2. Waiting for initial auth check
+  if (isLoading) {
+    return <LoadingScreen onLoaded={() => {}} />;
+  }
+
+  // 3. If player is not logged in and has not chosen guest mode
+  if (!user) {
+    return <AuthScreen onSuccess={() => {}} />;
+  }
+
+  // 4. Authenticated or guest -> Launch game
+  return <GameApp />;
+};
+
 // The game is landscape-only: ask phones held upright to rotate
 const RotateHint: React.FC = () => (
   <div className="rotate-hint">
@@ -91,10 +117,12 @@ function App() {
   }, []);
 
   return (
-    <GameProvider>
-      <GameApp />
-      <RotateHint />
-    </GameProvider>
+    <AuthProvider>
+      <GameProvider>
+        <MainFlow />
+        <RotateHint />
+      </GameProvider>
+    </AuthProvider>
   );
 }
 

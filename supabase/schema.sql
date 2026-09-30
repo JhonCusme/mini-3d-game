@@ -35,3 +35,20 @@ create policy "players update their village" on public.villages for update using
 
 create policy "defenders read attacks" on public.attacks for select using (true);
 create policy "attackers report attacks" on public.attacks for insert with check (true);
+
+-- Cloud Saves for logged in users
+create table if not exists public.player_saves (
+    user_id uuid primary key references auth.users (id) on delete cascade,
+    player_id text not null,
+    game_state jsonb not null,
+    updated_at timestamptz not null default now()
+);
+
+alter table public.player_saves enable row level security;
+
+create policy "users manage their own cloud save"
+on public.player_saves
+for all
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+

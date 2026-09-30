@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useGame } from '../core/GameContext';
+import { useAuth } from '../core/AuthContext';
 
 export const SettingsScreen = () => {
   const { state, toggleMute, resetGame } = useGame();
+  const { user, logout } = useAuth();
   const [muted, setMuted] = useState(localStorage.getItem('mini_kingdom_muted') === 'true');
   const [confirmReset, setConfirmReset] = useState(false);
 
@@ -55,6 +57,31 @@ export const SettingsScreen = () => {
             style={{ padding: '8px 14px', fontSize: '13px' }}
           >
             {muted ? '🔇 Mute' : '🔊 On'}
+          </button>
+        </div>
+      </div>
+
+      {/* Account & Cloud Save */}
+      <div className="glass-panel flex-col gap-2">
+        <div className="flex-row justify-between" style={{ alignItems: 'center' }}>
+          <div className="flex-col gap-1">
+            <h3 style={{ fontSize: '14px' }}>
+              {user && !user.isGuest ? '☁️ Cuenta en la Nube' : '👤 Modo Invitado'}
+            </h3>
+            <p style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+              {user && !user.isGuest
+                ? user.email || 'Conectado a Supabase'
+                : 'Tu progreso solo está guardado en este dispositivo.'}
+            </p>
+          </div>
+          <button
+            className={user && !user.isGuest ? 'btn-primary' : 'btn-upgrade'}
+            onClick={async () => {
+              await logout();
+            }}
+            style={{ padding: '8px 14px', fontSize: '12px' }}
+          >
+            {user && !user.isGuest ? 'Cerrar Sesión' : '☁️ Conectar'}
           </button>
         </div>
       </div>

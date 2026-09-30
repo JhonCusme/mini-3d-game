@@ -19,6 +19,7 @@ import { IAPManager } from './IAPManager';
 import { AudioManager } from './AudioManager';
 import { AnalyticsManager } from './AnalyticsManager';
 import { HeroManager } from './HeroManager';
+import { useAuth } from './AuthContext';
 
 interface GameContextType {
     state: GameState;
@@ -57,6 +58,7 @@ const GameContext = createContext<GameContextType | undefined>(undefined);
 
 export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [offlineEarnings, setOfflineEarnings] = useState(0);
+    const { user, saveToCloud, loadFromCloud } = useAuth();
     const [state, setState] = useState<GameState>(() => {
         const loaded = SaveManager.load();
         if (loaded._isFirstOpen) {
@@ -68,6 +70,34 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
     const stateRef = useRef(state);
     useEffect(() => { stateRef.current = state; }, [state]);
+
+    // Cloud sync: save on mutations when logged in, and load cloud save on account switch
+    useEffect(() => {
+        if (user && !user.isGuest) {
+            SaveManager.setCloudHandler((st) => {
+                saveToCloud(st).catch((e) => console.warn('Cloud save error', e));
+            });
+
+            let active = true;
+            loadFromCloud().then((cloudData) => {
+                if (!active) return;
+                if (cloudData && cloudData.hasCompletedSetup) {
+                    const prepared = VillageManager.completeUpgrades(VillageManager.ensureVillage(cloudData));
+                    setState(prepared);
+                    SaveManager.save(prepared);
+                } else if (stateRef.current.hasCompletedSetup) {
+                    saveToCloud(stateRef.current);
+                }
+            });
+
+            return () => {
+                active = false;
+                SaveManager.setCloudHandler(null);
+            };
+        } else {
+            SaveManager.setCloudHandler(null);
+        }
+    }, [user?.id, user?.isGuest]);
 
     // The gold mine kept producing while the game was closed
     useEffect(() => {

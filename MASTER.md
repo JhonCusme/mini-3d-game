@@ -57,11 +57,13 @@
 
 ### Interfaz y plataforma
 - [x] HUD estilo Clash: perfil y trofeos, constructores, recursos, botón ¡Atacar!, menús.
+- [x] Pantalla de carga inicial con descarga animada de recursos, barra de progreso estilo Clash, consejos rotativos y precarga de assets.
+- [x] Autenticación de jugadores (Supabase Auth) con inicio de sesión, registro, modo invitado y sincronización de partida en la nube.
 - [x] Menús como paneles sobre la aldea (Misiones, Tienda, Ajustes, Registro, Campaña).
 - [x] Aviso "Gira tu dispositivo" en vertical; Android e iOS bloqueados en horizontal.
 - [x] Creación de personaje (6 héroes, 3 reinos).
 - [x] Misiones (9), recompensa diaria, cofres, prestigio.
-- [x] Guardado automático en el dispositivo.
+- [x] Guardado automático local y sincronización con la nube (Cloud Save).
 - [x] Publicado en Vercel desde `master`.
 
 ---
@@ -72,8 +74,8 @@ Prioridad: **P0** = imprescindible antes de publicar, **P1** = muy importante, *
 
 ### 3.1 Técnico y seguridad (P0)
 - [ ] **Anti-trampas**: ahora cada teléfono calcula su batalla y escribe directo en la base de datos. Mover la validación de batallas a una Edge Function de Supabase (el motor `AttackSim` ya es determinista y se puede reutilizar en el servidor).
-- [ ] **Cuentas de usuario** con Supabase Auth (email/Google/Apple) y políticas RLS por `auth.uid()`.
-- [ ] **Guardado en la nube**: hoy la partida vive solo en el dispositivo; si se borra el navegador o se cambia de teléfono, se pierde.
+- [x] **Cuentas de usuario** con Supabase Auth (email/contraseña + sesión persistente y opción de jugar como invitado).
+- [x] **Guardado en la nube**: sincronización de partida en Supabase (`player_saves`) con fallback a almacenamiento local.
 - [ ] **Probar el modo online real** con varios jugadores (aún no se ha probado contra Supabase).
 - [ ] Ejecutar `supabase/schema.sql` en el proyecto (si no se ha hecho) y revocar la clave secreta expuesta.
 - [ ] Rendimiento en móviles de gama baja (sombras, número de tropas, calidad gráfica ajustable).
