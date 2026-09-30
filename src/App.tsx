@@ -11,8 +11,9 @@ import { QuestScreen } from './components/QuestScreen';
 import { StoreScreen } from './components/StoreScreen';
 import { SettingsScreen } from './components/SettingsScreen';
 import { CharacterCreation } from './components/CharacterCreation';
+import { PvpScreen } from './components/PvpScreen';
 
-export type ViewType = 'home' | 'map' | 'quests' | 'store' | 'settings';
+export type ViewType = 'home' | 'map' | 'pvp' | 'quests' | 'store' | 'settings';
 
 const GameApp: React.FC = () => {
   const { state, offlineEarnings, dismissOfflineEarnings } = useGame();
@@ -39,11 +40,12 @@ const GameApp: React.FC = () => {
       <div className="screen-container animate-pop" key={currentView}>
         {currentView === 'home' && <MainScreen />}
         {currentView === 'map' && <MapScreen />}
+        {currentView === 'pvp' && <PvpScreen />}
         {currentView === 'quests' && <QuestScreen />}
         {currentView === 'store' && <StoreScreen />}
         {currentView === 'settings' && <SettingsScreen />}
       </div>
-      <BottomNav currentView={currentView} onViewChange={setCurrentView} />
+      <BottomNav currentView={currentView} onViewChange={setCurrentView} badges={{ pvp: state.defenseLog.filter(e => !e.seen).length }} />
     </>
   );
 };

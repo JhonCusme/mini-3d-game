@@ -59,7 +59,62 @@ export const GameConfig = {
             costMultiplier: 2.0,
             effectBase: 1, // 1% per level
             effectMultiplier: 1.0
+        },
+        walls: {
+            id: 'walls',
+            name: 'Murallas',
+            description: 'Protegen tu aldea de los ataques de otros jugadores.',
+            baseCost: 250,
+            costMultiplier: 1.7,
+            effectBase: 60, // wall HP per level
+            effectMultiplier: 1.0
         }
+    },
+
+    // Gods: unlocked with gems, equipped for attack and/or defense in PvP
+    gods: {
+        tharok: {
+            id: 'tharok', name: 'Tharok', title: 'Dios del Trueno', icon: '⚡', color: '#4fc3ff',
+            description: 'Lanza un rayo al inicio de la batalla y aumenta el ataque.',
+            unlockGems: 50, unlockTerritory: 3,
+            attackBonusBase: 0.15, attackBonusPerLevel: 0.05,
+            lightningBase: 40, lightningPerLevel: 25,
+        },
+        aurelia: {
+            id: 'aurelia', name: 'Aurelia', title: 'Diosa del Sol', icon: '☀️', color: '#ffc93c',
+            description: 'Sana a tus tropas: reduce las bajas en cada ronda.',
+            unlockGems: 80, unlockTerritory: 5,
+            healBase: 0.15, healPerLevel: 0.04,
+        },
+        morvath: {
+            id: 'morvath', name: 'Morvath', title: 'Señor de la Tierra', icon: '⛰️', color: '#b0895a',
+            description: 'Refuerza murallas y la resistencia de la guarnición. Ideal para defender.',
+            unlockGems: 100, unlockTerritory: 7,
+            wallBonusBase: 0.3, wallBonusPerLevel: 0.1,
+            hpBonusBase: 0.1, hpBonusPerLevel: 0.03,
+        },
+        nyx: {
+            id: 'nyx', name: 'Nyx', title: 'Diosa de la Noche', icon: '🌙', color: '#b48cff',
+            description: 'Golpes críticos en las sombras: más probabilidad de doble daño.',
+            unlockGems: 150, unlockTerritory: 10,
+            critBase: 0.1, critPerLevel: 0.03,
+        },
+    },
+    godMaxLevel: 10,
+    godLevelUpBaseGems: 20,
+    godLevelUpMultiplier: 1.6,
+
+    // Online PvP
+    pvp: {
+        energyCost: 3,
+        maxRounds: 6,
+        lootPercent: 0.2,        // share of defender coins stolen on victory
+        lootCapPerLevel: 500,    // loot cap = defender level * this
+        trophiesWin: 25,
+        trophiesLoss: 15,
+        trophiesDefenseWin: 10,
+        startingTrophies: 100,
+        shieldMs: 30 * 60 * 1000, // protection after being attacked
     },
 
     // Troops

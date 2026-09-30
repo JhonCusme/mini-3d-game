@@ -5,6 +5,7 @@ import { UpgradeManager } from '../core/UpgradeManager';
 import { EconomyManager } from '../core/EconomyManager';
 import { HeroManager } from '../core/HeroManager';
 import { EffectManager } from '../core/EffectManager';
+import { PvpManager } from '../core/pvp/PvpManager';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Html, useGLTF } from '@react-three/drei';
 
@@ -171,7 +172,7 @@ export const MainScreen: React.FC = () => {
     }));
   }, []);
 
-  const totalTroops = Object.values(state.troops).reduce((a, b) => a + b, 0);
+  const totalTroops = PvpManager.totalTroops(state);
   const maxCapacity = UpgradeManager.getTroopCapacity(state);
   const heroCost = HeroManager.getUpgradeCost(state.heroLevel);
 

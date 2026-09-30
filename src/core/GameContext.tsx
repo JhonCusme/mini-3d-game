@@ -1,5 +1,11 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { type GameState, type AvatarType, type KingdomType, getInitialState } from './GameState';
+import { type GameState, type AvatarType, type KingdomType, type GodId, type TroopCounts, type TroopId, getInitialState, newPlayerId } from './GameState';
+import { GodManager } from './GodManager';
+import { PvpManager } from './pvp/PvpManager';
+import { pvpService } from './pvp/PvpService';
+import { simulatePvpBattle } from './pvp/PvpBattle';
+import { computeOutcome, type PvpOutcome } from './pvp/PvpRules';
+import type { PvpBattleResult, VillageSnapshot } from './pvp/PvpTypes';
 import { SaveManager } from './SaveManager';
 import { GameConfig } from '../config/GameConfig';
 import { EconomyManager } from './EconomyManager';
@@ -29,6 +35,13 @@ interface GameContextType {
     upgradeHero: () => void;
     prestigeAscension: () => void;
     toggleMute: () => boolean;
+    pvpMode: 'local' | 'online';
+    moveTroops: (troopId: TroopId, amount: number, to: 'garrison' | 'army') => void;
+    unlockGod: (godId: GodId) => void;
+    levelUpGod: (godId: GodId) => void;
+    equipGod: (slot: 'attack' | 'defense', godId: GodId | null) => void;
+    attackPlayer: (opponent: VillageSnapshot, selection: TroopCounts) => { result: PvpBattleResult; outcome: PvpOutcome } | null;
+    markDefenseLogSeen: () => void;
     resetGame: () => void;
 }
 
@@ -42,6 +55,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             AnalyticsManager.trackFirstOpen();
         }
         delete loaded._isFirstOpen;
+        if (!loaded.playerId) loaded.playerId = newPlayerId();
         return loaded as GameState;
     });
     const stateRef = useRef(state);
@@ -65,6 +79,44 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             AnalyticsManager.trackSessionEnd(Math.floor((Date.now() - start) / 1000));
         };
     }, []);
+
+    // PvP: pick up attacks received while away, then keep checking
+    useEffect(() => {
+        const check = async () => {
+            const current = stateRef.current;
+            if (!current.hasCompletedSetup) return;
+            const checkedAt = Date.now();
+            if (!current.lastDefenseCheck) {
+                setState((prev) => ({ ...prev, lastDefenseCheck: checkedAt }));
+                return;
+            }
+            try {
+                const records = await pvpService.fetchAttacksAgainst(current.playerId, current.lastDefenseCheck);
+                setState((prev) => {
+                    const next = PvpManager.applyDefenseRecords(prev, records, checkedAt);
+                    SaveManager.save(next);
+                    return next;
+                });
+            } catch (e) {
+                console.warn('PvP: could not fetch defense log', e);
+            }
+        };
+        check();
+        const id = setInterval(check, 2 * 60 * 1000);
+        return () => clearInterval(id);
+    }, []);
+
+    // PvP: publish what this village leaves prepared for defense
+    const snapshotKey = JSON.stringify([state.hasCompletedSetup, state.garrison, state.defenseGod, state.gods, state.upgrades,
+        state.trophies, state.heroLevel, state.level, state.shieldUntil, Math.floor(state.coins / 100)]);
+    useEffect(() => {
+        if (!stateRef.current.hasCompletedSetup) return;
+        const id = setTimeout(() => {
+            pvpService.publishVillage(PvpManager.buildSnapshot(stateRef.current))
+                .catch((e) => console.warn('PvP: could not publish village', e));
+        }, 1500);
+        return () => clearTimeout(id);
+    }, [snapshotKey]);
 
     // Game Loop
     useEffect(() => {
@@ -209,6 +261,54 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
     };
 
+    const updateAndSave = (fn: (prev: GameState) => GameState) => {
+        setState((prev) => {
+            const next = fn(prev);
+            if (next !== prev) SaveManager.save(next);
+            return next;
+        });
+    };
+
+    const moveTroops = (troopId: TroopId, amount: number, to: 'garrison' | 'army') => {
+        AudioManager.playClick();
+        updateAndSave((prev) => PvpManager.moveTroops(prev, troopId, amount, to));
+    };
+
+    const unlockGod = (godId: GodId) => {
+        AudioManager.playVictory();
+        updateAndSave((prev) => GodManager.unlock(prev, godId));
+    };
+
+    const levelUpGod = (godId: GodId) => {
+        AudioManager.playClick();
+        updateAndSave((prev) => GodManager.levelUp(prev, godId));
+    };
+
+    const equipGod = (slot: 'attack' | 'defense', godId: GodId | null) => {
+        AudioManager.playClick();
+        updateAndSave((prev) => GodManager.equip(prev, slot, godId));
+    };
+
+    const attackPlayer = (opponent: VillageSnapshot, selection: TroopCounts) => {
+        const current = stateRef.current;
+        if (!PvpManager.canAttack(current, selection)) return null;
+        AudioManager.playClick();
+
+        const army = PvpManager.buildArmy(current, selection);
+        const seed = Math.floor(Math.random() * 2 ** 31);
+        const result = simulatePvpBattle(army, opponent, seed);
+        const outcome = computeOutcome(result, current.trophies, opponent.trophies, opponent.lootableCoins);
+        AnalyticsManager.trackBattle(result.won ? 'win' : 'loss', `pvp_${opponent.playerId}`, 0, 0);
+        if (result.won) AudioManager.playVictory();
+
+        updateAndSave((prev) => PvpManager.applyAttack(prev, result, outcome));
+        pvpService.reportAttack(PvpManager.buildAttackRecord(current, opponent, result, outcome))
+            .catch((e) => console.warn('PvP: could not report attack', e));
+        return { result, outcome };
+    };
+
+    const markDefenseLogSeen = () => updateAndSave((prev) => PvpManager.markLogSeen(prev));
+
     const toggleMute = () => {
         return AudioManager.toggleMute();
     };
@@ -218,6 +318,20 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setState((prev) => {
             const next = getInitialState();
             next.prestigeLevel = prev.prestigeLevel + 1;
+            // Keep online identity, name and PvP progress across prestige
+            next.hasCompletedSetup = prev.hasCompletedSetup;
+            next.playerName = prev.playerName;
+            next.playerAvatar = prev.playerAvatar;
+            next.playerKingdom = prev.playerKingdom;
+            next.playerId = prev.playerId;
+            next.trophies = prev.trophies;
+            next.pvpWins = prev.pvpWins;
+            next.pvpLosses = prev.pvpLosses;
+            next.gods = prev.gods;
+            next.attackGod = prev.attackGod;
+            next.defenseGod = prev.defenseGod;
+            next.defenseLog = prev.defenseLog;
+            next.lastDefenseCheck = prev.lastDefenseCheck;
             SaveManager.save(next);
             return next;
         });
@@ -225,7 +339,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const resetGame = () => {
         SaveManager.clear();
-        setState(getInitialState());
+        setState({ ...getInitialState(), playerId: newPlayerId() });
     };
 
     return (
@@ -233,7 +347,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             state, offlineEarnings, dismissOfflineEarnings: () => setOfflineEarnings(0),
             completeSetup, purchaseUpgrade, trainTroop, fightTerritory, 
             claimQuest, openChest, claimDailyReward, watchAdForReward, buyIAP,
-            upgradeHero, prestigeAscension, toggleMute, resetGame 
+            upgradeHero, prestigeAscension, toggleMute, resetGame,
+            pvpMode: pvpService.mode, moveTroops, unlockGod, levelUpGod, equipGod, attackPlayer, markDefenseLogSeen 
         }}>
             {children}
         </GameContext.Provider>
