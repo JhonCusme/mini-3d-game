@@ -1,10 +1,21 @@
 import { GameConfig } from '../config/GameConfig';
+import type { BuildingType } from '../config/BuildingsConfig';
 
 export type AvatarType = 'warrior' | 'mage' | 'archer' | 'paladin' | 'rogue' | 'druid';
 export type KingdomType = 'emerald' | 'golden' | 'frost';
 export type TroopId = keyof typeof GameConfig.troops;
 export type TroopCounts = Record<TroopId, number>;
 export type GodId = keyof typeof GameConfig.gods;
+
+export interface PlacedBuilding {
+    uid: string;
+    type: BuildingType;
+    level: number;          // 0 = still under construction
+    x: number;              // tile coordinates of the top-left corner
+    z: number;
+    upgradingUntil: number; // timestamp, 0 when idle
+    stored: number;         // gold waiting to be collected (gold mine)
+}
 
 export interface DefenseLogEntry {
     id: string;
@@ -43,7 +54,7 @@ export interface GameState {
     prestigeLevel: number;
     chestsOpened: number;
     battlesWon: number;
-    lastSaveTime: number;
+    lastSaveTime: number; // Timestamp of last save, used for offline production
 
     // Online PvP
     playerId: string;
@@ -56,7 +67,11 @@ export interface GameState {
     defenseGod: GodId | null;
     shieldUntil: number;
     defenseLog: DefenseLogEntry[];
-    lastDefenseCheck: number; // Timestamp of last save, used for offline earnings
+    lastDefenseCheck: number;
+
+    // Village layout (Clash-style base building)
+    village: PlacedBuilding[];
+    builders: number;
 }
 
 export const getInitialState = (): GameState => ({
@@ -97,7 +112,10 @@ export const getInitialState = (): GameState => ({
     defenseGod: null,
     shieldUntil: 0,
     defenseLog: [],
-    lastDefenseCheck: 0
+    lastDefenseCheck: 0,
+
+    village: [],
+    builders: 2
 });
 
 export function emptyTroops(): TroopCounts {

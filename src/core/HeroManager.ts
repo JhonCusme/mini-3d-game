@@ -18,6 +18,8 @@ export class HeroManager {
         let newState = { ...state };
         newState.gems -= cost;
         newState.heroLevel += 1;
+        // The altar in the village shows the hero's level
+        newState.village = newState.village.map(b => (b.type === 'altar' ? { ...b, level: newState.heroLevel } : b));
 
         return newState;
     }

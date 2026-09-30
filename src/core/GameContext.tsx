@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { type GameState, type AvatarType, type KingdomType, type GodId, type TroopCounts, type TroopId, getInitialState, newPlayerId } from './GameState';
 import { GodManager } from './GodManager';
+import { VillageManager } from './VillageManager';
+import type { BuildingType } from '../config/BuildingsConfig';
 import { PvpManager } from './pvp/PvpManager';
 import { pvpService } from './pvp/PvpService';
 import { simulatePvpBattle } from './pvp/PvpBattle';
@@ -42,6 +44,12 @@ interface GameContextType {
     equipGod: (slot: 'attack' | 'defense', godId: GodId | null) => void;
     attackPlayer: (opponent: VillageSnapshot, selection: TroopCounts) => { result: PvpBattleResult; outcome: PvpOutcome } | null;
     markDefenseLogSeen: () => void;
+    startBuildingUpgrade: (uid: string) => void;
+    finishBuildingUpgrade: (uid: string) => void;
+    moveBuilding: (uid: string, x: number, z: number) => void;
+    buildBuilding: (type: BuildingType) => string | null;
+    collectMine: (uid: string) => number;
+    buyBuilder: () => void;
     resetGame: () => void;
 }
 
@@ -56,20 +64,22 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
         delete loaded._isFirstOpen;
         if (!loaded.playerId) loaded.playerId = newPlayerId();
-        return loaded as GameState;
+        return VillageManager.completeUpgrades(VillageManager.ensureVillage(loaded as GameState));
     });
     const stateRef = useRef(state);
     useEffect(() => { stateRef.current = state; }, [state]);
 
-    // Grant offline earnings once on startup
+    // The gold mine kept producing while the game was closed
     useEffect(() => {
         const current = stateRef.current;
-        if (!current.hasCompletedSetup) return;
-        const earned = EconomyManager.getOfflineEarnings(current);
-        if (earned > 0) {
-            setState((prev) => ({ ...prev, coins: prev.coins + earned }));
-            setOfflineEarnings(earned);
-        }
+        if (!current.hasCompletedSetup || !current.lastSaveTime) return;
+        const seconds = Math.max(0, (Date.now() - current.lastSaveTime) / 1000);
+        if (seconds < 60) return;
+        const storedBefore = current.village.reduce((s, b) => s + b.stored, 0);
+        const after = VillageManager.produce(current, seconds);
+        const produced = Math.floor(after.village.reduce((s, b) => s + b.stored, 0) - storedBefore);
+        setState((prev) => VillageManager.produce(prev, seconds));
+        if (produced > 0) setOfflineEarnings(produced);
     }, []);
 
     useEffect(() => {
@@ -307,6 +317,44 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return { result, outcome };
     };
 
+    const startBuildingUpgrade = (uid: string) => {
+        AudioManager.playClick();
+        updateAndSave((prev) => VillageManager.startUpgrade(prev, uid));
+    };
+
+    const finishBuildingUpgrade = (uid: string) => {
+        AudioManager.playVictory();
+        updateAndSave((prev) => VillageManager.finishWithGems(prev, uid));
+    };
+
+    const moveBuilding = (uid: string, x: number, z: number) => {
+        updateAndSave((prev) => VillageManager.move(prev, uid, x, z));
+    };
+
+    const buildBuilding = (type: BuildingType): string | null => {
+        const res = VillageManager.build(stateRef.current, type);
+        if (!res.uid) return null;
+        AudioManager.playClick();
+        stateRef.current = res.state;
+        SaveManager.save(res.state);
+        setState(res.state);
+        return res.uid;
+    };
+
+    const collectMine = (uid: string): number => {
+        const res = VillageManager.collect(stateRef.current, uid);
+        if (res.amount <= 0) return 0;
+        AudioManager.playClick();
+        stateRef.current = res.state;
+        setState((prev) => VillageManager.collect(prev, uid).state);
+        return res.amount;
+    };
+
+    const buyBuilder = () => {
+        AudioManager.playVictory();
+        updateAndSave((prev) => VillageManager.buyBuilder(prev));
+    };
+
     const markDefenseLogSeen = () => updateAndSave((prev) => PvpManager.markLogSeen(prev));
 
     const toggleMute = () => {
@@ -332,6 +380,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             next.defenseGod = prev.defenseGod;
             next.defenseLog = prev.defenseLog;
             next.lastDefenseCheck = prev.lastDefenseCheck;
+            Object.assign(next, VillageManager.ensureVillage(next));
             SaveManager.save(next);
             return next;
         });
@@ -339,7 +388,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const resetGame = () => {
         SaveManager.clear();
-        setState({ ...getInitialState(), playerId: newPlayerId() });
+        setState(VillageManager.ensureVillage({ ...getInitialState(), playerId: newPlayerId() }));
     };
 
     return (
@@ -348,7 +397,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             completeSetup, purchaseUpgrade, trainTroop, fightTerritory, 
             claimQuest, openChest, claimDailyReward, watchAdForReward, buyIAP,
             upgradeHero, prestigeAscension, toggleMute, resetGame,
-            pvpMode: pvpService.mode, moveTroops, unlockGod, levelUpGod, equipGod, attackPlayer, markDefenseLogSeen 
+            pvpMode: pvpService.mode, moveTroops, unlockGod, levelUpGod, equipGod, attackPlayer, markDefenseLogSeen,
+            startBuildingUpgrade, finishBuildingUpgrade, moveBuilding, buildBuilding, collectMine, buyBuilder 
         }}>
             {children}
         </GameContext.Provider>

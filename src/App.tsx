@@ -2,55 +2,70 @@ import { useEffect, useState } from 'react';
 import { GameProvider, useGame } from './core/GameContext';
 import './index.css';
 
-// Componentes
-import { TopBar } from './components/TopBar';
-import { MainScreen } from './components/MainScreen';
 import { MapScreen } from './components/MapScreen';
-import { BottomNav } from './components/BottomNav';
 import { QuestScreen } from './components/QuestScreen';
 import { StoreScreen } from './components/StoreScreen';
 import { SettingsScreen } from './components/SettingsScreen';
 import { CharacterCreation } from './components/CharacterCreation';
 import { PvpScreen } from './components/PvpScreen';
+import { VillageScreen } from './components/village/VillageScreen';
+import { Hud } from './components/Hud';
+import { Sheet } from './components/ui/Sheet';
+import { DefenseLogPanel } from './components/panels/Panels';
 
-export type ViewType = 'home' | 'map' | 'pvp' | 'quests' | 'store' | 'settings';
+export type PanelType = 'attack' | 'multiplayer' | 'map' | 'quests' | 'store' | 'settings' | 'log' | 'build';
 
 const GameApp: React.FC = () => {
   const { state, offlineEarnings, dismissOfflineEarnings } = useGame();
-  const [currentView, setCurrentView] = useState<ViewType>('home');
+  const [panel, setPanel] = useState<PanelType | null>(null);
+  const [villageFocused, setVillageFocused] = useState(false);
 
   // Show character creation if setup not completed
   if (!state.hasCompletedSetup) {
     return <CharacterCreation />;
   }
 
+  const close = () => setPanel(null);
+
   return (
-    <>
-      {offlineEarnings > 0 && (
-        <div className="building-modal-overlay" onClick={dismissOfflineEarnings} style={{ zIndex: 2000 }}>
-          <div className="building-modal animate-pop" onClick={e => e.stopPropagation()} style={{ textAlign: 'center' }}>
-            <h2 className="title-clash" style={{ color: 'var(--accent-gold)' }}>¡Bienvenido de vuelta!</h2>
-            <p style={{ color: 'var(--text-secondary)', margin: '12px 0' }}>Tu reino generó mientras no estabas:</p>
-            <p style={{ fontSize: '28px', fontWeight: 800, color: 'var(--accent-gold)' }}>+ {offlineEarnings.toLocaleString()} 🪙</p>
-            <button className="btn-upgrade" onClick={dismissOfflineEarnings} style={{ width: '100%', padding: '12px', marginTop: '16px' }}>Recoger</button>
+    <div className="game-root">
+      <VillageScreen buildOpen={panel === 'build'} onCloseBuild={close} onFocusChange={setVillageFocused} />
+      <Hud onOpen={setPanel} compact={villageFocused} />
+
+      {panel === 'attack' && (
+        <Sheet title="⚔️ Atacar" onClose={close}>
+          <div className="card-grid">
+            <button className="attack-mode-card multiplayer" onClick={() => setPanel('multiplayer')}>
+              <span className="attack-mode-icon">⚔️</span>
+              <b>Multijugador</b>
+              <span>Saquea aldeas de otros jugadores y gana trofeos.</span>
+            </button>
+            <button className="attack-mode-card campaign" onClick={() => setPanel('map')}>
+              <span className="attack-mode-icon">🗺️</span>
+              <b>Campaña</b>
+              <span>Conquista territorios, vence a los jefes y despierta Dioses.</span>
+            </button>
           </div>
-        </div>
+        </Sheet>
       )}
-      <div className="app-shell">
-        <BottomNav currentView={currentView} onViewChange={setCurrentView} badges={{ pvp: state.defenseLog.filter(e => !e.seen).length }} />
-        <div className="app-main">
-          <TopBar />
-          <div className={`screen-container animate-pop ${currentView === 'home' ? 'screen-full' : ''}`} key={currentView}>
-            {currentView === 'home' && <MainScreen />}
-            {currentView === 'map' && <MapScreen />}
-            {currentView === 'pvp' && <PvpScreen />}
-            {currentView === 'quests' && <QuestScreen />}
-            {currentView === 'store' && <StoreScreen />}
-            {currentView === 'settings' && <SettingsScreen />}
+      {panel === 'multiplayer' && <Sheet title="⚔️ Multijugador" onClose={close} wide><PvpScreen /></Sheet>}
+      {panel === 'map' && <Sheet title="🗺️ Campaña" onClose={close} wide><MapScreen /></Sheet>}
+      {panel === 'quests' && <Sheet title="📜 Misiones" onClose={close} wide><QuestScreen /></Sheet>}
+      {panel === 'store' && <Sheet title="💎 Tienda" onClose={close} wide><StoreScreen /></Sheet>}
+      {panel === 'settings' && <Sheet title="⚙️ Ajustes" onClose={close}><SettingsScreen /></Sheet>}
+      {panel === 'log' && <Sheet title="🛡️ Registro de defensa" onClose={close} wide><DefenseLogPanel /></Sheet>}
+
+      {offlineEarnings > 0 && (
+        <Sheet title="¡Bienvenido de vuelta!" onClose={dismissOfflineEarnings}>
+          <div className="flex-col gap-3" style={{ alignItems: 'center', textAlign: 'center' }}>
+            <p style={{ color: 'var(--text-secondary)' }}>Tu mina siguió trabajando mientras no estabas:</p>
+            <p style={{ fontSize: '28px', fontWeight: 800, color: 'var(--accent-gold)' }}>+ {offlineEarnings.toLocaleString()} 🪙</p>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Toca la mina para recoger el oro.</p>
+            <button className="btn-upgrade" onClick={dismissOfflineEarnings} style={{ width: '100%', padding: '12px' }}>¡Vamos!</button>
           </div>
-        </div>
-      </div>
-    </>
+        </Sheet>
+      )}
+    </div>
   );
 };
 
