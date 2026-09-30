@@ -1,4 +1,4 @@
-import { useState, Suspense, useMemo } from 'react';
+import { Component, useState, Suspense, useMemo, type ReactNode } from 'react';
 import { useGame } from '../core/GameContext';
 import { GameConfig } from '../config/GameConfig';
 import { UpgradeManager } from '../core/UpgradeManager';
@@ -37,21 +37,65 @@ const TROOP_ICONS: Record<string, string> = {
   healers: '💚',
 };
 
-// Grass 3D Model Component
-const GrassModel = ({ position, rotation, scale = 1 }: any) => {
-  const { scene } = useGLTF('/assets/models/grass/grass_medium_01_4k.gltf');
+// Catches model loading errors (e.g. missing .gltf files) and shows a simple fallback instead
+class ModelBoundary extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch() { /* fallback shown */ }
+  render() { return this.state.failed ? this.props.fallback : this.props.children; }
+}
+
+type PropTransform = { position: [number, number, number]; rotation: [number, number, number]; scale?: number };
+
+const GltfModel = ({ url, position, rotation, scale = 1 }: PropTransform & { url: string }) => {
+  const { scene } = useGLTF(url);
   return <primitive object={scene.clone()} position={position} rotation={rotation} scale={scale} receiveShadow castShadow />;
 };
 
-const TreeModel = ({ position, rotation, scale = 1 }: any) => {
-  const { scene } = useGLTF('/assets/models/tree/jacaranda_tree_4k.gltf');
-  return <primitive object={scene.clone()} position={position} rotation={rotation} scale={scale} receiveShadow castShadow />;
-};
+const GrassFallback = ({ position, rotation, scale = 1 }: PropTransform) => (
+  <mesh position={position} rotation={rotation} scale={scale * 0.3} castShadow>
+    <coneGeometry args={[0.4, 1, 5]} />
+    <meshStandardMaterial color="#3fa34d" roughness={1} />
+  </mesh>
+);
 
-const RockModel = ({ position, rotation, scale = 1 }: any) => {
-  const { scene } = useGLTF('/assets/models/rock/namaqualand_boulder_02_4k.gltf');
-  return <primitive object={scene.clone()} position={position} rotation={rotation} scale={scale} receiveShadow castShadow />;
-};
+const TreeFallback = ({ position, rotation, scale = 1 }: PropTransform) => (
+  <group position={position} rotation={rotation} scale={scale}>
+    <mesh position={[0, 1.5, 0]} castShadow>
+      <cylinderGeometry args={[0.3, 0.45, 3, 6]} />
+      <meshStandardMaterial color="#6b4423" roughness={1} />
+    </mesh>
+    <mesh position={[0, 4.5, 0]} castShadow>
+      <icosahedronGeometry args={[2, 0]} />
+      <meshStandardMaterial color="#8e5ab8" roughness={0.9} flatShading />
+    </mesh>
+  </group>
+);
+
+const RockFallback = ({ position, rotation, scale = 1 }: PropTransform) => (
+  <mesh position={position} rotation={rotation} scale={scale * 1.5} castShadow receiveShadow>
+    <dodecahedronGeometry args={[0.8, 0]} />
+    <meshStandardMaterial color="#8a8275" roughness={1} flatShading />
+  </mesh>
+);
+
+const GrassModel = (p: PropTransform) => (
+  <ModelBoundary fallback={<GrassFallback {...p} />}>
+    <GltfModel url="/assets/models/grass/grass_medium_01_4k.gltf" {...p} />
+  </ModelBoundary>
+);
+
+const TreeModel = (p: PropTransform) => (
+  <ModelBoundary fallback={<TreeFallback {...p} />}>
+    <GltfModel url="/assets/models/tree/jacaranda_tree_4k.gltf" {...p} />
+  </ModelBoundary>
+);
+
+const RockModel = (p: PropTransform) => (
+  <ModelBoundary fallback={<RockFallback {...p} />}>
+    <GltfModel url="/assets/models/rock/namaqualand_boulder_02_4k.gltf" {...p} />
+  </ModelBoundary>
+);
 
 const BuildingMesh = ({ b, level, canUpgrade, onClick }: any) => {
   const isCastle = b.type === 'castle';
