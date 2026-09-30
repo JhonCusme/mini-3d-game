@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { type GameState, type AvatarType, type KingdomType, getInitialState } from './GameState';
 import { SaveManager } from './SaveManager';
 import { GameConfig } from '../config/GameConfig';
@@ -15,6 +15,8 @@ import { HeroManager } from './HeroManager';
 
 interface GameContextType {
     state: GameState;
+    offlineEarnings: number;
+    dismissOfflineEarnings: () => void;
     completeSetup: (name: string, avatar: AvatarType, kingdom: KingdomType) => void;
     purchaseUpgrade: (upgradeId: keyof typeof GameConfig.upgrades) => void;
     trainTroop: (troopId: keyof typeof GameConfig.troops) => void;
@@ -33,14 +35,28 @@ interface GameContextType {
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
 export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+    const [offlineEarnings, setOfflineEarnings] = useState(0);
     const [state, setState] = useState<GameState>(() => {
         const loaded = SaveManager.load();
         if (loaded._isFirstOpen) {
             AnalyticsManager.trackFirstOpen();
-            delete loaded._isFirstOpen;
         }
+        delete loaded._isFirstOpen;
         return loaded as GameState;
     });
+    const stateRef = useRef(state);
+    useEffect(() => { stateRef.current = state; }, [state]);
+
+    // Grant offline earnings once on startup
+    useEffect(() => {
+        const current = stateRef.current;
+        if (!current.hasCompletedSetup) return;
+        const earned = EconomyManager.getOfflineEarnings(current);
+        if (earned > 0) {
+            setState((prev) => ({ ...prev, coins: prev.coins + earned }));
+            setOfflineEarnings(earned);
+        }
+    }, []);
 
     useEffect(() => {
         AnalyticsManager.trackSessionStart();
@@ -96,29 +112,26 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const fightTerritory = (territoryIndex: number): BattleResult | null => {
         AudioManager.playClick();
-        let result: BattleResult | null = null;
-        setState((prev) => {
-            const playerPower = BattleManager.getPlayerPower(prev);
-            const enemyPower = GameConfig.territories[territoryIndex].enemyPower;
-            AnalyticsManager.trackBattle('start', `t_${territoryIndex}`, playerPower, enemyPower);
-            
-            result = BattleManager.calculateBattle(prev, territoryIndex);
-            if (result) {
-                AnalyticsManager.trackBattle(result.won ? 'win' : 'loss', `t_${territoryIndex}`, playerPower, enemyPower);
-                
-                if (result.won) {
-                    AudioManager.playVictory();
-                    if (result.newState.territoryProgress > prev.territoryProgress) {
-                        AnalyticsManager.trackTerritoryUnlocked(`t_${result.newState.territoryProgress}`);
-                    }
-                }
-                
-                const next = QuestManager.checkQuests(result.newState);
-                SaveManager.save(next);
-                return next;
+        const prev = stateRef.current;
+        const playerPower = BattleManager.getPlayerPower(prev);
+        const enemyPower = GameConfig.territories[territoryIndex].enemyPower;
+        AnalyticsManager.trackBattle('start', `t_${territoryIndex}`, playerPower, enemyPower);
+
+        const result = BattleManager.calculateBattle(prev, territoryIndex);
+        if (!result) return null;
+
+        AnalyticsManager.trackBattle(result.won ? 'win' : 'loss', `t_${territoryIndex}`, playerPower, enemyPower);
+        if (result.won) {
+            AudioManager.playVictory();
+            if (result.newState.territoryProgress > prev.territoryProgress) {
+                AnalyticsManager.trackTerritoryUnlocked(`t_${result.newState.territoryProgress}`);
             }
-            return prev;
-        });
+        }
+
+        const next = QuestManager.checkQuests(result.newState);
+        stateRef.current = next;
+        SaveManager.save(next);
+        setState(next);
         return result;
     };
 
@@ -217,7 +230,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     return (
         <GameContext.Provider value={{ 
-            state, completeSetup, purchaseUpgrade, trainTroop, fightTerritory, 
+            state, offlineEarnings, dismissOfflineEarnings: () => setOfflineEarnings(0),
+            completeSetup, purchaseUpgrade, trainTroop, fightTerritory, 
             claimQuest, openChest, claimDailyReward, watchAdForReward, buyIAP,
             upgradeHero, prestigeAscension, toggleMute, resetGame 
         }}>

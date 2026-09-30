@@ -15,7 +15,7 @@ import { CharacterCreation } from './components/CharacterCreation';
 export type ViewType = 'home' | 'map' | 'quests' | 'store' | 'settings';
 
 const GameApp: React.FC = () => {
-  const { state } = useGame();
+  const { state, offlineEarnings, dismissOfflineEarnings } = useGame();
   const [currentView, setCurrentView] = useState<ViewType>('home');
 
   // Show character creation if setup not completed
@@ -25,6 +25,16 @@ const GameApp: React.FC = () => {
 
   return (
     <>
+      {offlineEarnings > 0 && (
+        <div className="building-modal-overlay" onClick={dismissOfflineEarnings} style={{ zIndex: 2000 }}>
+          <div className="building-modal animate-pop" onClick={e => e.stopPropagation()} style={{ textAlign: 'center' }}>
+            <h2 className="title-clash" style={{ color: 'var(--accent-gold)' }}>¡Bienvenido de vuelta!</h2>
+            <p style={{ color: 'var(--text-secondary)', margin: '12px 0' }}>Tu reino generó mientras no estabas:</p>
+            <p style={{ fontSize: '28px', fontWeight: 800, color: 'var(--accent-gold)' }}>+ {offlineEarnings.toLocaleString()} 🪙</p>
+            <button className="btn-upgrade" onClick={dismissOfflineEarnings} style={{ width: '100%', padding: '12px', marginTop: '16px' }}>Recoger</button>
+          </div>
+        </div>
+      )}
       <TopBar />
       <div className="screen-container animate-pop" key={currentView}>
         {currentView === 'home' && <MainScreen />}

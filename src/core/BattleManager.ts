@@ -7,6 +7,7 @@ export interface BattleResult {
     bajas: { [key: string]: number };
     coinsEarned: number;
     expEarned: number;
+    crit: boolean;
 }
 
 export class BattleManager {
@@ -32,7 +33,13 @@ export class BattleManager {
         return basePower * (1 + (attackBonus / 100));
     }
 
-    static calculateBattle(state: GameState, territoryIndex: number): BattleResult | null {
+    static getCritChance(state: GameState): number {
+        const lvl = state.upgrades.critRate || 0;
+        const cfg = GameConfig.upgrades.critRate;
+        return Math.min(50, lvl * cfg.effectBase * cfg.effectMultiplier) / 100;
+    }
+
+    static calculateBattle(state: GameState, territoryIndex: number, rng: () => number = Math.random): BattleResult | null {
         const territory = GameConfig.territories[territoryIndex];
         if (!territory) return null;
 
@@ -54,6 +61,10 @@ export class BattleManager {
                 }
             }
         }
+
+        // Critical hit: double damage
+        const crit = rng() < this.getCritChance(state);
+        if (crit) playerPower *= 2;
 
         const won = playerPower >= enemyPower;
         let coinsEarned = 0;
@@ -117,7 +128,8 @@ export class BattleManager {
             newState,
             bajas,
             coinsEarned,
-            expEarned
+            expEarned,
+            crit
         };
     }
 }

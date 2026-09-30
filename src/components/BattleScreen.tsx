@@ -81,6 +81,7 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({ territory, result, o
                 textShadow: '0 4px 20px rgba(255,215,0,0.5)',
               }}>¡VICTORIA!</h1>
               <p style={{ color: 'var(--text-secondary)' }}>Has conquistado {territory.name}.</p>
+              {result.crit && <p style={{ color: 'var(--accent-gold)', fontWeight: 800 }}>💥 ¡Golpe crítico!</p>}
 
               {/* Rewards */}
               <div style={{
