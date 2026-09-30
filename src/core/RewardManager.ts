@@ -7,6 +7,7 @@ export class RewardManager {
 
         let newState = { ...state };
         newState.chests -= 1;
+        newState.chestsOpened = (newState.chestsOpened || 0) + 1;
 
         // RNG for rewards
         const random = Math.random();

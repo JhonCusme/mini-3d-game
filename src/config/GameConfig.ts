@@ -77,7 +77,12 @@ export const GameConfig = {
         { id: 'q_upgrade_1', title: 'Mejora tu economía', description: 'Compra 5 niveles de Mina de Oro', target: 5, rewardCoins: 100, rewardGems: 5, type: 'upgrade_economy' },
         { id: 'q_troops_1', title: 'Ejército de 50', description: 'Entrena un total de 50 tropas', target: 50, rewardCoins: 200, rewardGems: 10, type: 'total_troops' },
         { id: 'q_territory_1', title: 'Conquistador', description: 'Conquista 3 territorios', target: 3, rewardCoins: 500, rewardGems: 15, type: 'territories_won' },
-        { id: 'q_chest_1', title: 'Cazatesoros', description: 'Abre 3 cofres', target: 3, rewardCoins: 300, rewardGems: 5, type: 'open_chests' }
+        { id: 'q_chest_1', title: 'Cazatesoros', description: 'Abre 3 cofres', target: 3, rewardCoins: 300, rewardGems: 5, type: 'open_chests' },
+        { id: 'q_battles_1', title: 'Veterano', description: 'Gana 10 batallas', target: 10, rewardCoins: 600, rewardGems: 10, type: 'battles_won' },
+        { id: 'q_attack_1', title: 'Forja de guerra', description: 'Sube la Herrería al nivel 5', target: 5, rewardCoins: 400, rewardGems: 8, type: 'upgrade_attack' },
+        { id: 'q_crit_1', title: 'Golpe certero', description: 'Sube la Arena al nivel 3', target: 3, rewardCoins: 500, rewardGems: 10, type: 'upgrade_crit' },
+        { id: 'q_hero_1', title: 'Héroe legendario', description: 'Lleva a tu héroe al nivel 5', target: 5, rewardCoins: 800, rewardGems: 20, type: 'hero_level' },
+        { id: 'q_territory_2', title: 'Señor de la guerra', description: 'Conquista 10 territorios', target: 10, rewardCoins: 2000, rewardGems: 30, type: 'territories_won' }
     ],
 
     // Territories

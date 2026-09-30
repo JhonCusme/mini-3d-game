@@ -33,6 +33,8 @@ export interface GameState {
     quests: { [id: string]: { progress: number; completed: boolean } };
     heroLevel: number;
     prestigeLevel: number;
+    chestsOpened: number;
+    battlesWon: number;
     lastSaveTime: number; // Timestamp of last save, used for offline earnings
 }
 
@@ -67,5 +69,7 @@ export const getInitialState = (): GameState => ({
     quests: {},
     heroLevel: 1,
     prestigeLevel: 0,
+    chestsOpened: 0,
+    battlesWon: 0,
     lastSaveTime: 0
 });

@@ -114,6 +114,7 @@ export class BattleManager {
 
         if (won) {
             const prestigeMultiplier = 1 + (state.prestigeLevel * 0.5); // +50% per prestige level
+            newState.battlesWon = (newState.battlesWon || 0) + 1;
             newState.coins += Math.floor(coinsEarned * prestigeMultiplier);
             newState.experience += Math.floor(expEarned * prestigeMultiplier);
             

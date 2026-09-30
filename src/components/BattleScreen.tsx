@@ -18,6 +18,7 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({ territory, result, o
       setTimeout(() => setShowResult(true), 200);
       if (result.won) {
         EffectManager.fireVictoryConfetti();
+        if (result.crit) EffectManager.fireCrit();
       }
     }
   }, [result]);
