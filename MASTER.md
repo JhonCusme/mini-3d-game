@@ -60,7 +60,7 @@
 - [x] Menús como paneles sobre la aldea (Misiones, Tienda, Ajustes, Registro, Campaña).
 - [x] Aviso "Gira tu dispositivo" en vertical; Android e iOS bloqueados en horizontal.
 - [x] Creación de personaje (6 héroes, 3 reinos).
-- [x] Misiones (10), recompensa diaria, cofres, prestigio.
+- [x] Misiones (9), recompensa diaria, cofres, prestigio.
 - [x] Guardado automático en el dispositivo.
 - [x] Publicado en Vercel desde `master`.
 
