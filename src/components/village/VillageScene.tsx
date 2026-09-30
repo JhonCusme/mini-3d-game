@@ -4,11 +4,11 @@ import { Html, OrbitControls } from '@react-three/drei';
 import { MOUSE, TOUCH, type Group } from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { BUILDINGS, mineCapacity } from '../../config/BuildingsConfig';
-import type { PlacedBuilding } from '../../core/GameState';
-import type { KingdomType } from '../../core/GameState';
+import type { PlacedBuilding, TroopCounts, KingdomType } from '../../core/GameState';
 import { getKingdomConfig, type KingdomVisualTheme } from '../../config/KingdomsConfig';
 import { BuildingModel, Scaffolding } from './BuildingModels';
 import { VillageTerrain, Walls } from './VillageTerrain';
+import { VillageTroops } from './VillageTroops';
 
 export const CAMERA_POSITION: [number, number, number] = [13, 17, 13];
 const PAN_LIMIT = 18;
@@ -87,6 +87,8 @@ interface VillageSceneProps {
   selectedUid: string | null;
   moving: { uid: string; x: number; z: number; valid: boolean } | null;
   kingdom?: KingdomType;
+  garrison?: TroopCounts;
+  troops?: TroopCounts;
   onSelect: (uid: string | null) => void;
   onMoveTo: (x: number, z: number) => void;
   onCollect: (uid: string) => void;
@@ -171,7 +173,7 @@ const BuildingNode: React.FC<{
 };
 
 export const VillageScene: React.FC<VillageSceneProps> = ({
-  village, wallsLevel, now, selectedUid, moving, kingdom = 'emerald', onSelect, onMoveTo, onCollect,
+  village, wallsLevel, now, selectedUid, moving, kingdom = 'emerald', garrison, troops, onSelect, onMoveTo, onCollect,
 }) => {
   const kingdomInfo = getKingdomConfig(kingdom);
   const theme = kingdomInfo.visual;
@@ -210,6 +212,14 @@ export const VillageScene: React.FC<VillageSceneProps> = ({
           onCollect={onCollect}
         />
       ))}
+
+      {/* 3D Troops: Patrols wandering the village & Attack army practicing in training grounds */}
+      <VillageTroops
+        village={village}
+        garrison={garrison}
+        troops={troops}
+        kingdom={kingdom}
+      />
     </Canvas>
   );
 };
