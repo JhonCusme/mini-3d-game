@@ -1,7 +1,8 @@
 import { GameConfig } from '../../config/GameConfig';
 import { emptyTroops, type AvatarType, type GodId, type KingdomType, type TroopCounts } from '../GameState';
 import { mulberry32 } from './PvpBattle';
-import type { AttackArmy, VillageSnapshot } from './PvpTypes';
+import type { AttackArmy, LayoutBuilding, VillageSnapshot } from './PvpTypes';
+import { BUILDINGS, VILLAGE_HALF, type BuildingType } from '../../config/BuildingsConfig';
 
 const NAMES = ['Ragnar', 'Isolda', 'Brom', 'Valeria', 'Theron', 'Mirra', 'Kael', 'Sigrid', 'Orin', 'Lyra',
     'Garrick', 'Nerea', 'Doran', 'Elara', 'Fenris', 'Yara', 'Borin', 'Selene', 'Aldric', 'Zora'];
@@ -31,6 +32,45 @@ function buildTroops(power: number, rng: () => number, defensive: boolean): Troo
     return troops;
 }
 
+function overlaps(list: LayoutBuilding[], type: BuildingType, x: number, z: number): boolean {
+    const s = BUILDINGS[type].size;
+    return list.some(o => {
+        const os = BUILDINGS[o.type].size;
+        // keep a 1-tile gap so troops can walk between buildings
+        return x < o.x + os + 1 && x + s + 1 > o.x && z < o.z + os + 1 && z + s + 1 > o.z;
+    });
+}
+
+/** Random but tidy base layout for a townhall level. */
+export function createBotLayout(seed: number, th: number): LayoutBuilding[] {
+    const rng = mulberry32(seed ^ 0x5bd1e995);
+    const list: LayoutBuilding[] = [{ type: 'townhall', level: th, x: -2, z: -2 }];
+    const lvl = () => Math.max(1, Math.min(th + 1, th - 1 + Math.floor(rng() * 3)));
+    const wanted: BuildingType[] = ['goldmine', 'barracks', 'blacksmith', 'armory', 'arena', 'altar'];
+    for (let i = 0; i < BUILDINGS.cannon.maxCount(th); i++) wanted.push('cannon');
+    for (let i = 0; i < BUILDINGS.archertower.maxCount(th); i++) wanted.push('archertower');
+    for (const type of wanted) {
+        const size = BUILDINGS[type].size;
+        // defenses close to the core, economy further out
+        const radius = BUILDINGS[type].isDefense ? 7 : 10;
+        for (let tries = 0; tries < 80; tries++) {
+            const x = Math.round((rng() - 0.5) * 2 * radius) - Math.floor(size / 2);
+            const z = Math.round((rng() - 0.5) * 2 * radius) - Math.floor(size / 2);
+            if (x < -VILLAGE_HALF || z < -VILLAGE_HALF || x + size > VILLAGE_HALF || z + size > VILLAGE_HALF) continue;
+            if (overlaps(list, type, x, z)) continue;
+            list.push({ type, level: lvl(), x, z });
+            break;
+        }
+    }
+    return list;
+}
+
+/** Layout of any snapshot; older snapshots without one get a generated base. */
+export function layoutOf(v: VillageSnapshot): LayoutBuilding[] {
+    if (v.layout && v.layout.length > 0) return v.layout;
+    return createBotLayout(hashString(v.playerId), Math.max(1, Math.min(10, v.level)));
+}
+
 /** Generates a believable rival village around a trophy count. */
 export function createBotVillage(seed: number, aroundTrophies: number): VillageSnapshot {
     const rng = mulberry32(seed);
@@ -56,6 +96,7 @@ export function createBotVillage(seed: number, aroundTrophies: number): VillageS
         shieldUntil: 0,
         updatedAt: Date.now(),
         isBot: true,
+        layout: createBotLayout(seed, Math.max(1, Math.min(10, 1 + Math.floor(trophies / 150)))),
     };
 }
 

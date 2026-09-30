@@ -7,7 +7,7 @@ import { QuestScreen } from './components/QuestScreen';
 import { StoreScreen } from './components/StoreScreen';
 import { SettingsScreen } from './components/SettingsScreen';
 import { CharacterCreation } from './components/CharacterCreation';
-import { PvpScreen } from './components/PvpScreen';
+import { AttackScreen } from './components/attack/AttackScreen';
 import { VillageScreen } from './components/village/VillageScreen';
 import { Hud } from './components/Hud';
 import { Sheet } from './components/ui/Sheet';
@@ -48,7 +48,7 @@ const GameApp: React.FC = () => {
           </div>
         </Sheet>
       )}
-      {panel === 'multiplayer' && <Sheet title="⚔️ Multijugador" onClose={close} wide><PvpScreen /></Sheet>}
+      {panel === 'multiplayer' && <AttackScreen onClose={close} />}
       {panel === 'map' && <Sheet title="🗺️ Campaña" onClose={close} wide><MapScreen /></Sheet>}
       {panel === 'quests' && <Sheet title="📜 Misiones" onClose={close} wide><QuestScreen /></Sheet>}
       {panel === 'store' && <Sheet title="💎 Tienda" onClose={close} wide><StoreScreen /></Sheet>}

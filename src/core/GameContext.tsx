@@ -1,11 +1,10 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { type GameState, type AvatarType, type KingdomType, type GodId, type TroopCounts, type TroopId, getInitialState, newPlayerId } from './GameState';
+import { type GameState, type AvatarType, type KingdomType, type GodId, type TroopId, getInitialState, newPlayerId } from './GameState';
 import { GodManager } from './GodManager';
 import { VillageManager } from './VillageManager';
 import type { BuildingType } from '../config/BuildingsConfig';
 import { PvpManager } from './pvp/PvpManager';
 import { pvpService } from './pvp/PvpService';
-import { simulatePvpBattle } from './pvp/PvpBattle';
 import { computeOutcome, type PvpOutcome } from './pvp/PvpRules';
 import type { PvpBattleResult, VillageSnapshot } from './pvp/PvpTypes';
 import { SaveManager } from './SaveManager';
@@ -42,7 +41,8 @@ interface GameContextType {
     unlockGod: (godId: GodId) => void;
     levelUpGod: (godId: GodId) => void;
     equipGod: (slot: 'attack' | 'defense', godId: GodId | null) => void;
-    attackPlayer: (opponent: VillageSnapshot, selection: TroopCounts) => { result: PvpBattleResult; outcome: PvpOutcome } | null;
+    completeAttack: (opponent: VillageSnapshot, result: PvpBattleResult) => PvpOutcome;
+    payCoins: (amount: number) => boolean;
     markDefenseLogSeen: () => void;
     startBuildingUpgrade: (uid: string) => void;
     finishBuildingUpgrade: (uid: string) => void;
@@ -299,22 +299,23 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         updateAndSave((prev) => GodManager.equip(prev, slot, godId));
     };
 
-    const attackPlayer = (opponent: VillageSnapshot, selection: TroopCounts) => {
+    /** Applies a finished real-time attack: losses, loot, trophies, and tells the defender. */
+    const completeAttack = (opponent: VillageSnapshot, result: PvpBattleResult): PvpOutcome => {
         const current = stateRef.current;
-        if (!PvpManager.canAttack(current, selection)) return null;
-        AudioManager.playClick();
-
-        const army = PvpManager.buildArmy(current, selection);
-        const seed = Math.floor(Math.random() * 2 ** 31);
-        const result = simulatePvpBattle(army, opponent, seed);
         const outcome = computeOutcome(result, current.trophies, opponent.trophies, opponent.lootableCoins);
         AnalyticsManager.trackBattle(result.won ? 'win' : 'loss', `pvp_${opponent.playerId}`, 0, 0);
         if (result.won) AudioManager.playVictory();
-
         updateAndSave((prev) => PvpManager.applyAttack(prev, result, outcome));
         pvpService.reportAttack(PvpManager.buildAttackRecord(current, opponent, result, outcome))
             .catch((e) => console.warn('PvP: could not report attack', e));
-        return { result, outcome };
+        return outcome;
+    };
+
+    const payCoins = (amount: number): boolean => {
+        if (stateRef.current.coins < amount) return false;
+        stateRef.current = { ...stateRef.current, coins: stateRef.current.coins - amount };
+        updateAndSave((prev) => ({ ...prev, coins: prev.coins - amount }));
+        return true;
     };
 
     const startBuildingUpgrade = (uid: string) => {
@@ -397,7 +398,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             completeSetup, purchaseUpgrade, trainTroop, fightTerritory, 
             claimQuest, openChest, claimDailyReward, watchAdForReward, buyIAP,
             upgradeHero, prestigeAscension, toggleMute, resetGame,
-            pvpMode: pvpService.mode, moveTroops, unlockGod, levelUpGod, equipGod, attackPlayer, markDefenseLogSeen,
+            pvpMode: pvpService.mode, moveTroops, unlockGod, levelUpGod, equipGod, completeAttack, payCoins, markDefenseLogSeen,
             startBuildingUpgrade, finishBuildingUpgrade, moveBuilding, buildBuilding, collectMine, buyBuilder 
         }}>
             {children}

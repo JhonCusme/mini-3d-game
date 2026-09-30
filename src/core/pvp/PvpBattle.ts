@@ -2,6 +2,8 @@ import { GameConfig } from '../../config/GameConfig';
 import { emptyTroops, type TroopCounts, type TroopId } from '../GameState';
 import { GodManager, type GodEffects } from '../GodManager';
 import type { AttackArmy, BattleRound, PvpBattleResult, VillageSnapshot } from './PvpTypes';
+import { BUILDINGS, defenseDamage } from '../../config/BuildingsConfig';
+import { layoutOf } from './BotFactory';
 
 const TROOP_IDS = Object.keys(GameConfig.troops) as TroopId[];
 
@@ -145,6 +147,10 @@ export function simulatePvpBattle(army: AttackArmy, village: VillageSnapshot, se
     const startDef = { ...def.counts };
 
     const wallMax = wallMaxHp(village);
+    // Cannons and archer towers of the defender add damage every round
+    const towerDamage = layoutOf(village)
+        .filter(b => BUILDINGS[b.type].isDefense)
+        .reduce((s, b) => s + defenseDamage(b.type, b.level) / (BUILDINGS[b.type].fireRate || 1), 0) * 1.5 * (1 + def.god.attackBonus);
     let wallHp = wallMax;
     const attackerMaxHp = totalHp(atk);
     const defenderMaxHp = totalHp(def);
@@ -198,7 +204,7 @@ export function simulatePvpBattle(army: AttackArmy, village: VillageSnapshot, se
         }
         toTroops += normal + siege / 3;
 
-        const defDamage = (d.normal + d.siege + d.magic) * dMult;
+        const defDamage = (d.normal + d.siege + d.magic + towerDamage) * dMult;
         const defLosses = applyDamage(def, toTroops);
         const atkLosses = applyDamage(atk, defDamage);
         subtract(def, defLosses);

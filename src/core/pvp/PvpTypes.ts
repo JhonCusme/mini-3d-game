@@ -1,4 +1,13 @@
 import type { AvatarType, GodId, KingdomType, TroopCounts } from '../GameState';
+import type { BuildingType } from '../../config/BuildingsConfig';
+
+/** A building as seen by attackers (position in tiles, top-left corner). */
+export interface LayoutBuilding {
+    type: BuildingType;
+    level: number;
+    x: number;
+    z: number;
+}
 
 /** What a player leaves prepared at home. Other players attack this snapshot. */
 export interface VillageSnapshot {
@@ -19,6 +28,7 @@ export interface VillageSnapshot {
     shieldUntil: number;
     updatedAt: number;
     isBot?: boolean;
+    layout?: LayoutBuilding[];
 }
 
 /** The army a player sends to attack. */

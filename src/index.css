@@ -1756,3 +1756,211 @@ button:disabled {
 
 .hud-bottom-left, .hud-bottom-right { transition: opacity 0.2s, transform 0.2s; }
 .action-bar { max-width: calc(100% - 40px); }
+
+/* ===== REAL-TIME ATTACK ===== */
+.attack-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  background: #a8d8f0;
+  font-family: 'Lilita One', 'Outfit', sans-serif;
+  color: #fff;
+}
+
+.attack-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 26px;
+  text-shadow: 0 2px 0 #000;
+  background: linear-gradient(180deg, #7ec8ff, #d6f0ff);
+  z-index: 5;
+}
+
+.attack-loading-cloud { font-size: 80px; animation: bob 1.2s ease-in-out infinite; }
+
+.attack-top-left {
+  position: absolute;
+  top: 8px;
+  left: max(10px, env(safe-area-inset-left));
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  z-index: 3;
+}
+
+.attack-loot {
+  align-self: flex-start;
+  font-size: 13px;
+  background: rgba(20, 12, 40, 0.75);
+  border-radius: 10px;
+  padding: 3px 10px;
+  text-shadow: 0 1px 0 #000;
+}
+
+.attack-loot b { font-weight: 400; color: var(--accent-gold); }
+
+.attack-top-center {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  z-index: 3;
+}
+
+.attack-timer {
+  font-size: 22px;
+  background: rgba(20, 12, 40, 0.75);
+  border-radius: 12px;
+  padding: 2px 14px;
+  text-shadow: 0 2px 0 #000;
+}
+
+.attack-stars {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 24px;
+  text-shadow: 0 2px 0 #000;
+}
+
+.attack-stars span { color: rgba(255, 255, 255, 0.3); }
+.attack-stars span.on { color: #ffd23a; text-shadow: 0 0 10px rgba(255, 210, 58, 0.8), 0 2px 0 #7a5a00; }
+.attack-stars b { font-weight: 400; font-size: 18px; margin-left: 8px; }
+.attack-stars.big { font-size: 56px; justify-content: center; }
+
+.attack-top-right {
+  position: absolute;
+  top: 8px;
+  right: max(10px, env(safe-area-inset-right));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  z-index: 3;
+}
+
+.attack-next, .attack-end {
+  font-family: 'Lilita One', sans-serif;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 17px;
+  padding: 8px 16px;
+  border-radius: 14px;
+  color: #fff;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
+  flex-direction: column;
+  gap: 0;
+}
+
+.attack-next { background: linear-gradient(180deg, #ffd23a, #f0a500); border: 3px solid #fff1b0; box-shadow: 0 5px 0 #9a6a00; }
+.attack-next span { font-size: 12px; }
+.attack-end { background: linear-gradient(180deg, #ff6b6b, #d63a3a); border: 3px solid #ffd6d6; box-shadow: 0 5px 0 #7a1f1f; font-size: 14px; }
+
+.attack-bar {
+  position: absolute;
+  left: 50%;
+  bottom: max(8px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  z-index: 3;
+  max-width: calc(100% - 20px);
+  overflow-x: auto;
+  padding: 6px;
+  background: rgba(20, 12, 40, 0.55);
+  border-radius: 16px;
+}
+
+.troop-card {
+  position: relative;
+  flex: 0 0 auto;
+  width: 66px;
+  height: 78px;
+  flex-direction: column;
+  gap: 0;
+  padding: 4px 2px;
+  border-radius: 12px;
+  text-transform: none;
+  letter-spacing: 0;
+  background: linear-gradient(180deg, #5b6dff, #3f4bd1);
+  border: 3px solid #b8c1ff;
+  box-shadow: 0 4px 0 #262c80;
+}
+
+.troop-card.selected { background: linear-gradient(180deg, #ffd23a, #f0a500); border-color: #fff; box-shadow: 0 4px 0 #9a6a00, 0 0 14px rgba(255, 215, 0, 0.8); transform: translateY(-4px); }
+.troop-card.spell { background: linear-gradient(180deg, #9b6bff, #5a2fc9); }
+.troop-card.burst { background: linear-gradient(180deg, #4a4a5a, #2a2a36); border-color: #888; }
+.troop-card:disabled { filter: grayscale(1) brightness(0.6); }
+.troop-card-count { position: absolute; top: 2px; left: 6px; font-size: 13px; color: #fff; text-shadow: 0 1px 0 #000; }
+.troop-card-icon { font-size: 28px; margin-top: 10px; }
+.troop-card-name { font-size: 10px; color: #fff; text-shadow: 0 1px 0 #000; font-family: 'Outfit', sans-serif; font-weight: 800; }
+
+.attack-empty { align-self: center; font-size: 14px; padding: 0 12px; }
+
+.attack-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 110px;
+  transform: translateX(-50%);
+  background: rgba(20, 12, 40, 0.8);
+  padding: 6px 14px;
+  border-radius: 12px;
+  font-size: 15px;
+  z-index: 4;
+  white-space: nowrap;
+}
+
+.attack-hint.warn { color: #ffd23a; bottom: 150px; }
+
+.attack-result-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  background: rgba(5, 2, 16, 0.35);
+}
+
+.attack-result {
+  position: relative;
+  width: min(420px, calc(100% - 24px));
+  max-height: calc(100% - 20px);
+  overflow-y: auto;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  padding: 18px;
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(43, 26, 85, 0.95), rgba(26, 14, 46, 0.95));
+  border: 3px solid rgba(255, 215, 0, 0.5);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+}
+
+.attack-result h1 { font-size: 40px; font-weight: 400; text-shadow: 0 3px 0 #000; }
+.attack-result p { font-family: 'Outfit', sans-serif; }
+.attack-result-rows { width: 100%; display: flex; flex-direction: column; gap: 6px; font-family: 'Outfit', sans-serif; }
+.attack-result-rows div { display: flex; justify-content: space-between; background: rgba(255, 255, 255, 0.06); padding: 6px 12px; border-radius: 10px; }
+.attack-result-rows b { font-weight: 800; }
+
+@media (max-height: 420px) {
+  .troop-card { width: 58px; height: 66px; }
+  .troop-card-icon { font-size: 22px; margin-top: 8px; }
+  .attack-hint { bottom: 90px; }
+  .attack-hint.warn { bottom: 125px; }
+  .attack-stars.big { font-size: 40px; }
+  .attack-result h1 { font-size: 30px; }
+}

@@ -9,15 +9,23 @@ npm install
 npm run dev
 ```
 
-## Guerra (multijugador asíncrono)
+## Aldea
 
-En la pestaña **⚔️ Guerra** los jugadores atacan las aldeas de otros con los guerreros que tengan listos y su Dios de ataque. Cada aldea se defiende sola con lo que su dueño dejó preparado:
+La aldea se ve en 3D a pantalla completa, con el HUD encima, como en Clash of Clans:
 
-- **Guarnición**: tropas que dejas en casa (no pueden atacar mientras defienden).
-- **Murallas**: absorben daño antes que las tropas. Las catapultas hacen triple daño a las murallas y los magos las ignoran.
-- **Dios defensor**: Tharok (rayo y ataque), Aurelia (curación), Morvath (murallas y vida) y Nyx (críticos). Se desbloquean con gemas al conquistar territorios.
+- **Edificios en cuadrícula**: tócalos para ver info, mejorarlos o moverlos (arrastrar y "Colocar").
+- **Constructores**: cada mejora ocupa un constructor durante un tiempo; puedes terminarla con gemas o contratar más constructores.
+- **Ayuntamiento**: su nivel limita el nivel del resto de edificios y cuántas defensas puedes construir.
+- **Mina de oro**: acumula oro (también con el juego cerrado); toca la moneda para recogerlo.
+- **Defensas**: cañones y torres de arqueros desde el botón 🔨 Construir; murallas desde el Ayuntamiento.
 
-Las batallas se simulan por rondas con una semilla, así que el resultado es el mismo para el atacante y el defensor. Ganar da botín y trofeos; el defensor ve el ataque en su **Registro** al volver, pierde el botín y las tropas caídas, y recibe un escudo de 30 minutos.
+## Ataque multijugador (tiempo real)
+
+**¡Atacar! → Multijugador** muestra la aldea de un rival en 3D. Puedes pasar a otro rival (cuesta oro) o soltar tus tropas fuera de la zona roja. Las tropas buscan edificios, rompen murallas y pelean; los cañones y torres disparan y la guarnición del rival sale a defender. Tu Dios de ataque se lanza una vez tocando el mapa (Tharok: rayo, Aurelia: curación, Morvath: terremoto, Nyx: sombras que duplican el daño).
+
+Estrellas como en Clash: 50 % de destrucción, destruir el Ayuntamiento y 100 %. El botín depende de la destrucción. El defensor ve el ataque en su **🛡️ Registro** al volver, pierde el botín y la guarnición caída, y recibe un escudo de 30 minutos.
+
+Cada aldea se defiende con lo que su dueño dejó preparado: guarnición (Ayuntamiento → Defensa), murallas, cañones, torres y Dios defensor (Altar).
 
 ### Modo local (por defecto)
 
@@ -42,7 +50,9 @@ Sin configuración, los rivales son aldeas simuladas cerca de tus trofeos y, mie
 
 ### Código
 
-- `src/core/pvp/PvpBattle.ts`: simulación de batalla (pura y determinista).
+- `src/core/pvp/AttackSim.ts`: combate en tiempo real (paso fijo, determinista).
+- `src/core/pvp/PvpBattle.ts`: simulación por rondas para los ataques que recibe tu aldea en modo local.
+- `src/core/VillageManager.ts` y `src/config/BuildingsConfig.ts`: edificios, constructores y mina.
 - `src/core/pvp/PvpRules.ts`: botín, trofeos y ligas.
 - `src/core/pvp/PvpManager.ts`: cambios en el estado del jugador.
 - `src/core/pvp/PvpService.ts`: interfaz del backend; `LocalPvpService` y `SupabasePvpService` la implementan.

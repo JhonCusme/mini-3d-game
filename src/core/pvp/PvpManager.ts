@@ -43,6 +43,7 @@ export class PvpManager {
             lootableCoins: lootableCoins(state.coins, state.level),
             shieldUntil: state.shieldUntil,
             updatedAt: Date.now(),
+            layout: state.village.filter(b => b.level > 0).map(b => ({ type: b.type, level: b.level, x: b.x, z: b.z })),
         };
     }
 

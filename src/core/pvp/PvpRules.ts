@@ -18,16 +18,18 @@ export function computeOutcome(
     // Beating a stronger rival is worth more, bullying a weaker one less
     const factor = Math.max(0.5, Math.min(1.5, 1 + (defenderTrophies - attackerTrophies) / 400));
 
+    // Loot depends on how much of the village was destroyed, like in Clash
+    const coinsStolen = Math.floor(lootableCoins * Math.min(1, result.destruction));
     if (result.won) {
         const gain = Math.round(cfg.trophiesWin * factor * (0.6 + 0.2 * result.stars));
         return {
-            coinsStolen: Math.floor(lootableCoins * result.stars / 3),
+            coinsStolen,
             attackerTrophiesDelta: gain,
             defenderTrophiesDelta: -Math.min(defenderTrophies, Math.round(gain * 0.8)),
         };
     }
     return {
-        coinsStolen: 0,
+        coinsStolen,
         attackerTrophiesDelta: -Math.min(attackerTrophies, Math.round(cfg.trophiesLoss / factor)),
         defenderTrophiesDelta: Math.round(cfg.trophiesDefenseWin * factor),
     };
