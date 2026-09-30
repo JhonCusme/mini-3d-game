@@ -19,6 +19,7 @@ import { IAPManager } from './IAPManager';
 import { AudioManager } from './AudioManager';
 import { AnalyticsManager } from './AnalyticsManager';
 import { HeroManager } from './HeroManager';
+import { TroopUpgradeManager } from './TroopUpgradeManager';
 import { useAuth } from './AuthContext';
 
 interface GameContextType {
@@ -28,6 +29,7 @@ interface GameContextType {
     completeSetup: (name: string, avatar: AvatarType, kingdom: KingdomType) => void;
     purchaseUpgrade: (upgradeId: keyof typeof GameConfig.upgrades) => void;
     trainTroop: (troopId: keyof typeof GameConfig.troops) => void;
+    upgradeTroop: (troopId: TroopId) => boolean;
     fightTerritory: (territoryIndex: number) => BattleResult | null;
     claimQuest: (questId: string) => void;
     openChest: () => void;
@@ -301,6 +303,18 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
     };
 
+    const upgradeTroop = (troopId: TroopId): boolean => {
+        const prev = stateRef.current;
+        if (!TroopUpgradeManager.canUpgrade(prev, troopId)) return false;
+        AudioManager.playVictory();
+        setState((s) => {
+            const next = TroopUpgradeManager.upgradeTroop(s, troopId);
+            SaveManager.save(next);
+            return next;
+        });
+        return true;
+    };
+
     const updateAndSave = (fn: (prev: GameState) => GameState) => {
         setState((prev) => {
             const next = fn(prev);
@@ -429,7 +443,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return (
         <GameContext.Provider value={{ 
             state, offlineEarnings, dismissOfflineEarnings: () => setOfflineEarnings(0),
-            completeSetup, purchaseUpgrade, trainTroop, fightTerritory, 
+            completeSetup, purchaseUpgrade, trainTroop, upgradeTroop, fightTerritory, 
             claimQuest, openChest, claimDailyReward, watchAdForReward, buyIAP,
             upgradeHero, prestigeAscension, toggleMute, resetGame,
             pvpMode: pvpService.mode, moveTroops, unlockGod, levelUpGod, equipGod, completeAttack, payCoins, markDefenseLogSeen,

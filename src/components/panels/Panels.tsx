@@ -11,7 +11,12 @@ import { TROOP_ICONS } from '../troopIcons';
 
 const TROOP_IDS = Object.keys(GameConfig.troops) as TroopId[];
 const GOD_IDS = Object.keys(GameConfig.gods) as GodId[];
-export const troopPower = (t: TroopCounts) => TROOP_IDS.reduce((s, id) => s + (t[id] || 0) * GameConfig.troops[id].power, 0);
+export const troopPower = (t: TroopCounts, levels?: Record<TroopId, number>) =>
+  TROOP_IDS.reduce((s, id) => {
+    const lvl = levels?.[id] || 1;
+    const mult = 1 + (lvl - 1) * 0.22;
+    return s + Math.round((t[id] || 0) * GameConfig.troops[id].power * mult);
+  }, 0);
 
 export const panel: React.CSSProperties = {
   padding: '12px', borderRadius: '14px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--glass-border)',
@@ -40,7 +45,7 @@ export const DefensePanel: React.FC = () => {
         </p>
         <div className="two-col">
         <div style={panel} className="flex-col gap-2">
-          <div className="flex-row justify-between"><b>🛡️ Guarnición</b><span style={{ fontSize: '12px' }}>⚔️ {troopPower(state.garrison)}</span></div>
+          <div className="flex-row justify-between"><b>🛡️ Guarnición</b><span style={{ fontSize: '12px' }}>⚔️ {troopPower(state.garrison, state.troopLevels)}</span></div>
           {TROOP_IDS.filter(id => state.troops[id] > 0 || state.garrison[id] > 0).map(id => (
             <div key={id} className="troop-row">
               <span style={{ fontSize: '13px' }}>{TROOP_ICONS[id]} {GameConfig.troops[id].name}</span>
@@ -206,13 +211,20 @@ export const TrainTroopsPanel: React.FC = () => {
         {TROOP_IDS.map(id => {
           const troop = GameConfig.troops[id];
           const canTrain = EconomyManager.canAfford(state, troop.cost, 'coins') && total < max;
+          const lvl = state.troopLevels?.[id] || 1;
+          const mult = 1 + (lvl - 1) * 0.22;
+          const scaledPower = Math.round(troop.power * mult);
+          const scaledHp = Math.round(troop.hp * mult);
           return (
             <div key={id} className="troop-row">
               <div className="flex-row gap-2">
                 <span className="troop-icon">{TROOP_ICONS[id]}</span>
                 <div className="flex-col">
-                  <span style={{ fontWeight: 700, fontSize: '13px' }}>{troop.name}</span>
-                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>⚔️{troop.power} ❤️{troop.hp} · ×{state.troops[id]}</span>
+                  <div className="flex-row gap-1" style={{ alignItems: 'baseline' }}>
+                    <span style={{ fontWeight: 700, fontSize: '13px' }}>{troop.name}</span>
+                    <span style={{ fontSize: '10px', color: 'var(--accent-gold)', fontWeight: 800 }}>Nv.{lvl}</span>
+                  </div>
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>⚔️{scaledPower} ❤️{scaledHp} · ×{state.troops[id]}</span>
                 </div>
               </div>
               <button className="btn-primary" disabled={!canTrain} onClick={() => trainTroop(id)} style={{ padding: '6px 10px', fontSize: '12px', minWidth: '70px' }}>
@@ -225,3 +237,5 @@ export const TrainTroopsPanel: React.FC = () => {
     </div>
   );
 };
+
+export { TroopUpgradePanel } from './TroopUpgradePanel';

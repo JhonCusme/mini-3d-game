@@ -56,4 +56,14 @@ export class EffectManager {
             colors: ['#00FF00', '#FFFFFF', '#FFFF00']
         });
     }
+
+    static fireTroopUpgrade() {
+        confetti({
+            particleCount: 65,
+            spread: 80,
+            origin: { y: 0.5 },
+            colors: ['#FFD700', '#FFA500', '#32CD32', '#FFFFFF'],
+            shapes: ['star']
+        });
+    }
 }

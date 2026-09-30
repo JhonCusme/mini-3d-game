@@ -1,4 +1,4 @@
-import type { AvatarType, GodId, KingdomType, TroopCounts } from '../GameState';
+import type { AvatarType, GodId, KingdomType, TroopCounts, TroopId } from '../GameState';
 import type { BuildingType } from '../../config/BuildingsConfig';
 
 /** A building as seen by attackers (position in tiles, top-left corner). */
@@ -41,6 +41,7 @@ export interface AttackArmy {
     armorLevel: number;
     critLevel: number;
     kingdom?: KingdomType;
+    troopLevels?: Record<TroopId, number>;
 }
 
 export interface BattleRound {

@@ -286,8 +286,10 @@ export class AttackSim {
 
     private spawn(side: 'attacker' | 'defender', type: TroopId, x: number, z: number) {
         const stats = UNIT_STATS[type];
-        const hpMult = side === 'attacker' ? this.atkHpMult : 1 + this.defGod.hpBonus;
-        const hp = stats.hp * hpMult;
+        const troopLevel = side === 'attacker' ? (this.army.troopLevels?.[type] || 1) : 1;
+        const levelHpMult = 1 + (troopLevel - 1) * 0.22;
+        const hpMult = (side === 'attacker' ? this.atkHpMult : 1 + this.defGod.hpBonus) * levelHpMult;
+        const hp = Math.round(stats.hp * hpMult);
         this.units.push({
             id: this.nextId++, side, type, x, z, hp, maxHp: hp, dead: false, cooldown: this.rng() * 0.5,
             targetKind: null, targetId: 0, heading: 0, buffUntil: 0,
@@ -489,7 +491,9 @@ export class AttackSim {
 
         const mult = u.side === 'attacker' ? this.atkDmgMult : this.defUnitDmgMult;
         const crit = u.side === 'attacker' && (this.rng() < this.atkCrit || u.buffUntil > this.time) ? 2 : 1;
-        let dmg = stats.dps * mult * crit;
+        const troopLevel = u.side === 'attacker' ? (this.army.troopLevels?.[u.type] || 1) : 1;
+        const levelDmgMult = 1 + (troopLevel - 1) * 0.22;
+        let dmg = stats.dps * mult * crit * levelDmgMult;
         if (stats.siege && u.targetKind === 'wall') dmg *= 3;
         const kind: SimProjectile['kind'] | null = u.type === 'archers' ? 'arrow' : u.type === 'mages' ? 'magic' : u.type === 'catapults' ? 'boulder' : null;
 

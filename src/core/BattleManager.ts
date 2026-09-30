@@ -17,7 +17,9 @@ export class BattleManager {
         for (const [troopId, amount] of Object.entries(state.troops)) {
             const config = GameConfig.troops[troopId as keyof typeof GameConfig.troops];
             if (config) {
-                basePower += config.power * amount;
+                const troopLvl = state.troopLevels?.[troopId as keyof typeof GameConfig.troops] || 1;
+                const levelMult = 1 + (troopLvl - 1) * 0.22;
+                basePower += config.power * amount * levelMult;
             }
         }
 

@@ -35,7 +35,13 @@ export class SaveManager {
             const serialized = localStorage.getItem(SAVE_KEY);
             if (serialized) {
                 const data = JSON.parse(serialized);
-                return { ...getInitialState(), ...data, _isFirstOpen: false };
+                const initial = getInitialState();
+                return {
+                    ...initial,
+                    ...data,
+                    troopLevels: { ...initial.troopLevels, ...(data.troopLevels || {}) },
+                    _isFirstOpen: false,
+                };
             }
         } catch (e) {
             console.error('Error loading game data', e);

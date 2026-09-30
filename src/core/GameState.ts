@@ -44,6 +44,7 @@ export interface GameState {
     level: number;
     upgrades: { [id: string]: number };
     troops: TroopCounts;
+    troopLevels: Record<TroopId, number>;
     territoryProgress: number; // Index of the highest unlocked territory (0-based)
     
     // Fase 2, 4 y 8: Recompensas, Misiones, Héroe y Prestigio
@@ -92,6 +93,7 @@ export const getInitialState = (): GameState => ({
         attackPower: 0
     },
     troops: emptyTroops(),
+    troopLevels: defaultTroopLevels(),
     territoryProgress: 0,
     chests: 1, // Regalamos 1 cofre al inicio
     lastDailyReward: 0,
@@ -120,6 +122,10 @@ export const getInitialState = (): GameState => ({
 
 export function emptyTroops(): TroopCounts {
     return { infantry: 0, archers: 0, cavalry: 0, mages: 0, catapults: 0, healers: 0 };
+}
+
+export function defaultTroopLevels(): Record<TroopId, number> {
+    return { infantry: 1, archers: 1, cavalry: 1, mages: 1, catapults: 1, healers: 1 };
 }
 
 export function newPlayerId(): string {

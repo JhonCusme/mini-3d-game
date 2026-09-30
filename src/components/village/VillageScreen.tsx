@@ -139,7 +139,8 @@ export const VillageScreen: React.FC<{ buildOpen: boolean; onCloseBuild: () => v
           </button>
         )}
         {selected.type === 'barracks' && <button className="action-btn" onClick={() => setInfoOpen(true)}>⚔️<span>Entrenar</span></button>}
-        {selected.type === 'altar' && <button className="action-btn gem" onClick={() => setInfoOpen(true)}>🔱<span>Dioses</span></button>}
+        {selected.type === 'blacksmith' && <button className="action-btn upgrade" onClick={() => setInfoOpen(true)}>⚒️<span>Mejorar</span></button>}
+        {selected.type === 'altar' && <button className="action-btn gem" onClick={() => setInfoOpen(true)}>🔱<span>Héroe</span></button>}
         {selected.type === 'townhall' && <button className="action-btn" onClick={() => setInfoOpen(true)}>🛡️<span>Defensa</span></button>}
         <button className="action-btn" onClick={() => startMove(selected.uid)}>✥<span>Mover</span></button>
       </div>

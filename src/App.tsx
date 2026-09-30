@@ -14,9 +14,9 @@ import { AttackScreen } from './components/attack/AttackScreen';
 import { VillageScreen } from './components/village/VillageScreen';
 import { Hud } from './components/Hud';
 import { Sheet } from './components/ui/Sheet';
-import { DefenseLogPanel } from './components/panels/Panels';
+import { DefenseLogPanel, TroopUpgradePanel } from './components/panels/Panels';
 
-export type PanelType = 'attack' | 'multiplayer' | 'map' | 'quests' | 'store' | 'settings' | 'log' | 'build';
+export type PanelType = 'attack' | 'multiplayer' | 'map' | 'quests' | 'store' | 'settings' | 'log' | 'build' | 'troops';
 
 const GameApp: React.FC = () => {
   const { state, offlineEarnings, dismissOfflineEarnings } = useGame();
@@ -57,6 +57,11 @@ const GameApp: React.FC = () => {
       {panel === 'store' && <Sheet title="💎 Tienda" onClose={close} wide><StoreScreen /></Sheet>}
       {panel === 'settings' && <Sheet title="⚙️ Ajustes" onClose={close}><SettingsScreen /></Sheet>}
       {panel === 'log' && <Sheet title="🛡️ Registro de defensa" onClose={close} wide><DefenseLogPanel /></Sheet>}
+      {panel === 'troops' && (
+        <Sheet title="⚒️ Personajes: Tropas y Héroe" onClose={close} wide>
+          <TroopUpgradePanel />
+        </Sheet>
+      )}
 
       {offlineEarnings > 0 && (
         <Sheet title="¡Bienvenido de vuelta!" onClose={dismissOfflineEarnings}>

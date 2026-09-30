@@ -8,7 +8,7 @@ import { HeroManager } from '../../core/HeroManager';
 import { EffectManager } from '../../core/EffectManager';
 import { UpgradeManager } from '../../core/UpgradeManager';
 import { Sheet } from '../ui/Sheet';
-import { DefensePanel, GodsPanel, TrainTroopsPanel, panel } from '../panels/Panels';
+import { DefensePanel, GodsPanel, TrainTroopsPanel, TroopUpgradePanel, panel } from '../panels/Panels';
 
 const Stat: React.FC<{ label: string; value: React.ReactNode; next?: React.ReactNode }> = ({ label, value, next }) => (
   <div className="troop-row">
@@ -52,7 +52,12 @@ export const BuildingPanel: React.FC<{ building: PlacedBuilding; onClose: () => 
       case 'barracks':
         return <Stat label="Capacidad de tropas" value={UpgradeManager.getTroopCapacity(state)} />;
       case 'blacksmith':
-        return <Stat label="Ataque extra" value={upgradeBonus('attackPower', lvl - 1)} next={upgradeBonus('attackPower', lvl)} />;
+        return (
+          <>
+            <Stat label="Nivel máx. de tropas" value={`Nv. ${lvl + 1}`} />
+            <Stat label="Ataque extra global" value={upgradeBonus('attackPower', lvl - 1)} next={upgradeBonus('attackPower', lvl)} />
+          </>
+        );
       case 'armory':
         return <Stat label="Menos bajas" value={upgradeBonus('troopHealth', lvl - 1)} next={upgradeBonus('troopHealth', lvl)} />;
       case 'arena':
@@ -97,9 +102,35 @@ export const BuildingPanel: React.FC<{ building: PlacedBuilding; onClose: () => 
           )}
         </div>
 
-        {b.type === 'barracks' && <TrainTroopsPanel />}
+        {b.type === 'blacksmith' && (
+          <div className="flex-col gap-2" style={{ marginTop: '8px' }}>
+            <b style={{ fontSize: '15px', color: 'var(--accent-gold)' }}>⚒️ Mejoras de Tropas y Héroe</b>
+            <TroopUpgradePanel initialTab="troops" />
+          </div>
+        )}
+        {b.type === 'barracks' && (
+          <div className="flex-col gap-3">
+            <TrainTroopsPanel />
+            <div style={{ marginTop: '12px', borderTop: '1px solid var(--glass-border)', paddingTop: '12px' }}>
+              <b style={{ fontSize: '15px', color: 'var(--accent-gold)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>⚒️</span> Laboratorio de Tropas
+              </b>
+              <TroopUpgradePanel initialTab="troops" />
+            </div>
+          </div>
+        )}
         {b.type === 'townhall' && <DefensePanel />}
-        {b.type === 'altar' && <GodsPanel />}
+        {b.type === 'altar' && (
+          <div className="flex-col gap-3">
+            <TroopUpgradePanel initialTab="hero" />
+            <div style={{ marginTop: '12px', borderTop: '1px solid var(--glass-border)', paddingTop: '12px' }}>
+              <b style={{ fontSize: '15px', color: 'var(--accent-gold)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>🔱</span> Panteón de los Dioses
+              </b>
+              <GodsPanel />
+            </div>
+          </div>
+        )}
       </div>
     </Sheet>
   );
