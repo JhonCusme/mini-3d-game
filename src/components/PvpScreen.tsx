@@ -117,7 +117,8 @@ export const PvpScreen: React.FC = () => {
       const army = PvpManager.buildArmy(state, selection);
       const canAttack = PvpManager.canAttack(state, selection);
       return (
-        <div className="flex-col gap-3">
+        <div className="two-col">
+          <div className="flex-col gap-3">
           <div style={panel} className="flex-col gap-2">
             <div className="flex-row justify-between">
               <b>🎯 {target.name}</b>
@@ -127,6 +128,14 @@ export const PvpScreen: React.FC = () => {
               🧱 Murallas {wallMaxHp(target)} HP · {renderGodBadge(target.defenseGod, target.defenseGodLevel)}
             </div>
             <TroopSummary troops={target.garrison} />
+          </div>
+          <button className="btn-fight" disabled={!canAttack} onClick={launchAttack} style={{ padding: '14px', fontSize: '16px' }}>
+            ⚔️ ¡Atacar! (⚡{GameConfig.pvp.energyCost})
+          </button>
+          {state.energy < GameConfig.pvp.energyCost && (
+            <p style={{ fontSize: '12px', color: 'var(--accent-danger)', textAlign: 'center' }}>No tienes energía suficiente.</p>
+          )}
+          <button className="btn-primary" onClick={() => setTarget(null)} style={{ padding: '10px' }}>← Volver</button>
           </div>
 
           <div style={panel} className="flex-col gap-2">
@@ -156,14 +165,6 @@ export const PvpScreen: React.FC = () => {
               Dios de ataque: {renderGodBadge(state.attackGod, state.attackGod ? GodManager.getLevel(state, state.attackGod) : 0)}
             </div>
           </div>
-
-          <button className="btn-fight" disabled={!canAttack} onClick={launchAttack} style={{ padding: '14px', fontSize: '16px' }}>
-            ⚔️ ¡Atacar! (⚡{GameConfig.pvp.energyCost})
-          </button>
-          {state.energy < GameConfig.pvp.energyCost && (
-            <p style={{ fontSize: '12px', color: 'var(--accent-danger)', textAlign: 'center' }}>No tienes energía suficiente.</p>
-          )}
-          <button className="btn-primary" onClick={() => setTarget(null)} style={{ padding: '10px' }}>← Volver</button>
         </div>
       );
     }
@@ -176,6 +177,7 @@ export const PvpScreen: React.FC = () => {
             onClick={() => setRefresh(r => r + 1)}>🔄 Buscar otros</button>
         </div>
         {loading && <p style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>Buscando rivales…</p>}
+        <div className="card-grid">
         {!loading && opponents.map(o => (
           <div key={o.playerId} style={panel} className="flex-col gap-2">
             <div className="flex-row gap-2" style={{ alignItems: 'center' }}>
@@ -195,6 +197,7 @@ export const PvpScreen: React.FC = () => {
             </div>
           </div>
         ))}
+        </div>
       </div>
     );
   };
@@ -209,6 +212,7 @@ export const PvpScreen: React.FC = () => {
         <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
           Deja guerreros en la guarnición: defenderán tu aldea cuando otros jugadores te ataquen. Las tropas en defensa no pueden atacar.
         </p>
+        <div className="two-col">
         <div style={panel} className="flex-col gap-2">
           <div className="flex-row justify-between"><b>🛡️ Guarnición</b><span style={{ fontSize: '12px' }}>⚔️ {troopPower(state.garrison)}</span></div>
           {TROOP_IDS.filter(id => state.troops[id] > 0 || state.garrison[id] > 0).map(id => (
@@ -232,6 +236,7 @@ export const PvpScreen: React.FC = () => {
           )}
         </div>
 
+        <div className="flex-col gap-3">
         <div style={panel} className="flex-col gap-2">
           <div className="flex-row justify-between">
             <b>🧱 Murallas Nv.{wallsLevel}</b>
@@ -261,13 +266,15 @@ export const PvpScreen: React.FC = () => {
             <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Desbloquea Dioses en la pestaña 🔱 Dioses.</p>
           )}
         </div>
+        </div>
+        </div>
       </div>
     );
   };
 
   // ---------- GODS ----------
   const renderGods = () => (
-    <div className="flex-col gap-3">
+    <div className="card-grid">
       {GOD_IDS.map(id => {
         const god = GameConfig.gods[id];
         const level = GodManager.getLevel(state, id);
@@ -324,7 +331,7 @@ export const PvpScreen: React.FC = () => {
 
   // ---------- LOG ----------
   const renderLog = () => (
-    <div className="flex-col gap-2">
+    <div className="card-grid">
       {state.defenseLog.length === 0 && (
         <p style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '13px' }}>Nadie ha atacado tu aldea todavía.</p>
       )}

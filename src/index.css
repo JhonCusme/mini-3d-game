@@ -1075,3 +1075,245 @@ button:disabled {
   pointer-events: none;
   z-index: 0;
 }
+
+/* ===== LANDSCAPE LAYOUT ===== */
+#root {
+  max-width: none;
+  height: 100vh;
+  height: 100dvh;
+}
+
+.app-shell {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.app-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Bottom nav becomes a side rail */
+.bottom-nav {
+  position: relative;
+  flex-direction: column;
+  justify-content: center;
+  align-items: stretch;
+  width: 78px;
+  height: 100%;
+  padding: 8px 6px;
+  gap: 2px;
+  border-top: none;
+  border-right: 1px solid rgba(255, 215, 0, 0.2);
+  box-shadow: 10px 0 30px rgba(0, 0, 0, 0.4);
+  padding-left: max(6px, env(safe-area-inset-left));
+  box-sizing: content-box;
+}
+
+.bottom-nav .nav-btn {
+  flex: 0 1 auto;
+  padding: 6px 4px;
+}
+
+.nav-btn.active {
+  transform: translateX(3px);
+}
+
+.nav-btn.active::before {
+  bottom: auto;
+  top: 50%;
+  left: -4px;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 22px;
+}
+
+.top-bar {
+  padding: 6px 16px;
+  padding-right: max(16px, env(safe-area-inset-right));
+}
+
+.player-avatar-small {
+  width: 30px;
+  height: 30px;
+}
+
+.screen-container {
+  padding: 12px 16px;
+  padding-right: max(16px, env(safe-area-inset-right));
+  min-height: 0;
+}
+
+.screen-container > * {
+  width: 100%;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.screen-container.screen-full {
+  padding: 8px;
+  padding-right: max(8px, env(safe-area-inset-right));
+}
+
+.screen-container.screen-full > * {
+  max-width: none;
+}
+
+/* Cards flow into columns on wide screens */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+.two-col {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+/* Village scene: army summary floats over the 3D world */
+.army-overlay {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 2;
+  background: rgba(26, 14, 46, 0.75);
+}
+
+/* Modals and battles must fit short landscape screens */
+.building-modal-overlay {
+  padding: 12px;
+}
+
+.building-modal {
+  max-width: 520px;
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  padding: 18px;
+}
+
+.modal-building-img img {
+  width: 80px !important;
+  height: 80px !important;
+}
+
+.battle-fullscreen {
+  overflow-y: auto;
+  justify-content: flex-start;
+}
+
+.battle-content {
+  margin: auto;
+  max-width: 420px;
+  padding: 16px;
+  gap: 10px;
+}
+
+.battle-content.wide {
+  max-width: 860px;
+}
+
+.pvp-battle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 14px;
+  width: 100%;
+  align-items: start;
+}
+
+.creation-screen {
+  justify-content: flex-start;
+  padding: 16px;
+}
+
+.creation-screen > * {
+  margin: auto;
+}
+
+/* Portrait on a phone/tablet: ask to rotate */
+.rotate-hint {
+  display: none;
+}
+
+@media (orientation: portrait) and (pointer: coarse) {
+  .rotate-hint {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: 5000;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    text-align: center;
+    padding: 24px;
+    background: radial-gradient(ellipse at center, #261447 0%, #0f0820 70%, #050210 100%);
+  }
+
+  .rotate-hint-icon {
+    font-size: 64px;
+    animation: rotate-phone 2s ease-in-out infinite;
+  }
+}
+
+@keyframes rotate-phone {
+  0%, 20% { transform: rotate(0deg); }
+  50%, 80% { transform: rotate(-90deg); }
+  100% { transform: rotate(0deg); }
+}
+
+/* Building modal: header on the left, actions on the right */
+.building-modal.wide {
+  max-width: 760px;
+}
+
+.modal-layout {
+  display: grid;
+  grid-template-columns: 170px 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+.modal-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  position: sticky;
+  top: 0;
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+@media (max-width: 560px) {
+  .modal-layout { grid-template-columns: 1fr; }
+  .modal-header { position: static; }
+}
+
+/* Character creation fits a short, wide screen */
+@media (min-width: 640px) {
+  .avatar-grid {
+    grid-template-columns: repeat(6, 1fr);
+    max-width: 720px;
+  }
+  .kingdom-grid {
+    max-width: 560px;
+  }
+}

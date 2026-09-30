@@ -16,7 +16,7 @@ export const QuestScreen = () => {
         </p>
       </div>
 
-      <div className="flex-col gap-3">
+      <div className="card-grid">
         {GameConfig.quests.map((quest, i) => {
           const progress = state.quests[quest.id]?.progress || 0;
           const isCompleted = state.quests[quest.id]?.completed || false;

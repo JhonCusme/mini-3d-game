@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { GameProvider, useGame } from './core/GameContext';
 import './index.css';
 
@@ -36,24 +36,49 @@ const GameApp: React.FC = () => {
           </div>
         </div>
       )}
-      <TopBar />
-      <div className="screen-container animate-pop" key={currentView}>
-        {currentView === 'home' && <MainScreen />}
-        {currentView === 'map' && <MapScreen />}
-        {currentView === 'pvp' && <PvpScreen />}
-        {currentView === 'quests' && <QuestScreen />}
-        {currentView === 'store' && <StoreScreen />}
-        {currentView === 'settings' && <SettingsScreen />}
+      <div className="app-shell">
+        <BottomNav currentView={currentView} onViewChange={setCurrentView} badges={{ pvp: state.defenseLog.filter(e => !e.seen).length }} />
+        <div className="app-main">
+          <TopBar />
+          <div className={`screen-container animate-pop ${currentView === 'home' ? 'screen-full' : ''}`} key={currentView}>
+            {currentView === 'home' && <MainScreen />}
+            {currentView === 'map' && <MapScreen />}
+            {currentView === 'pvp' && <PvpScreen />}
+            {currentView === 'quests' && <QuestScreen />}
+            {currentView === 'store' && <StoreScreen />}
+            {currentView === 'settings' && <SettingsScreen />}
+          </div>
+        </div>
       </div>
-      <BottomNav currentView={currentView} onViewChange={setCurrentView} badges={{ pvp: state.defenseLog.filter(e => !e.seen).length }} />
     </>
   );
 };
 
+// The game is landscape-only: ask phones held upright to rotate
+const RotateHint: React.FC = () => (
+  <div className="rotate-hint">
+    <div className="rotate-hint-icon">📱</div>
+    <h2 className="title-clash" style={{ color: 'var(--accent-gold)', fontSize: '22px' }}>Gira tu dispositivo</h2>
+    <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Mini Kingdom se juega en horizontal.</p>
+  </div>
+);
+
+function lockLandscape() {
+  const orientation = screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> };
+  orientation?.lock?.('landscape').catch(() => { /* only allowed in fullscreen/installed apps */ });
+}
+
 function App() {
+  useEffect(() => {
+    lockLandscape();
+    window.addEventListener('pointerdown', lockLandscape, { once: true });
+    return () => window.removeEventListener('pointerdown', lockLandscape);
+  }, []);
+
   return (
     <GameProvider>
       <GameApp />
+      <RotateHint />
     </GameProvider>
   );
 }

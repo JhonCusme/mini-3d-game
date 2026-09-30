@@ -6,6 +6,7 @@ import { EconomyManager } from '../core/EconomyManager';
 import { HeroManager } from '../core/HeroManager';
 import { EffectManager } from '../core/EffectManager';
 import { PvpManager } from '../core/pvp/PvpManager';
+import { createPortal } from 'react-dom';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Html, useGLTF } from '@react-three/drei';
 
@@ -198,11 +199,13 @@ export const MainScreen: React.FC = () => {
     if (!selectedBuilding) return null;
     const b = selectedBuilding;
 
-    return (
+    // Portal: the screen container is animated (transform), which would trap a fixed overlay inside it
+    return createPortal(
       <div className="building-modal-overlay" onClick={() => setSelectedBuilding(null)} style={{ zIndex: 1000 }}>
-        <div className="building-modal animate-pop" onClick={e => e.stopPropagation()}>
-          <div className="flex-col gap-4" style={{ alignItems: 'center' }}>
+        <div className="building-modal wide animate-pop" onClick={e => e.stopPropagation()}>
+          <div className="modal-layout">
             {/* Header */}
+            <div className="modal-header">
             <div className="modal-building-img">
               <img src={b.icon} alt={b.name} style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '16px', boxShadow: '0 4px 15px rgba(0,0,0,0.5)', border: '2px solid var(--accent-gold)' }} />
             </div>
@@ -212,6 +215,9 @@ export const MainScreen: React.FC = () => {
             <div style={{ fontSize: '13px', color: 'var(--accent-gold)', background: 'rgba(255,215,0,0.1)', padding: '4px 14px', borderRadius: '12px' }}>
               Nivel {getBuildingLevel(b)}
             </div>
+            </div>
+
+            <div className="modal-body">
 
             {/* Castle info */}
             {b.type === 'castle' && (
@@ -340,17 +346,19 @@ export const MainScreen: React.FC = () => {
             >
               Cerrar
             </button>
+            </div>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
     );
   };
 
   return (
-    <div className="flex-col gap-3" style={{ height: '100%', flex: 1, paddingBottom: '20px' }}>
+    <div className="flex-col gap-3" style={{ height: '100%', flex: 1, minHeight: 0 }}>
       
       {/* 3D World Canvas */}
-      <div style={{ width: '100%', height: '420px', borderRadius: '24px', overflow: 'hidden', position: 'relative', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', border: '2px solid rgba(255,215,0,0.2)' }}>
+      <div style={{ width: '100%', flex: 1, minHeight: '240px', borderRadius: '24px', overflow: 'hidden', position: 'relative', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', border: '2px solid rgba(255,215,0,0.2)' }}>
         
         {/* Sky background gradient */}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, #87CEEB 0%, #E0F6FF 100%)', zIndex: 0 }} />
@@ -394,10 +402,9 @@ export const MainScreen: React.FC = () => {
             />
           ))}
         </Canvas>
-      </div>
 
       {/* Army summary */}
-      <div className="glass-panel flex-row justify-between" style={{ padding: '14px 20px', margin: '0 4px' }}>
+      <div className="glass-panel flex-row justify-between army-overlay" style={{ padding: '8px 16px' }}>
         <div className="flex-row gap-3">
           <span style={{ fontSize: '24px' }}>⚔️</span>
           <div className="flex-col">
@@ -417,6 +424,7 @@ export const MainScreen: React.FC = () => {
             );
           })}
         </div>
+      </div>
       </div>
 
       {renderUpgradeModal()}

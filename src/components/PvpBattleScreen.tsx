@@ -60,7 +60,9 @@ export const PvpBattleScreen: React.FC<Props> = ({ opponent, result, outcome, on
   return (
     <div className="battle-fullscreen">
       <div className={`battle-bg ${bgClass}`} />
-      <div className="battle-content animate-pop" style={{ gap: '12px' }}>
+      <div className="battle-content wide animate-pop" style={{ gap: '12px' }}>
+       <div className="pvp-battle-grid">
+        <div className="flex-col gap-2" style={{ alignItems: 'center', width: '100%' }}>
         {!finished ? (
           <h2 className="title-clash" style={{ fontSize: '22px', color: 'var(--accent-danger)' }}>
             {step < 0 ? '¡A la carga!' : `Ronda ${current?.round}`}
@@ -86,6 +88,9 @@ export const PvpBattleScreen: React.FC<Props> = ({ opponent, result, outcome, on
         <Bar label="Tus tropas" value={attackerHp} max={result.attackerMaxHp} color="linear-gradient(90deg,#2ed573,#7bed9f)" />
         {result.wallMaxHp > 0 && <Bar label="🧱 Murallas" value={wallHp} max={result.wallMaxHp} color="linear-gradient(90deg,#a0a0a0,#dcdcdc)" />}
         <Bar label="Defensores" value={defenderHp} max={result.defenderMaxHp} color="linear-gradient(90deg,#ff4757,#ff6b81)" />
+        </div>
+
+        <div className="flex-col gap-2" style={{ width: '100%' }}>
 
         <div style={{
           width: '100%', maxHeight: '150px', overflowY: 'auto', padding: '10px', borderRadius: '12px',
@@ -133,6 +138,8 @@ export const PvpBattleScreen: React.FC<Props> = ({ opponent, result, outcome, on
             Saltar ⏩
           </button>
         )}
+        </div>
+       </div>
       </div>
     </div>
   );
