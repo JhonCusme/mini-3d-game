@@ -15,7 +15,8 @@ export class SupabasePvpService implements PvpService {
     private readonly key: string;
 
     constructor(url: string, key: string) {
-        this.baseUrl = url.replace(/\/$/, '') + '/rest/v1';
+        // Accept both the project URL and the REST URL (.../rest/v1/)
+        this.baseUrl = url.trim().replace(/\/+$/, '').replace(/\/rest\/v1$/, '') + '/rest/v1';
         this.key = key;
     }
 
