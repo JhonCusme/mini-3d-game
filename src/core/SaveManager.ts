@@ -5,7 +5,7 @@ const SAVE_KEY = 'mini_kingdom_save_data';
 export class SaveManager {
     static save(state: GameState): void {
         try {
-            const serialized = JSON.stringify(state);
+            const serialized = JSON.stringify({ ...state, lastSaveTime: Date.now() });
             localStorage.setItem(SAVE_KEY, serialized);
         } catch (e) {
             console.error('Error saving game data', e);

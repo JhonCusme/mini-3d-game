@@ -33,7 +33,8 @@ export class UpgradeManager {
     }
 
     static trainTroop(state: GameState, troopId: keyof typeof GameConfig.troops): GameState {
-        const currentTotalTroops = Object.values(state.troops).reduce((a, b) => a + b, 0);
+        const currentTotalTroops = Object.values(state.troops).reduce((a, b) => a + b, 0)
+            + Object.values(state.garrison || {}).reduce((a, b) => a + b, 0);
         const maxCapacity = this.getTroopCapacity(state);
 
         if (currentTotalTroops >= maxCapacity) {

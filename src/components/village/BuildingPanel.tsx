@@ -1,0 +1,106 @@
+import { useGame } from '../../core/GameContext';
+import { GameConfig } from '../../config/GameConfig';
+import {
+  BUILDINGS, buildingHp, defenseDamage, mineCapacity, mineRatePerSecond,
+} from '../../config/BuildingsConfig';
+import type { PlacedBuilding } from '../../core/GameState';
+import { HeroManager } from '../../core/HeroManager';
+import { EffectManager } from '../../core/EffectManager';
+import { UpgradeManager } from '../../core/UpgradeManager';
+import { Sheet } from '../ui/Sheet';
+import { DefensePanel, GodsPanel, TrainTroopsPanel, panel } from '../panels/Panels';
+
+const Stat: React.FC<{ label: string; value: React.ReactNode; next?: React.ReactNode }> = ({ label, value, next }) => (
+  <div className="troop-row">
+    <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>{label}</span>
+    <span style={{ fontWeight: 700 }}>
+      {value}{next !== undefined && <span style={{ color: 'var(--accent-success)', marginLeft: 6 }}>→ {next}</span>}
+    </span>
+  </div>
+);
+
+function upgradeBonus(id: 'attackPower' | 'troopHealth' | 'critRate', level: number): string {
+  const u = GameConfig.upgrades[id];
+  if (id === 'critRate') return `${Math.round(level * u.effectBase * u.effectMultiplier)}%`;
+  if (level <= 0) return '0%';
+  return `${Math.round(u.effectBase * Math.pow(u.effectMultiplier, level - 1))}%`;
+}
+
+export const BuildingPanel: React.FC<{ building: PlacedBuilding; onClose: () => void }> = ({ building: b, onClose }) => {
+  const { state, upgradeHero } = useGame();
+  const def = BUILDINGS[b.type];
+  const lvl = Math.max(1, b.level);
+
+  const renderStats = () => {
+    switch (b.type) {
+      case 'townhall':
+        return (
+          <>
+            <Stat label="Nivel máximo del resto de edificios" value={lvl + 1} />
+            <Stat label="Cañones permitidos" value={BUILDINGS.cannon.maxCount(lvl)} />
+            <Stat label="Torres de arqueros permitidas" value={BUILDINGS.archertower.maxCount(lvl)} />
+          </>
+        );
+      case 'goldmine':
+        return (
+          <>
+            <Stat label="Producción" value={`${Math.round(mineRatePerSecond(lvl) * 3600)}/h`} next={`${Math.round(mineRatePerSecond(lvl + 1) * 3600)}/h`} />
+            <Stat label="Capacidad" value={mineCapacity(lvl)} next={mineCapacity(lvl + 1)} />
+            <Stat label="Acumulado" value={`🪙 ${Math.floor(b.stored)}`} />
+          </>
+        );
+      case 'barracks':
+        return <Stat label="Capacidad de tropas" value={UpgradeManager.getTroopCapacity(state)} />;
+      case 'blacksmith':
+        return <Stat label="Ataque extra" value={upgradeBonus('attackPower', lvl - 1)} next={upgradeBonus('attackPower', lvl)} />;
+      case 'armory':
+        return <Stat label="Menos bajas" value={upgradeBonus('troopHealth', lvl - 1)} next={upgradeBonus('troopHealth', lvl)} />;
+      case 'arena':
+        return <Stat label="Golpe crítico" value={upgradeBonus('critRate', lvl - 1)} next={upgradeBonus('critRate', lvl)} />;
+      case 'cannon':
+      case 'archertower':
+        return (
+          <>
+            <Stat label="Daño por disparo" value={defenseDamage(b.type, lvl)} next={defenseDamage(b.type, lvl + 1)} />
+            <Stat label="Alcance" value={`${def.range} casillas`} />
+            <Stat label="Cadencia" value={`${def.fireRate}s`} />
+          </>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const heroCost = HeroManager.getUpgradeCost(state.heroLevel);
+
+  return (
+    <Sheet title={<>{def.name} <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Nv.{b.level}</span></>} onClose={onClose} wide>
+      <div className="flex-col gap-3">
+        <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{def.description}</p>
+        <div className="two-col">
+          <div style={panel} className="flex-col gap-2">
+            <Stat label="Vida" value={buildingHp(b.type, lvl)} />
+            {renderStats()}
+          </div>
+
+          {b.type === 'altar' && (
+            <div style={panel} className="flex-col gap-2">
+              <b>🦸 Héroe Nv.{state.heroLevel}</b>
+              <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                +{Math.round((state.heroLevel - 1) * GameConfig.heroPowerMultiplierPerLevel * 100)}% de poder para todas tus tropas.
+              </p>
+              <button className="btn-gem" disabled={state.gems < heroCost} style={{ padding: '10px' }}
+                onClick={() => { upgradeHero(); EffectManager.fireHeroUpgrade(); }}>
+                Subir héroe — 💎 {heroCost}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {b.type === 'barracks' && <TrainTroopsPanel />}
+        {b.type === 'townhall' && <DefensePanel />}
+        {b.type === 'altar' && <GodsPanel />}
+      </div>
+    </Sheet>
+  );
+};

@@ -1,5 +1,6 @@
 import type { GameState } from './GameState';
 import { GameConfig } from '../config/GameConfig';
+import { VillageManager } from './VillageManager';
 
 export class EconomyManager {
     static tick(state: GameState): GameState {
@@ -19,18 +20,8 @@ export class EconomyManager {
             newState.lastEnergyUpdate = Date.now();
         }
 
-        // Generate passive coins
-        const economyLevel = newState.upgrades.economy || 0;
-        const upgradeConfig = GameConfig.upgrades.economy;
-        // Total passive coins = base + (level * effectBase * multiplier)
-        let coinGain = GameConfig.coinsPerTick;
-        if (economyLevel > 0) {
-            coinGain += (economyLevel * upgradeConfig.effectBase) * upgradeConfig.effectMultiplier;
-        }
-        
-        newState.coins += coinGain;
-
-        return newState;
+        // Gold is produced by the mine and collected by tapping it
+        return VillageManager.completeUpgrades(VillageManager.produce(newState, GameConfig.tickRateMs / 1000));
     }
 
     static canAfford(state: GameState, cost: number, currency: 'coins' | 'gems' = 'coins'): boolean {

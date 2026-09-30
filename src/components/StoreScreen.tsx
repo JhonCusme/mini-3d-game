@@ -50,6 +50,7 @@ export const StoreScreen = () => {
         </p>
       </div>
 
+      <div className="card-grid">
       {/* Daily Reward */}
       <div className={`store-card daily ${canClaimDaily ? 'pulse-glow' : ''}`}>
         <div className="flex-row gap-3">
@@ -132,6 +133,7 @@ export const StoreScreen = () => {
         {loadingIAP && (
           <p style={{ fontSize: '12px', color: 'var(--accent-gem-light)', textAlign: 'center' }}>Procesando compra...</p>
         )}
+      </div>
       </div>
     </div>
   );

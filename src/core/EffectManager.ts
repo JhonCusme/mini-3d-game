@@ -28,6 +28,17 @@ export class EffectManager {
         frame();
     }
 
+    static fireCrit() {
+        confetti({
+            particleCount: 60,
+            spread: 360,
+            startVelocity: 35,
+            origin: { x: 0.5, y: 0.4 },
+            colors: ['#FF4757', '#FFA502', '#FFFFFF'],
+            shapes: ['star']
+        });
+    }
+
     static fireChestLoot() {
         confetti({
             particleCount: 150,

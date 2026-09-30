@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, MouseEvent } from 'react';
+import { useState, useMemo, useRef, type MouseEvent } from 'react';
 import { useGame } from '../core/GameContext';
 import type { AvatarType, KingdomType } from '../core/GameState';
 import { EffectManager } from '../core/EffectManager';
@@ -34,8 +34,6 @@ const TiltCard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const rotateY = ((x - centerX) / centerX) * 20;
     
     // Add dynamic lighting/glare
-    const glareX = (x / rect.width) * 100;
-    const glareY = (y / rect.height) * 100;
     
     setStyle({
       transform: `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.1)`,

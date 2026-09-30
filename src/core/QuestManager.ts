@@ -22,10 +22,19 @@ export class QuestManager {
                     currentProgress = newState.territoryProgress;
                     break;
                 case 'open_chests':
-                    // We need to track opened chests in GameState for this, 
-                    // for simplicity let's mock progress by just setting it if they have few chests left
-                    // In a real app we'd add 'chestsOpened' to GameState.
-                    currentProgress = (newState.quests[quest.id]?.progress || 0);
+                    currentProgress = newState.chestsOpened || 0;
+                    break;
+                case 'battles_won':
+                    currentProgress = newState.battlesWon || 0;
+                    break;
+                case 'hero_level':
+                    currentProgress = newState.heroLevel;
+                    break;
+                case 'upgrade_attack':
+                    currentProgress = newState.upgrades.attackPower || 0;
+                    break;
+                case 'upgrade_crit':
+                    currentProgress = newState.upgrades.critRate || 0;
                     break;
             }
 
