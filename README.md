@@ -27,12 +27,14 @@ Sin configuración, los rivales son aldeas simuladas cerca de tus trofeos y, mie
 
 1. Crea un proyecto gratis en [supabase.com](https://supabase.com).
 2. En **SQL Editor**, ejecuta [`supabase/schema.sql`](supabase/schema.sql).
-3. En **Project Settings → API**, copia la URL y la clave `anon` y añádelas a `.env`:
+3. En **Project Settings → API Keys**, copia la URL del proyecto y la clave pública (`sb_publishable_...` o la antigua `anon` que empieza por `eyJ`) y añádelas a `.env.local` (no se sube a git):
 
    ```
    VITE_SUPABASE_URL=https://xxxx.supabase.co
-   VITE_SUPABASE_ANON_KEY=eyJ...
+   VITE_SUPABASE_ANON_KEY=sb_publishable_...
    ```
+
+   Nunca uses la clave `sb_secret_...` / `service_role` en el juego.
 
 4. Reinicia `npm run dev`. La pestaña Guerra mostrará "🌐 En línea". Si hay pocos jugadores reales cerca de tus trofeos, la lista se completa con bots (marcados con 🤖).
 

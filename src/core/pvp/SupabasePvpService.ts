@@ -25,7 +25,9 @@ export class SupabasePvpService implements PvpService {
             ...init,
             headers: {
                 apikey: this.key,
-                Authorization: `Bearer ${this.key}`,
+                // Legacy anon keys are JWTs and go in Authorization too;
+                // new publishable keys (sb_publishable_...) only go in apikey.
+                ...(this.key.startsWith('eyJ') ? { Authorization: `Bearer ${this.key}` } : {}),
                 'Content-Type': 'application/json',
                 ...(init.headers || {}),
             },
