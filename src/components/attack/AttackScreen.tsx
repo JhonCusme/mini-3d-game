@@ -194,35 +194,58 @@ export const AttackScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => 
       {sim && opponent && !outcome && (
         <>
           <div className="attack-top-left">
-            <div className="hud-profile">
-              <img src={AVATAR_IMAGES[opponent.avatar]} alt="" />
-              <div className="flex-col">
+            <div className="hud-profile" style={{ padding: '6px 12px 6px 6px', background: 'rgba(20, 12, 40, 0.85)', border: '2px solid rgba(255, 215, 0, 0.4)' }}>
+              <img src={AVATAR_IMAGES[opponent.avatar]} alt="" style={{ width: '48px', height: '48px', borderRadius: '12px' }} />
+              <div className="flex-col" style={{ gap: '2px' }}>
+                <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 800 }}>
+                  🏰 Aldea enemiga de:
+                </span>
                 <div className="flex-row gap-1" style={{ alignItems: 'center' }}>
-                  <b>{opponent.name}</b>
+                  <b style={{ fontSize: '16px', color: '#fff', textShadow: '0 2px 4px #000' }}>{opponent.name}</b>
                   {opponent.isSystemVillage ? (
-                    <span style={{ fontSize: '9px', background: '#3742fa', color: '#fff', padding: '1px 5px', borderRadius: '4px', fontWeight: 800 }}>
+                    <span style={{ fontSize: '9px', background: '#3742fa', color: '#fff', padding: '1px 6px', borderRadius: '4px', fontWeight: 800, textTransform: 'uppercase' }}>
                       SISTEMA
                     </span>
                   ) : (
-                    <span style={{ fontSize: '9px', background: '#2ed573', color: '#1a1100', padding: '1px 5px', borderRadius: '4px', fontWeight: 800 }}>
+                    <span style={{ fontSize: '9px', background: '#2ed573', color: '#1a1100', padding: '1px 6px', borderRadius: '4px', fontWeight: 800, textTransform: 'uppercase' }}>
                       JUGADOR
                     </span>
                   )}
                 </div>
-                <span style={{ fontSize: '11px', color: 'var(--accent-gold)' }}>
-                  {oppKingdom.icon} {oppKingdom.name}
-                </span>
-                <span>{leagueFor(opponent.trophies).icon} {opponent.trophies} 🏆 · Nv.{opponent.level}</span>
+                <div className="flex-row gap-2" style={{ alignItems: 'center', fontSize: '11px' }}>
+                  <span style={{ color: 'var(--accent-gold)' }}>
+                    {oppKingdom.icon} {oppKingdom.name}
+                  </span>
+                  <span style={{ color: 'rgba(255,255,255,0.85)' }}>
+                    Ayunt. Nv.{opponent.level} · {leagueFor(opponent.trophies).icon} {opponent.trophies} 🏆
+                  </span>
+                </div>
               </div>
             </div>
-            <div className="attack-loot">Botín disponible: <b>🪙 {opponent.lootableCoins}</b></div>
+            <div className="attack-loot">Botín disponible: <b>🪙 {opponent.lootableCoins.toLocaleString()}</b></div>
             {!sim.started && preview && (
               <div className="attack-loot">Victoria <b style={{ color: '#7bed9f' }}>+{preview.win}🏆</b> · Derrota <b style={{ color: '#ff6b6b' }}>{preview.lose}🏆</b></div>
             )}
           </div>
 
           <div className="attack-top-center">
-            <div className="attack-timer">{sim.started ? `${mm}:${ss}` : 'Suelta tus tropas'}</div>
+            {!sim.started ? (
+              <div style={{
+                background: 'rgba(20, 12, 40, 0.85)',
+                border: '1px solid rgba(255, 215, 0, 0.5)',
+                borderRadius: '12px',
+                padding: '4px 14px',
+                textAlign: 'center',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+              }}>
+                <div style={{ fontSize: '11px', color: 'var(--accent-gold)', fontWeight: 800, textTransform: 'uppercase' }}>
+                  ⚔️ Objetivo: Aldea de {opponent.name}
+                </div>
+                <div style={{ fontSize: '12px', color: '#fff' }}>Suelta tus tropas para iniciar el ataque</div>
+              </div>
+            ) : (
+              <div className="attack-timer">{mm}:{ss}</div>
+            )}
             <div className="attack-stars">
               {[0, 1, 2].map(i => <span key={i} className={i < sim.stars ? 'on' : ''}>★</span>)}
               <b>{Math.round(sim.destruction * 100)}%</b>
@@ -283,6 +306,13 @@ export const AttackScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => 
           <div className="attack-stars big">
             {[0, 1, 2].map(i => <span key={i} className={i < sim.stars ? 'on' : ''}>★</span>)}
           </div>
+          <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+            {sim.stars > 0 ? 'Has saqueado la aldea de' : 'Fuiste derrotado en la aldea de'}{' '}
+            <b style={{ color: 'var(--accent-gold)' }}>{opponent.name}</b>{' '}
+            <span style={{ fontSize: '11px', opacity: 0.8 }}>
+              {opponent.isSystemVillage ? '(Aldea del Sistema)' : '(Jugador Real)'}
+            </span>
+          </p>
           <p>Destrucción total: <b>{Math.round(sim.destruction * 100)}%</b></p>
           <div className="attack-result-rows">
             <div><span>Botín</span><b style={{ color: 'var(--accent-gold)' }}>+{outcome.coinsStolen} 🪙</b></div>
