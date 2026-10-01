@@ -85,8 +85,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 if (!active) return;
                 if (cloudData && cloudData.hasCompletedSetup) {
                     const prepared = VillageManager.completeUpgrades(VillageManager.ensureVillage(cloudData));
-                    setState(prepared);
-                    SaveManager.save(prepared);
+                    const now = Date.now();
+                    const seconds = Math.max(0, (now - (cloudData.lastSaveTime || now)) / 1000);
+                    const caughtUp = EconomyManager.tick(prepared, seconds, now);
+                    setState(caughtUp);
+                    SaveManager.save(caughtUp);
                 } else if (stateRef.current.hasCompletedSetup) {
                     saveToCloud(stateRef.current);
                 }
@@ -101,17 +104,26 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     }, [user?.id, user?.isGuest]);
 
-    // The gold mine kept producing while the game was closed
+    // The gold mine and buildings kept progressing while the game was closed
     useEffect(() => {
         const current = stateRef.current;
         if (!current.hasCompletedSetup || !current.lastSaveTime) return;
-        const seconds = Math.max(0, (Date.now() - current.lastSaveTime) / 1000);
-        if (seconds < 60) return;
+        const now = Date.now();
+        const seconds = Math.max(0, (now - current.lastSaveTime) / 1000);
+        if (seconds < 2) return;
+
         const storedBefore = current.village.reduce((s, b) => s + b.stored, 0);
-        const after = VillageManager.produce(current, seconds);
-        const produced = Math.floor(after.village.reduce((s, b) => s + b.stored, 0) - storedBefore);
-        setState((prev) => VillageManager.produce(prev, seconds));
-        if (produced > 0) setOfflineEarnings(produced);
+        let updated = EconomyManager.tick(current, seconds, now);
+        updated = QuestManager.checkQuests(updated);
+        const storedAfter = updated.village.reduce((s, b) => s + b.stored, 0);
+        const produced = Math.floor(storedAfter - storedBefore);
+
+        stateRef.current = updated;
+        SaveManager.save(updated);
+        setState(updated);
+        if (produced > 0 && seconds >= 10) {
+            setOfflineEarnings(produced);
+        }
     }, []);
 
     useEffect(() => {
@@ -160,18 +172,66 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return () => clearTimeout(id);
     }, [snapshotKey]);
 
-    // Game Loop
+    // Game Loop with delta time calculation and Page Visibility API (handles tab switching and background)
     useEffect(() => {
-        const intervalId = setInterval(() => {
+        let lastTime = Date.now();
+
+        const processTick = () => {
+            const now = Date.now();
+            const elapsedSeconds = Math.max(0, (now - lastTime) / 1000);
+            lastTime = now;
+
+            if (elapsedSeconds <= 0.05) return;
+
             setState((prev) => {
-                let next = EconomyManager.tick(prev);
+                let next = EconomyManager.tick(prev, elapsedSeconds, now);
                 next = QuestManager.checkQuests(next);
                 SaveManager.save(next); // Auto-save on tick
                 return next;
             });
-        }, GameConfig.tickRateMs);
+        };
 
-        return () => clearInterval(intervalId);
+        const intervalId = setInterval(processTick, GameConfig.tickRateMs);
+
+        // When switching back to the browser tab or focusing the window, immediately catch up
+        const handleResume = () => {
+            processTick();
+        };
+
+        // When switching away or closing, immediately save state
+        const handlePauseOrUnload = () => {
+            const now = Date.now();
+            const elapsedSeconds = Math.max(0, (now - lastTime) / 1000);
+            lastTime = now;
+            const current = stateRef.current;
+            if (current.hasCompletedSetup) {
+                const finalState = EconomyManager.tick(current, elapsedSeconds, now);
+                SaveManager.save(finalState);
+            }
+        };
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                handleResume();
+            } else {
+                handlePauseOrUnload();
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('focus', handleResume);
+        window.addEventListener('blur', handlePauseOrUnload);
+        window.addEventListener('pagehide', handlePauseOrUnload);
+        window.addEventListener('beforeunload', handlePauseOrUnload);
+
+        return () => {
+            clearInterval(intervalId);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('focus', handleResume);
+            window.removeEventListener('blur', handlePauseOrUnload);
+            window.removeEventListener('pagehide', handlePauseOrUnload);
+            window.removeEventListener('beforeunload', handlePauseOrUnload);
+        };
     }, []);
 
     const completeSetup = (name: string, avatar: AvatarType, kingdom: KingdomType) => {

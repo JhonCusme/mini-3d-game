@@ -3,8 +3,12 @@ import { GameConfig } from '../config/GameConfig';
 import { VillageManager } from './VillageManager';
 
 export class EconomyManager {
-    static tick(state: GameState): GameState {
-        const newState = { ...state };
+    static tick(
+        state: GameState,
+        deltaSeconds: number = GameConfig.tickRateMs / 1000,
+        now: number = Date.now()
+    ): GameState {
+        let newState = { ...state };
 
         // Energy regeneration logic (Emerald Kingdom regenerates 30% faster)
         const regenTickMs = newState.playerKingdom === 'emerald'
@@ -12,20 +16,27 @@ export class EconomyManager {
             : GameConfig.energyRegenTickMs;
 
         if (newState.energy < GameConfig.maxEnergy) {
-            const timeSinceLastUpdate = Date.now() - (newState.lastEnergyUpdate || Date.now());
+            const timeSinceLastUpdate = now - (newState.lastEnergyUpdate || now);
             const energyToRecover = Math.floor(timeSinceLastUpdate / regenTickMs);
             
             if (energyToRecover > 0) {
                 newState.energy = Math.min(GameConfig.maxEnergy, newState.energy + energyToRecover);
                 // Update lastEnergyUpdate leaving the remainder
-                newState.lastEnergyUpdate = Date.now() - (timeSinceLastUpdate % regenTickMs);
+                newState.lastEnergyUpdate = now - (timeSinceLastUpdate % regenTickMs);
             }
         } else {
-            newState.lastEnergyUpdate = Date.now();
+            newState.lastEnergyUpdate = now;
         }
 
-        // Gold is produced by the mine and collected by tapping it
-        return VillageManager.completeUpgrades(VillageManager.produce(newState, GameConfig.tickRateMs / 1000));
+        // Gold is produced by the mine according to real elapsed seconds
+        if (deltaSeconds > 0) {
+            newState = VillageManager.produce(newState, deltaSeconds);
+        }
+
+        // Building upgrades finish when upgradingUntil <= now
+        newState = VillageManager.completeUpgrades(newState, now);
+
+        return newState;
     }
 
     static canAfford(state: GameState, cost: number, currency: 'coins' | 'gems' = 'coins'): boolean {

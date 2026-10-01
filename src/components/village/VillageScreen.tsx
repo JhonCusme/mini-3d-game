@@ -52,8 +52,15 @@ export const VillageScreen: React.FC<{ buildOpen: boolean; onCloseBuild: () => v
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 500);
-    return () => clearInterval(id);
+    const updateNow = () => setNow(Date.now());
+    const id = setInterval(updateNow, 500);
+    document.addEventListener('visibilitychange', updateNow);
+    window.addEventListener('focus', updateNow);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', updateNow);
+      window.removeEventListener('focus', updateNow);
+    };
   }, []);
 
   useEffect(() => {
