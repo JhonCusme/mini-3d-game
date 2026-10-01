@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Canvas, useFrame, type ThreeEvent } from '@react-three/fiber';
 import { useGame } from '../../core/GameContext';
+import { useAuth } from '../../core/AuthContext';
 import { GameConfig } from '../../config/GameConfig';
 import { VILLAGE_HALF } from '../../config/BuildingsConfig';
 import type { TroopId } from '../../core/GameState';
@@ -9,7 +10,7 @@ import { AttackSim, BATTLE_SECONDS } from '../../core/pvp/AttackSim';
 import { PvpManager } from '../../core/pvp/PvpManager';
 import { pvpService } from '../../core/pvp/PvpService';
 import { computeOutcome, leagueFor, type PvpOutcome } from '../../core/pvp/PvpRules';
-import { createSystemVillage, hashString } from '../../core/pvp/BotFactory';
+import { createSystemVillage, hashString, isSameOrCloneVillage } from '../../core/pvp/BotFactory';
 import type { VillageSnapshot } from '../../core/pvp/PvpTypes';
 import { EffectManager } from '../../core/EffectManager';
 import { RtsControls, SceneLights } from '../village/VillageScene';
@@ -60,6 +61,7 @@ const NoDeployZone: React.FC<{ visible: boolean }> = ({ visible }) => (
 
 export const AttackScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const { state, completeAttack, payCoins } = useGame();
+  const { user } = useAuth();
   const [opponent, setOpponent] = useState<VillageSnapshot | null>(null);
   const [refresh, setRefresh] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -80,16 +82,17 @@ export const AttackScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => 
     let cancelled = false;
     setLoading(true);
     setSim(null);
-    pvpService.findOpponents(PvpManager.buildSnapshot(state), 1, refresh)
+    const meSnapshot = PvpManager.buildSnapshot(state, user?.id);
+
+    pvpService.findOpponents(meSnapshot, 1, refresh)
       .then(list => {
         if (cancelled) return;
         let opp = list[0];
-        const myName = (state.playerName || '').trim().toLowerCase();
 
-        // 100% GUARANTEE: Never attack yourself under any circumstance!
-        if (!opp || opp.playerId === state.playerId || (opp.name || '').trim().toLowerCase() === myName) {
+        // 100% GUARANTEE: Never attack yourself, your test accounts, or clones under any circumstance!
+        if (!opp || isSameOrCloneVillage(opp, meSnapshot)) {
           const sysSeed = hashString(`${state.playerId}:${Date.now()}:${refresh}`);
-          opp = createSystemVillage(sysSeed, state.trophies);
+          opp = createSystemVillage(sysSeed, state.trophies, state.playerKingdom);
         }
 
         const seed = hashString(`${opp.playerId}:${Date.now()}`);
@@ -194,21 +197,27 @@ export const AttackScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => 
       {sim && opponent && !outcome && (
         <>
           <div className="attack-top-left">
-            <div className="hud-profile" style={{ padding: '6px 12px 6px 6px', background: 'rgba(20, 12, 40, 0.85)', border: '2px solid rgba(255, 215, 0, 0.4)' }}>
-              <img src={AVATAR_IMAGES[opponent.avatar]} alt="" style={{ width: '48px', height: '48px', borderRadius: '12px' }} />
+            <div className="hud-profile" style={{
+              padding: '8px 14px 8px 8px',
+              background: 'linear-gradient(135deg, rgba(35, 10, 20, 0.94), rgba(18, 8, 28, 0.96))',
+              border: '2px solid #ff4757',
+              boxShadow: '0 4px 16px rgba(255, 71, 87, 0.35)',
+              borderRadius: '16px',
+            }}>
+              <img src={AVATAR_IMAGES[opponent.avatar]} alt="" style={{ width: '50px', height: '50px', borderRadius: '12px', border: '2px solid #ff4757' }} />
               <div className="flex-col" style={{ gap: '2px' }}>
-                <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 800 }}>
-                  🏰 Aldea enemiga de:
+                <span style={{ fontSize: '10px', color: '#ff6b81', textTransform: 'uppercase', letterSpacing: '0.8px', fontWeight: 800 }}>
+                  ⚔️ Aldea Rival · Territorio Enemigo:
                 </span>
                 <div className="flex-row gap-1" style={{ alignItems: 'center' }}>
-                  <b style={{ fontSize: '16px', color: '#fff', textShadow: '0 2px 4px #000' }}>{opponent.name}</b>
+                  <b style={{ fontSize: '17px', color: '#fff', textShadow: '0 2px 4px #000' }}>{opponent.name}</b>
                   {opponent.isSystemVillage ? (
-                    <span style={{ fontSize: '9px', background: '#3742fa', color: '#fff', padding: '1px 6px', borderRadius: '4px', fontWeight: 800, textTransform: 'uppercase' }}>
-                      SISTEMA
+                    <span style={{ fontSize: '9px', background: '#e84118', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      NPC SISTEMA
                     </span>
                   ) : (
-                    <span style={{ fontSize: '9px', background: '#2ed573', color: '#1a1100', padding: '1px 6px', borderRadius: '4px', fontWeight: 800, textTransform: 'uppercase' }}>
-                      JUGADOR
+                    <span style={{ fontSize: '9px', background: '#ff4757', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      JUGADOR RIVAL
                     </span>
                   )}
                 </div>
@@ -222,26 +231,30 @@ export const AttackScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => 
                 </div>
               </div>
             </div>
-            <div className="attack-loot">Botín disponible: <b>🪙 {opponent.lootableCoins.toLocaleString()}</b></div>
+            <div className="attack-loot" style={{ borderColor: 'rgba(255, 71, 87, 0.4)' }}>
+              Botín disponible: <b>🪙 {opponent.lootableCoins.toLocaleString()}</b>
+            </div>
             {!sim.started && preview && (
-              <div className="attack-loot">Victoria <b style={{ color: '#7bed9f' }}>+{preview.win}🏆</b> · Derrota <b style={{ color: '#ff6b6b' }}>{preview.lose}🏆</b></div>
+              <div className="attack-loot" style={{ borderColor: 'rgba(255, 215, 0, 0.3)' }}>
+                Victoria <b style={{ color: '#7bed9f' }}>+{preview.win}🏆</b> · Derrota <b style={{ color: '#ff6b6b' }}>{preview.lose}🏆</b>
+              </div>
             )}
           </div>
 
           <div className="attack-top-center">
             {!sim.started ? (
               <div style={{
-                background: 'rgba(20, 12, 40, 0.85)',
-                border: '1px solid rgba(255, 215, 0, 0.5)',
-                borderRadius: '12px',
-                padding: '4px 14px',
+                background: 'linear-gradient(135deg, rgba(40, 10, 20, 0.92), rgba(20, 8, 30, 0.95))',
+                border: '1.5px solid #ff4757',
+                borderRadius: '14px',
+                padding: '6px 18px',
                 textAlign: 'center',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                boxShadow: '0 4px 18px rgba(0,0,0,0.6)',
               }}>
-                <div style={{ fontSize: '11px', color: 'var(--accent-gold)', fontWeight: 800, textTransform: 'uppercase' }}>
-                  ⚔️ Objetivo: Aldea de {opponent.name}
+                <div style={{ fontSize: '11px', color: '#ff6b81', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                  🚩 Asalto a la Base de {opponent.name}
                 </div>
-                <div style={{ fontSize: '12px', color: '#fff' }}>Suelta tus tropas para iniciar el ataque</div>
+                <div style={{ fontSize: '12px', color: '#fff', fontWeight: 600 }}>Toca fuera de la zona roja para desplegar tus tropas</div>
               </div>
             ) : (
               <div className="attack-timer">{mm}:{ss}</div>

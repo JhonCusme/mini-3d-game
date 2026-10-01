@@ -27,6 +27,7 @@ export interface VillageSnapshot {
     lootableCoins: number;
     shieldUntil: number;
     updatedAt: number;
+    userId?: string;
     isBot?: boolean;
     isSystemVillage?: boolean;
     underAttackUntil?: number;

@@ -34,6 +34,27 @@ const HpBar: React.FC<{ y: number; width: number; get: () => number; color?: str
   );
 };
 
+/** Enemy battle pennant flying over hostile headquarters. */
+const EnemyFlag: React.FC<{ y: number }> = ({ y }) => (
+  <group position={[0, y, 0]}>
+    {/* Flag pole */}
+    <mesh position={[0, 0.7, 0]} castShadow>
+      <cylinderGeometry args={[0.04, 0.04, 1.4, 6]} />
+      <meshStandardMaterial color="#2d3436" metalness={0.7} roughness={0.3} />
+    </mesh>
+    {/* Crimson battle pennant */}
+    <mesh position={[0.3, 1.15, 0]} rotation={[0, 0, -0.05]} castShadow>
+      <boxGeometry args={[0.6, 0.35, 0.02]} />
+      <meshStandardMaterial color="#d63031" roughness={0.6} />
+    </mesh>
+    {/* Golden skull / enemy emblem */}
+    <mesh position={[0.3, 1.15, 0.015]}>
+      <circleGeometry args={[0.09, 8]} />
+      <meshBasicMaterial color="#f1c40f" />
+    </mesh>
+  </group>
+);
+
 export const BuildingActor: React.FC<{ b: SimBuilding }> = ({ b }) => {
   const alive = useRef<Group>(null);
   const rubble = useRef<Group>(null);
@@ -49,6 +70,7 @@ export const BuildingActor: React.FC<{ b: SimBuilding }> = ({ b }) => {
         {b.type === 'cannon' || b.type === 'archertower'
           ? <group ref={turret}><BuildingModel type={b.type} level={b.level} aimAngle={0} /></group>
           : <BuildingModel type={b.type} level={b.level} />}
+        {b.type === 'townhall' && <EnemyFlag y={b.size * 0.85} />}
         <HpBar y={b.size + 1} width={b.size * 0.7} get={() => b.hp / b.maxHp} />
       </group>
       <group ref={rubble} visible={false}>

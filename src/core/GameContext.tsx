@@ -167,7 +167,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (!stateRef.current.hasCompletedSetup) return;
         const publish = () => {
             if (stateRef.current.hasCompletedSetup) {
-                pvpService.publishVillage(PvpManager.buildSnapshot(stateRef.current), true)
+                pvpService.publishVillage(PvpManager.buildSnapshot(stateRef.current, user?.id), true)
                     .catch((e) => console.warn('PvP: could not publish village', e));
             }
         };

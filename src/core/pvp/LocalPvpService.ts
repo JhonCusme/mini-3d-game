@@ -30,7 +30,7 @@ export class LocalPvpService implements PvpService {
 
     async findOpponents(me: VillageSnapshot, count: number, refresh: number): Promise<VillageSnapshot[]> {
         const base = hashString(`${me.playerId}:${refresh}:${Date.now()}`);
-        return Array.from({ length: count }, (_, i) => createSystemVillage(base + i * 7919, me.trophies));
+        return Array.from({ length: count }, (_, i) => createSystemVillage(base + i * 7919, me.trophies, me.kingdom));
     }
 
     async lockVillageForAttack(): Promise<boolean> {

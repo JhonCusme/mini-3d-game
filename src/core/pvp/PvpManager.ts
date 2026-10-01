@@ -25,9 +25,10 @@ export class PvpManager {
         return { ...state, troops, garrison };
     }
 
-    static buildSnapshot(state: GameState): VillageSnapshot {
+    static buildSnapshot(state: GameState, userId?: string): VillageSnapshot {
         return {
             playerId: state.playerId,
+            userId,
             name: state.playerName || 'Héroe',
             avatar: state.playerAvatar,
             kingdom: state.playerKingdom,

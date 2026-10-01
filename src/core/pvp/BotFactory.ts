@@ -41,25 +41,113 @@ function overlaps(list: LayoutBuilding[], type: BuildingType, x: number, z: numb
     });
 }
 
-/** Random but tidy base layout for a townhall level. */
+/**
+ * Detects if a rival snapshot belongs to the same player, an earlier test session
+ * of the developer, or has an identical unedited starter base layout.
+ */
+export function isSameOrCloneVillage(candidate: VillageSnapshot | null | undefined, me: VillageSnapshot): boolean {
+    if (!candidate || !candidate.playerId) return true;
+
+    // 1. Direct player ID match
+    if (candidate.playerId === me.playerId) return true;
+
+    // 2. Direct user ID match (when logged in with Supabase Auth)
+    if (candidate.userId && me.userId && candidate.userId === me.userId) return true;
+
+    // 3. Name comparison (case-insensitive & trimmed)
+    const cName = (candidate.name || '').trim().toLowerCase();
+    const myName = (me.name || '').trim().toLowerCase();
+    if (cName === myName) return true;
+
+    // 4. Filter known test accounts/aliases of the developer (jhon, jacc, heroe)
+    const testAliases = ['jhon', 'jacc', 'heroe', 'héroe', 'admin', 'test'];
+    if (testAliases.includes(cName) && (testAliases.includes(myName) || !me.name || me.playerId.startsWith('guest_'))) {
+        return true;
+    }
+
+    // 5. Default starter layout clone check:
+    // When a new village is created, it has townhall at [-2, -2], goldmine at [-9, -3], barracks at [6, -3].
+    // If candidate has those exact same coordinates, it is an identical starter layout from the developer testing.
+    const layout = candidate.layout;
+    if (layout && layout.length > 0) {
+        const th = layout.find(b => b.type === 'townhall');
+        const gm = layout.find(b => b.type === 'goldmine');
+        const bar = layout.find(b => b.type === 'barracks');
+        if (th && th.x === -2 && th.z === -2 &&
+            gm && gm.x === -9 && gm.z === -3 &&
+            bar && bar.x === 6 && bar.z === -3) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/** Random but strategic fortress base layout for rival villages. */
 export function createBotLayout(seed: number, th: number): LayoutBuilding[] {
     const rng = mulberry32(seed ^ 0x5bd1e995);
-    const list: LayoutBuilding[] = [{ type: 'townhall', level: th, x: -2, z: -2 }];
-    const lvl = () => Math.max(1, Math.min(th + 1, th - 1 + Math.floor(rng() * 3)));
-    const wanted: BuildingType[] = ['goldmine', 'barracks', 'blacksmith', 'armory', 'arena', 'altar'];
-    for (let i = 0; i < BUILDINGS.cannon.maxCount(th); i++) wanted.push('cannon');
-    for (let i = 0; i < BUILDINGS.archertower.maxCount(th); i++) wanted.push('archertower');
+    const archetype = Math.floor(rng() * 4); // 0: Centro, 1: Norte, 2: Este, 3: Sudoeste
+    const list: LayoutBuilding[] = [];
+
+    const lvl = (type: BuildingType) => {
+        if (type === 'townhall') return th;
+        if (BUILDINGS[type].isDefense) return Math.max(1, Math.min(10, th + (rng() > 0.4 ? 1 : 0)));
+        return Math.max(1, Math.min(10, th - 1 + Math.floor(rng() * 3)));
+    };
+
+    // Townhall position varies according to fortress archetype (never all identical)
+    let thPos: { x: number; z: number };
+    if (archetype === 0) {
+        thPos = { x: -2, z: -2 }; // Central stronghold
+    } else if (archetype === 1) {
+        thPos = { x: -2, z: -6 }; // Northern citadel
+    } else if (archetype === 2) {
+        thPos = { x: 3, z: -3 };  // Eastern fortress
+    } else {
+        thPos = { x: -5, z: 3 };  // South-western bunker
+    }
+
+    list.push({ type: 'townhall', level: lvl('townhall'), x: thPos.x, z: thPos.z });
+
+    // Ensure rival bases always have fortified defenses
+    const numCannons = Math.max(2, Math.min(4, BUILDINGS.cannon.maxCount(th) + 1));
+    const numTowers = Math.max(1, Math.min(3, BUILDINGS.archertower.maxCount(th) + 1));
+
+    const wanted: BuildingType[] = [];
+    for (let i = 0; i < numCannons; i++) wanted.push('cannon');
+    for (let i = 0; i < numTowers; i++) wanted.push('archertower');
+    wanted.push('goldmine', 'goldmine', 'barracks', 'blacksmith', 'armory', 'arena', 'altar');
+
     for (const type of wanted) {
         const size = BUILDINGS[type].size;
-        // defenses close to the core, economy further out
-        const radius = BUILDINGS[type].isDefense ? 7 : 10;
-        for (let tries = 0; tries < 80; tries++) {
-            const x = Math.round((rng() - 0.5) * 2 * radius) - Math.floor(size / 2);
-            const z = Math.round((rng() - 0.5) * 2 * radius) - Math.floor(size / 2);
-            if (x < -VILLAGE_HALF || z < -VILLAGE_HALF || x + size > VILLAGE_HALF || z + size > VILLAGE_HALF) continue;
+        const isDef = BUILDINGS[type].isDefense;
+        const radius = isDef ? (5 + Math.floor(rng() * 5)) : (7 + Math.floor(rng() * 6));
+
+        let placed = false;
+        for (let tries = 0; tries < 90; tries++) {
+            const angle = rng() * Math.PI * 2;
+            const dist = (isDef ? 4 : 6) + rng() * radius;
+            const cx = thPos.x + 2 + Math.cos(angle) * dist;
+            const cz = thPos.z + 2 + Math.sin(angle) * dist;
+            const x = Math.round(cx - size / 2);
+            const z = Math.round(cz - size / 2);
+
+            if (x < -VILLAGE_HALF + 1 || z < -VILLAGE_HALF + 1 || x + size > VILLAGE_HALF - 1 || z + size > VILLAGE_HALF - 1) continue;
             if (overlaps(list, type, x, z)) continue;
-            list.push({ type, level: lvl(), x, z });
+            list.push({ type, level: lvl(type), x, z });
+            placed = true;
             break;
+        }
+
+        if (!placed) {
+            for (let x = -VILLAGE_HALF + 2; x <= VILLAGE_HALF - size - 2 && !placed; x += 3) {
+                for (let z = -VILLAGE_HALF + 2; z <= VILLAGE_HALF - size - 2 && !placed; z += 3) {
+                    if (!overlaps(list, type, x, z)) {
+                        list.push({ type, level: lvl(type), x, z });
+                        placed = true;
+                    }
+                }
+            }
         }
     }
     return list;
@@ -71,28 +159,33 @@ export function layoutOf(v: VillageSnapshot): LayoutBuilding[] {
     return createBotLayout(hashString(v.playerId), Math.max(1, Math.min(10, v.level)));
 }
 
-/** Generates a believable rival village around a trophy count. */
-export function createBotVillage(seed: number, aroundTrophies: number): VillageSnapshot {
+/** Generates a believable rival village around a trophy count with a distinct visual biome. */
+export function createBotVillage(seed: number, aroundTrophies: number, avoidKingdom?: KingdomType): VillageSnapshot {
     const rng = mulberry32(seed);
     const trophies = Math.max(0, Math.round(aroundTrophies + (rng() - 0.5) * 120));
     const level = Math.max(1, Math.round(trophies / 60 + rng() * 2));
-    const defensePower = 6 + trophies * 0.12 * (0.7 + rng() * 0.6);
-    const hasGod = trophies > 250 && rng() < 0.6;
+    const defensePower = 8 + trophies * 0.15 * (0.8 + rng() * 0.6);
+    const hasGod = trophies > 200 && rng() < 0.7;
+
+    // Pick a kingdom DIFFERENT from the player's kingdom so it is unmistakably an enemy biome
+    const availableKingdoms = avoidKingdom ? KINGDOMS.filter(k => k !== avoidKingdom) : KINGDOMS;
+    const kingdom = availableKingdoms[Math.floor(rng() * availableKingdoms.length)] || 'golden';
+
     return {
         playerId: `bot_${seed}`,
         name: `${NAMES[Math.floor(rng() * NAMES.length)]} ${TITLES[Math.floor(rng() * TITLES.length)]}`,
         avatar: AVATARS[Math.floor(rng() * AVATARS.length)],
-        kingdom: KINGDOMS[Math.floor(rng() * KINGDOMS.length)],
+        kingdom,
         level,
         heroLevel: 1 + Math.floor(trophies / 200),
         trophies,
         garrison: buildTroops(defensePower, rng, true),
         defenseGod: hasGod ? GODS[Math.floor(rng() * GODS.length)] : null,
         defenseGodLevel: hasGod ? 1 + Math.floor(rng() * Math.min(5, trophies / 200)) : 0,
-        wallsLevel: Math.floor(trophies / 200 + rng() * 1.5),
+        wallsLevel: Math.max(1, Math.floor(trophies / 180 + rng() * 1.5) + 1), // Always show fortress walls
         armorLevel: Math.floor(trophies / 250),
         attackLevel: Math.floor(trophies / 200),
-        lootableCoins: Math.floor((200 + trophies * 4) * (0.6 + rng() * 0.8)),
+        lootableCoins: Math.floor((300 + trophies * 5) * (0.7 + rng() * 0.8)),
         shieldUntil: 0,
         updatedAt: Date.now(),
         isBot: true,
@@ -112,11 +205,13 @@ const SYSTEM_VILLAGE_NAMES = [
     'Enclave Solar',
     'Bastión de la Guardia',
     'Puesto Fronterizo',
+    'Ciudadela Carmesí',
+    'Nido de Sombras',
 ];
 
 /** Explicit system village (NPC enemy village for when no real players are available). */
-export function createSystemVillage(seed: number, aroundTrophies: number): VillageSnapshot {
-    const v = createBotVillage(seed, aroundTrophies);
+export function createSystemVillage(seed: number, aroundTrophies: number, avoidKingdom?: KingdomType): VillageSnapshot {
+    const v = createBotVillage(seed, aroundTrophies, avoidKingdom);
     const rng = mulberry32(seed ^ 0xa5a5a5a5);
     const sysName = SYSTEM_VILLAGE_NAMES[Math.floor(rng() * SYSTEM_VILLAGE_NAMES.length)];
     return {
@@ -125,7 +220,7 @@ export function createSystemVillage(seed: number, aroundTrophies: number): Villa
         name: `${sysName} (Sistema)`,
         isBot: true,
         isSystemVillage: true,
-        lootableCoins: Math.max(350, Math.floor((350 + aroundTrophies * 5) * (0.85 + rng() * 0.5))),
+        lootableCoins: Math.max(400, Math.floor((400 + aroundTrophies * 6) * (0.85 + rng() * 0.5))),
     };
 }
 

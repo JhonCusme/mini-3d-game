@@ -1,6 +1,6 @@
 import type { PvpService } from './PvpService';
 import type { AttackRecord, VillageSnapshot } from './PvpTypes';
-import { createSystemVillage, hashString } from './BotFactory';
+import { createSystemVillage, hashString, isSameOrCloneVillage } from './BotFactory';
 import { GameConfig } from '../../config/GameConfig';
 
 const TROPHY_RANGE = 350;
@@ -96,15 +96,12 @@ export class SupabasePvpService implements PvpService {
             console.warn('PvP: could not load online opponents', e);
         }
 
-        const myName = (me.name || '').trim().toLowerCase();
-
         // Strict filters:
-        // - Cannot be self (by playerId OR name)
+        // - Cannot be self, alias, or starter clone
         // - Cannot be currently shielded, online in game, or under attack by someone else
         const validPlayers = players.filter(p => {
             if (!p || !p.playerId) return false;
-            if (p.playerId === me.playerId) return false;
-            if ((p.name || '').trim().toLowerCase() === myName) return false;
+            if (isSameOrCloneVillage(p, me)) return false;
             if (p.shieldUntil && p.shieldUntil > nowMs) return false;
             if (p.onlineUntil && p.onlineUntil > nowMs) return false;
             if (p.underAttackUntil && p.underAttackUntil > nowMs) return false;
@@ -116,9 +113,9 @@ export class SupabasePvpService implements PvpService {
         validPlayers.sort((a, b) => (hashString(a.playerId) ^ seed) - (hashString(b.playerId) ^ seed));
         const picked = validPlayers.slice(0, count);
 
-        // If no real human opponents available, generate rich System Villages (NPC)
+        // If no real human opponents available, generate rich System Villages (NPC) in a different kingdom
         for (let i = picked.length; i < count; i++) {
-            picked.push(createSystemVillage(seed + i * 7919, me.trophies));
+            picked.push(createSystemVillage(seed + i * 7919, me.trophies, me.kingdom));
         }
 
         return picked;
