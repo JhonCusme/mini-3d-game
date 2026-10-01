@@ -179,7 +179,7 @@ export const AttackScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => 
   return createPortal(
     <div className="attack-screen">
       {sim && opponent && (
-        <Canvas shadows camera={{ position: [0, 30, 30], fov: 40 }} className="village-canvas">
+        <Canvas shadows camera={{ position: [0, 33, 27], fov: 44 }} className="village-canvas">
           <color attach="background" args={[oppTheme.skyColor]} />
           <fog attach="fog" args={[oppTheme.fogColor, oppTheme.fogNear, oppTheme.fogFar]} />
           <SceneLights theme={oppTheme} />

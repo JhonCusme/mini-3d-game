@@ -147,14 +147,20 @@ const DesertMesa: React.FC<{
     rotation?: number;
 }> = ({ position, width, height, depth, rotation = 0 }) => (
     <group position={position} rotation={[0, rotation, 0]}>
-        <mesh position={[0, height / 2, 0]} castShadow receiveShadow>
-            <boxGeometry args={[width, height, depth]} />
-            <meshStandardMaterial color="#c28535" roughness={0.95} flatShading />
+        {/* Tier 1 Base Mesa */}
+        <mesh position={[0, height * 0.35, 0]} castShadow receiveShadow>
+            <boxGeometry args={[width, height * 0.7, depth]} />
+            <meshStandardMaterial color="#b87a32" roughness={0.95} flatShading />
         </mesh>
-        {/* Upper Sand Dune Layer */}
-        <mesh position={[0, height + 0.4, 0]} castShadow receiveShadow>
-            <coneGeometry args={[width * 0.45, 1.4, 4]} />
-            <meshStandardMaterial color="#e5a952" roughness={0.9} flatShading />
+        {/* Tier 2 Tapered Mesa Top */}
+        <mesh position={[0, height * 0.75, 0]} castShadow receiveShadow>
+            <boxGeometry args={[width * 0.75, height * 0.5, depth * 0.75]} />
+            <meshStandardMaterial color="#d49242" roughness={0.9} flatShading />
+        </mesh>
+        {/* Sand Dune Summit */}
+        <mesh position={[0, height + 0.3, 0]} castShadow receiveShadow>
+            <coneGeometry args={[width * 0.35, 1.2, 5]} />
+            <meshStandardMaterial color="#f0b45b" roughness={0.85} flatShading />
         </mesh>
     </group>
 );
@@ -222,47 +228,49 @@ const ForestTree: React.FC<{ position: [number, number, number]; scale?: number 
 export const KingdomDecor: React.FC<KingdomDecorProps> = ({ theme, seed = 42 }) => {
     const rng = useMemo(() => mulberry32(seed), [seed]);
 
-    // Generate surrounding mountain landscape around the village borders (outside 24x24 village)
+    // Generate backdrop mountain amphitheater (strictly in the North / flanks, never blocking camera foreground)
     const mountains = useMemo(() => {
         const list: { pos: [number, number, number]; r: number; h: number; rot: number; w?: number; d?: number }[] = [];
-        const ringRadius = VILLAGE_HALF + 16;
 
-        // Place 16 prominent mountain / hill formations in a ring around the kingdom
-        for (let i = 0; i < 16; i++) {
-            const angle = (i / 16) * Math.PI * 2 + (rng() - 0.5) * 0.2;
-            const dist = ringRadius + (rng() - 0.5) * 8;
+        // Primary backdrop arc across the Northern horizon: West (-x) -> North (-z) -> East (+x)
+        const count = 14;
+        for (let i = 0; i < count; i++) {
+            // Arc spanning 210 degrees across the back: from 155° to 385°
+            const angle = Math.PI * 0.86 + (i / (count - 1)) * (Math.PI * 1.28) + (rng() - 0.5) * 0.12;
+            const dist = 32 + rng() * 10;
             const x = Math.cos(angle) * dist;
             const z = Math.sin(angle) * dist;
-            const r = 8 + rng() * 6;
-            const h = 12 + rng() * 14;
+            const r = 7 + rng() * 4.5;
+            const h = 10 + rng() * 10;
             const rot = rng() * Math.PI * 2;
-            list.push({ pos: [x, 0, z], r, h, rot, w: r * 1.5, d: r * 1.2 });
+            list.push({ pos: [x, 0, z], r, h, rot, w: r * 1.3, d: r * 1.1 });
         }
 
-        // Secondary outer background peaks
-        for (let i = 0; i < 10; i++) {
-            const angle = (i / 10) * Math.PI * 2 + rng() * 0.3;
-            const dist = ringRadius + 18 + rng() * 12;
+        // Secondary towering background peaks further in the distance
+        for (let i = 0; i < 9; i++) {
+            const angle = Math.PI * 0.88 + (i / 8) * (Math.PI * 1.24) + (rng() - 0.5) * 0.15;
+            const dist = 48 + rng() * 14;
             const x = Math.cos(angle) * dist;
             const z = Math.sin(angle) * dist;
-            const r = 12 + rng() * 8;
-            const h = 18 + rng() * 16;
+            const r = 9 + rng() * 6;
+            const h = 16 + rng() * 12;
             const rot = rng() * Math.PI * 2;
-            list.push({ pos: [x, 0, z], r, h, rot, w: r * 1.8, d: r * 1.4 });
+            list.push({ pos: [x, 0, z], r, h, rot, w: r * 1.5, d: r * 1.2 });
         }
 
         return list;
     }, [rng]);
 
-    // Generate vegetation / foliage specific to the biome
+    // Generate vegetation / foliage outside the deploy perimeter
     const flora = useMemo(() => {
         const list: { pos: [number, number, number]; scale: number }[] = [];
-        for (let i = 0; i < 28; i++) {
-            const angle = rng() * Math.PI * 2;
-            const dist = VILLAGE_HALF + 2.5 + rng() * 12;
+        for (let i = 0; i < 22; i++) {
+            // Arc around lateral flanks and northern perimeter (keeps camera foreground clear)
+            const angle = Math.PI * 0.8 + rng() * (Math.PI * 1.4);
+            const dist = VILLAGE_HALF + 3.8 + rng() * 9;
             const x = Math.cos(angle) * dist;
             const z = Math.sin(angle) * dist;
-            const scale = 0.7 + rng() * 0.6;
+            const scale = 0.65 + rng() * 0.45;
             list.push({ pos: [x, 0, z], scale });
         }
         return list;
