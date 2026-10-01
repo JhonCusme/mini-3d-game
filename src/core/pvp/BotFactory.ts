@@ -96,7 +96,36 @@ export function createBotVillage(seed: number, aroundTrophies: number): VillageS
         shieldUntil: 0,
         updatedAt: Date.now(),
         isBot: true,
+        isSystemVillage: true,
         layout: createBotLayout(seed, Math.max(1, Math.min(10, 1 + Math.floor(trophies / 150)))),
+    };
+}
+
+const SYSTEM_VILLAGE_NAMES = [
+    'Bastión Bárbaro',
+    'Fortaleza de Escarcha',
+    'Campamento Rebelde',
+    'Ciudadela de Obsidiana',
+    'Guarnición del Dragón',
+    'Fortín de los Mercenarios',
+    'Refugio de los Asaltantes',
+    'Enclave Solar',
+    'Bastión de la Guardia',
+    'Puesto Fronterizo',
+];
+
+/** Explicit system village (NPC enemy village for when no real players are available). */
+export function createSystemVillage(seed: number, aroundTrophies: number): VillageSnapshot {
+    const v = createBotVillage(seed, aroundTrophies);
+    const rng = mulberry32(seed ^ 0xa5a5a5a5);
+    const sysName = SYSTEM_VILLAGE_NAMES[Math.floor(rng() * SYSTEM_VILLAGE_NAMES.length)];
+    return {
+        ...v,
+        playerId: `system_${seed}`,
+        name: `${sysName} (Sistema)`,
+        isBot: true,
+        isSystemVillage: true,
+        lootableCoins: Math.max(350, Math.floor((350 + aroundTrophies * 5) * (0.85 + rng() * 0.5))),
     };
 }
 

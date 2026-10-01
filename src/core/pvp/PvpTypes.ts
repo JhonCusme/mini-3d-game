@@ -28,6 +28,9 @@ export interface VillageSnapshot {
     shieldUntil: number;
     updatedAt: number;
     isBot?: boolean;
+    isSystemVillage?: boolean;
+    underAttackUntil?: number;
+    onlineUntil?: number;
     layout?: LayoutBuilding[];
 }
 

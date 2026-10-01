@@ -8,8 +8,10 @@ import { SupabasePvpService } from './SupabasePvpService';
  */
 export interface PvpService {
     readonly mode: 'local' | 'online';
-    publishVillage(snapshot: VillageSnapshot): Promise<void>;
+    publishVillage(snapshot: VillageSnapshot, isOnline?: boolean): Promise<void>;
     findOpponents(me: VillageSnapshot, count: number, refresh: number): Promise<VillageSnapshot[]>;
+    lockVillageForAttack(defenderId: string): Promise<boolean>;
+    unlockVillage(defenderId: string): Promise<void>;
     reportAttack(record: AttackRecord): Promise<void>;
     fetchAttacksAgainst(playerId: string, since: number): Promise<AttackRecord[]>;
 }

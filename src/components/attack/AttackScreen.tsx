@@ -9,7 +9,7 @@ import { AttackSim, BATTLE_SECONDS } from '../../core/pvp/AttackSim';
 import { PvpManager } from '../../core/pvp/PvpManager';
 import { pvpService } from '../../core/pvp/PvpService';
 import { computeOutcome, leagueFor, type PvpOutcome } from '../../core/pvp/PvpRules';
-import { hashString } from '../../core/pvp/BotFactory';
+import { createSystemVillage, hashString } from '../../core/pvp/BotFactory';
 import type { VillageSnapshot } from '../../core/pvp/PvpTypes';
 import { EffectManager } from '../../core/EffectManager';
 import { RtsControls, SceneLights } from '../village/VillageScene';
@@ -82,11 +82,21 @@ export const AttackScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => 
     setSim(null);
     pvpService.findOpponents(PvpManager.buildSnapshot(state), 1, refresh)
       .then(list => {
-        if (cancelled || !list[0]) return;
-        const opp = list[0];
+        if (cancelled) return;
+        let opp = list[0];
+        const myName = (state.playerName || '').trim().toLowerCase();
+
+        // 100% GUARANTEE: Never attack yourself under any circumstance!
+        if (!opp || opp.playerId === state.playerId || (opp.name || '').trim().toLowerCase() === myName) {
+          const sysSeed = hashString(`${state.playerId}:${Date.now()}:${refresh}`);
+          opp = createSystemVillage(sysSeed, state.trophies);
+        }
+
         const seed = hashString(`${opp.playerId}:${Date.now()}`);
         seedRef.current = seed;
         setOpponent(opp);
+        // Lock this village so other players cannot attack it concurrently
+        pvpService.lockVillageForAttack(opp.playerId);
         setSim(new AttackSim(PvpManager.buildArmy(state, state.troops), opp, seed));
         const first = TROOP_IDS.find(id => state.troops[id] > 0);
         setSelected(first ?? null);
@@ -129,13 +139,21 @@ export const AttackScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => 
 
   const next = () => {
     if (!payCoins(nextCost)) { setMessage('Oro insuficiente'); return; }
+    if (opponent) pvpService.unlockVillage(opponent.playerId);
     finishedRef.current = false;
     setRefresh(r => r + 1);
   };
 
+  const handleReturnHome = () => {
+    if (opponent && (!sim || !sim.started)) {
+      pvpService.unlockVillage(opponent.playerId);
+    }
+    onClose();
+  };
+
   const endBattle = () => {
     if (!sim) return;
-    if (!sim.started) { onClose(); return; }
+    if (!sim.started) { handleReturnHome(); return; }
     sim.surrender();
     onTick();
   };
@@ -179,7 +197,18 @@ export const AttackScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => 
             <div className="hud-profile">
               <img src={AVATAR_IMAGES[opponent.avatar]} alt="" />
               <div className="flex-col">
-                <b>{opponent.name}</b>
+                <div className="flex-row gap-1" style={{ alignItems: 'center' }}>
+                  <b>{opponent.name}</b>
+                  {opponent.isSystemVillage ? (
+                    <span style={{ fontSize: '9px', background: '#3742fa', color: '#fff', padding: '1px 5px', borderRadius: '4px', fontWeight: 800 }}>
+                      SISTEMA
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: '9px', background: '#2ed573', color: '#1a1100', padding: '1px 5px', borderRadius: '4px', fontWeight: 800 }}>
+                      JUGADOR
+                    </span>
+                  )}
+                </div>
                 <span style={{ fontSize: '11px', color: 'var(--accent-gold)' }}>
                   {oppKingdom.icon} {oppKingdom.name}
                 </span>
@@ -204,7 +233,7 @@ export const AttackScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => 
             {!sim.started ? (
               <>
                 <button className="attack-next" onClick={next}>Siguiente ⏭<span>🪙 {nextCost}</span></button>
-                <button className="attack-end" onClick={onClose}>Volver a casa</button>
+                <button className="attack-end" onClick={handleReturnHome}>Volver a casa</button>
               </>
             ) : (
               <button className="attack-end" onClick={endBattle}>🏳️ Terminar batalla</button>

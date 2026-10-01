@@ -1,6 +1,6 @@
 import type { PvpService } from './PvpService';
 import type { AttackRecord, VillageSnapshot } from './PvpTypes';
-import { createBotArmy, createBotVillage, hashString } from './BotFactory';
+import { createBotArmy, createSystemVillage, hashString } from './BotFactory';
 import { simulatePvpBattle, mulberry32 } from './PvpBattle';
 import { computeOutcome } from './PvpRules';
 
@@ -10,21 +10,35 @@ const RAID_EVERY_MS = 90 * 60 * 1000;
 const MAX_RAIDS = 3;
 
 /**
- * Offline stand-in for the online backend: rivals are generated bots and,
+ * Offline stand-in for the online backend: rivals are generated bots/system villages and,
  * while you are away, bots raid the defense you left prepared.
  */
 export class LocalPvpService implements PvpService {
     readonly mode = 'local' as const;
 
-    async publishVillage(snapshot: VillageSnapshot): Promise<void> {
+    async publishVillage(snapshot: VillageSnapshot, isOnline = true): Promise<void> {
         try {
-            localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snapshot));
+            const now = Date.now();
+            const withOnline: VillageSnapshot = {
+                ...snapshot,
+                onlineUntil: isOnline ? now + 90_000 : 0,
+                updatedAt: now,
+            };
+            localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(withOnline));
         } catch { /* storage unavailable */ }
     }
 
     async findOpponents(me: VillageSnapshot, count: number, refresh: number): Promise<VillageSnapshot[]> {
-        const base = hashString(`${me.playerId}:${refresh}`);
-        return Array.from({ length: count }, (_, i) => createBotVillage(base + i * 7919, me.trophies));
+        const base = hashString(`${me.playerId}:${refresh}:${Date.now()}`);
+        return Array.from({ length: count }, (_, i) => createSystemVillage(base + i * 7919, me.trophies));
+    }
+
+    async lockVillageForAttack(): Promise<boolean> {
+        return true;
+    }
+
+    async unlockVillage(): Promise<void> {
+        // Local system villages don't need persistent locking
     }
 
     async reportAttack(): Promise<void> {

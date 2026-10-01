@@ -1,9 +1,9 @@
 import type { PvpService } from './PvpService';
 import type { AttackRecord, VillageSnapshot } from './PvpTypes';
-import { createBotVillage, hashString } from './BotFactory';
+import { createSystemVillage, hashString } from './BotFactory';
 import { GameConfig } from '../../config/GameConfig';
 
-const TROPHY_RANGE = 250;
+const TROPHY_RANGE = 350;
 
 /**
  * Online backend using Supabase's REST API (tables defined in supabase/schema.sql).
@@ -37,7 +37,23 @@ export class SupabasePvpService implements PvpService {
         return (text ? JSON.parse(text) : null) as T;
     }
 
-    async publishVillage(snapshot: VillageSnapshot): Promise<void> {
+    /**
+     * Publishes village state.
+     * When player is active in the game (`isOnline = true`), sets onlineUntil and
+     * a temporary protection window so nobody can attack them while they are playing.
+     */
+    async publishVillage(snapshot: VillageSnapshot, isOnline = true): Promise<void> {
+        const now = Date.now();
+        // While playing, protect the village with an active session window (90s)
+        const onlineUntil = isOnline ? now + 90_000 : 0;
+        const effectiveShield = Math.max(snapshot.shieldUntil || 0, onlineUntil);
+
+        const payloadSnapshot: VillageSnapshot = {
+            ...snapshot,
+            onlineUntil,
+            updatedAt: now,
+        };
+
         await this.request('/villages?on_conflict=id', {
             method: 'POST',
             headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
@@ -45,19 +61,27 @@ export class SupabasePvpService implements PvpService {
                 id: snapshot.playerId,
                 name: snapshot.name,
                 trophies: snapshot.trophies,
-                shield_until: new Date(snapshot.shieldUntil).toISOString(),
-                snapshot,
-                updated_at: new Date().toISOString(),
+                shield_until: new Date(effectiveShield).toISOString(),
+                snapshot: payloadSnapshot,
+                updated_at: new Date(now).toISOString(),
             }),
         });
     }
 
+    /**
+     * Finds rival villages:
+     * 1. Never returns the current player (checks playerId AND name).
+     * 2. Excludes players currently online in the game, under attack, or shielded.
+     * 3. If no valid human rivals exist, falls back to a rich System Village (NPC).
+     */
     async findOpponents(me: VillageSnapshot, count: number, refresh: number): Promise<VillageSnapshot[]> {
-        const now = new Date().toISOString();
+        const nowMs = Date.now();
+        const nowIso = new Date(nowMs).toISOString();
+
         const params = new URLSearchParams({
             select: 'snapshot',
             id: `neq.${me.playerId}`,
-            shield_until: `lt.${now}`,
+            shield_until: `lt.${nowIso}`,
             order: 'updated_at.desc',
             limit: '30',
         });
@@ -67,23 +91,80 @@ export class SupabasePvpService implements PvpService {
         let players: VillageSnapshot[] = [];
         try {
             const rows = await this.request<{ snapshot: VillageSnapshot }[]>(`/villages?${params}`);
-            players = rows.map(r => r.snapshot);
+            players = (rows || []).map(r => r.snapshot).filter(Boolean);
         } catch (e) {
             console.warn('PvP: could not load online opponents', e);
         }
 
-        // Shuffle deterministically per refresh so "search again" shows other rivals
-        const seed = hashString(`${me.playerId}:${refresh}`);
-        players.sort((a, b) => (hashString(a.playerId) ^ seed) - (hashString(b.playerId) ^ seed));
-        const picked = players.slice(0, count);
+        const myName = (me.name || '').trim().toLowerCase();
 
-        // Fill with bots while there are not enough real players around your trophies
-        for (let i = picked.length; i < count; i++) picked.push(createBotVillage(seed + i * 7919, me.trophies));
+        // Strict filters:
+        // - Cannot be self (by playerId OR name)
+        // - Cannot be currently shielded, online in game, or under attack by someone else
+        const validPlayers = players.filter(p => {
+            if (!p || !p.playerId) return false;
+            if (p.playerId === me.playerId) return false;
+            if ((p.name || '').trim().toLowerCase() === myName) return false;
+            if (p.shieldUntil && p.shieldUntil > nowMs) return false;
+            if (p.onlineUntil && p.onlineUntil > nowMs) return false;
+            if (p.underAttackUntil && p.underAttackUntil > nowMs) return false;
+            return true;
+        });
+
+        // Shuffle deterministically per refresh so "search again" shows other rivals
+        const seed = hashString(`${me.playerId}:${refresh}:${nowMs}`);
+        validPlayers.sort((a, b) => (hashString(a.playerId) ^ seed) - (hashString(b.playerId) ^ seed));
+        const picked = validPlayers.slice(0, count);
+
+        // If no real human opponents available, generate rich System Villages (NPC)
+        for (let i = picked.length; i < count; i++) {
+            picked.push(createSystemVillage(seed + i * 7919, me.trophies));
+        }
+
         return picked;
     }
 
+    /**
+     * Locks a village when an attack starts so other players cannot attack it concurrently.
+     */
+    async lockVillageForAttack(defenderId: string): Promise<boolean> {
+        if (!defenderId || defenderId.startsWith('bot_') || defenderId.startsWith('system_')) {
+            return true;
+        }
+        try {
+            const lockUntil = new Date(Date.now() + 180_000).toISOString(); // 3-minute battle lock
+            await this.request(`/villages?id=eq.${encodeURIComponent(defenderId)}`, {
+                method: 'PATCH',
+                headers: { Prefer: 'return=minimal' },
+                body: JSON.stringify({ shield_until: lockUntil }),
+            });
+            return true;
+        } catch (e) {
+            console.warn('PvP: could not lock village for attack', e);
+            return false;
+        }
+    }
+
+    /**
+     * Unlocks a village if the attacker retreats early or cancels.
+     */
+    async unlockVillage(defenderId: string): Promise<void> {
+        if (!defenderId || defenderId.startsWith('bot_') || defenderId.startsWith('system_')) {
+            return;
+        }
+        try {
+            await this.request(`/villages?id=eq.${encodeURIComponent(defenderId)}`, {
+                method: 'PATCH',
+                headers: { Prefer: 'return=minimal' },
+                body: JSON.stringify({ shield_until: new Date().toISOString() }),
+            });
+        } catch (e) {
+            console.warn('PvP: could not unlock village', e);
+        }
+    }
+
     async reportAttack(record: AttackRecord): Promise<void> {
-        if (record.defenderId.startsWith('bot_')) return;
+        if (record.defenderId.startsWith('bot_') || record.defenderId.startsWith('system_')) return;
         await this.request('/attacks', {
             method: 'POST',
             headers: { Prefer: 'return=minimal' },
@@ -102,6 +183,9 @@ export class SupabasePvpService implements PvpService {
                 headers: { Prefer: 'return=minimal' },
                 body: JSON.stringify({ shield_until: new Date(record.createdAt + GameConfig.pvp.shieldMs).toISOString() }),
             });
+        } else {
+            // Unlock if defender won
+            await this.unlockVillage(record.defenderId);
         }
     }
 

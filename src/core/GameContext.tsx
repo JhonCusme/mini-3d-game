@@ -160,16 +160,25 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return () => clearInterval(id);
     }, []);
 
-    // PvP: publish what this village leaves prepared for defense
+    // PvP: publish what this village leaves prepared for defense and keep online protection active
     const snapshotKey = JSON.stringify([state.hasCompletedSetup, state.garrison, state.defenseGod, state.gods, state.upgrades,
         state.trophies, state.heroLevel, state.level, state.shieldUntil, Math.floor(state.coins / 100)]);
     useEffect(() => {
         if (!stateRef.current.hasCompletedSetup) return;
-        const id = setTimeout(() => {
-            pvpService.publishVillage(PvpManager.buildSnapshot(stateRef.current))
-                .catch((e) => console.warn('PvP: could not publish village', e));
-        }, 1500);
-        return () => clearTimeout(id);
+        const publish = () => {
+            if (stateRef.current.hasCompletedSetup) {
+                pvpService.publishVillage(PvpManager.buildSnapshot(stateRef.current), true)
+                    .catch((e) => console.warn('PvP: could not publish village', e));
+            }
+        };
+
+        const id = setTimeout(publish, 1200);
+        const heartbeat = setInterval(publish, 45_000);
+
+        return () => {
+            clearTimeout(id);
+            clearInterval(heartbeat);
+        };
     }, [snapshotKey]);
 
     // Game Loop with delta time calculation and Page Visibility API (handles tab switching and background)
