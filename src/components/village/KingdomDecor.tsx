@@ -81,22 +81,23 @@ const WeatherParticles: React.FC<{ type: 'snow' | 'sand' | 'leaves'; color: stri
     );
 };
 
-/** Snowy Mountain Peak for Frost Kingdom */
-const SnowMountainPeak: React.FC<{
+/** Low Snowy Ridge marking the map border for Frost Kingdom */
+const LowSnowRidge: React.FC<{
     position: [number, number, number];
-    radius: number;
+    width: number;
     height: number;
+    depth: number;
     rotation?: number;
-}> = ({ position, radius, height, rotation = 0 }) => (
+}> = ({ position, width, height, depth, rotation = 0 }) => (
     <group position={position} rotation={[0, rotation, 0]}>
-        {/* Rocky Base */}
-        <mesh position={[0, height * 0.38, 0]} castShadow receiveShadow>
-            <coneGeometry args={[radius, height * 0.76, 5]} />
+        {/* Rocky Base Rim */}
+        <mesh position={[0, height * 0.35, 0]} castShadow receiveShadow>
+            <boxGeometry args={[width, height * 0.7, depth]} />
             <meshStandardMaterial color="#4a5d6e" roughness={0.9} flatShading />
         </mesh>
-        {/* Snowy Cap */}
-        <mesh position={[0, height * 0.78, 0]} castShadow receiveShadow>
-            <coneGeometry args={[radius * 0.48, height * 0.44, 5]} />
+        {/* Soft Snow Cap on the Rim */}
+        <mesh position={[0, height * 0.85, 0]} castShadow receiveShadow>
+            <coneGeometry args={[width * 0.46, height * 0.5, 5]} />
             <meshStandardMaterial color="#ffffff" roughness={0.4} flatShading />
         </mesh>
     </group>
@@ -138,8 +139,8 @@ const SnowyPine: React.FC<{ position: [number, number, number]; scale?: number }
     </group>
 );
 
-/** Desert Sand Dune / Mesa Monolith for Golden Kingdom */
-const DesertMesa: React.FC<{
+/** Low Sand Dune / Sandstone Ridge marking map boundary for Golden Desert */
+const LowDesertRidge: React.FC<{
     position: [number, number, number];
     width: number;
     height: number;
@@ -147,20 +148,15 @@ const DesertMesa: React.FC<{
     rotation?: number;
 }> = ({ position, width, height, depth, rotation = 0 }) => (
     <group position={position} rotation={[0, rotation, 0]}>
-        {/* Tier 1 Base Mesa */}
+        {/* Low Sandstone Base */}
         <mesh position={[0, height * 0.35, 0]} castShadow receiveShadow>
             <boxGeometry args={[width, height * 0.7, depth]} />
             <meshStandardMaterial color="#b87a32" roughness={0.95} flatShading />
         </mesh>
-        {/* Tier 2 Tapered Mesa Top */}
+        {/* Gentle Rounded Sand Dune Top */}
         <mesh position={[0, height * 0.75, 0]} castShadow receiveShadow>
-            <boxGeometry args={[width * 0.75, height * 0.5, depth * 0.75]} />
-            <meshStandardMaterial color="#d49242" roughness={0.9} flatShading />
-        </mesh>
-        {/* Sand Dune Summit */}
-        <mesh position={[0, height + 0.3, 0]} castShadow receiveShadow>
-            <coneGeometry args={[width * 0.35, 1.2, 5]} />
-            <meshStandardMaterial color="#f0b45b" roughness={0.85} flatShading />
+            <coneGeometry args={[width * 0.45, height * 0.6, 5]} />
+            <meshStandardMaterial color="#e5a952" roughness={0.9} flatShading />
         </mesh>
     </group>
 );
@@ -195,16 +191,26 @@ const DesertPalm: React.FC<{ position: [number, number, number]; scale?: number 
     </group>
 );
 
-/** Rolling Green Forest Hill */
-const ForestHill: React.FC<{
+/** Low Mossy Stone Berm marking map boundary for Emerald Forest */
+const LowForestRidge: React.FC<{
     position: [number, number, number];
-    radius: number;
+    width: number;
     height: number;
-}> = ({ position, radius, height }) => (
-    <mesh position={[position[0], height * 0.4, position[2]]} castShadow receiveShadow>
-        <sphereGeometry args={[radius, 7, 6]} />
-        <meshStandardMaterial color="#2d6a22" roughness={0.9} flatShading />
-    </mesh>
+    depth: number;
+    rotation?: number;
+}> = ({ position, width, height, depth, rotation = 0 }) => (
+    <group position={position} rotation={[0, rotation, 0]}>
+        {/* Low Earth/Rock Base */}
+        <mesh position={[0, height * 0.35, 0]} castShadow receiveShadow>
+            <boxGeometry args={[width, height * 0.7, depth]} />
+            <meshStandardMaterial color="#4a443b" roughness={0.95} flatShading />
+        </mesh>
+        {/* Lush Green Moss Mound */}
+        <mesh position={[0, height * 0.75, 0]} castShadow receiveShadow>
+            <coneGeometry args={[width * 0.45, height * 0.6, 6]} />
+            <meshStandardMaterial color="#2d6a22" roughness={0.9} flatShading />
+        </mesh>
+    </group>
 );
 
 /** Deciduous Tree for Emerald Forest */
@@ -228,49 +234,37 @@ const ForestTree: React.FC<{ position: [number, number, number]; scale?: number 
 export const KingdomDecor: React.FC<KingdomDecorProps> = ({ theme, seed = 42 }) => {
     const rng = useMemo(() => mulberry32(seed), [seed]);
 
-    // Generate backdrop mountain amphitheater (strictly in the North / flanks, never blocking camera foreground)
-    const mountains = useMemo(() => {
-        const list: { pos: [number, number, number]; r: number; h: number; rot: number; w?: number; d?: number }[] = [];
+    // Small, tidy perimeter border outlining the battlefield boundary (never giant)
+    const borderRidges = useMemo(() => {
+        const list: { pos: [number, number, number]; w: number; h: number; d: number; rot: number }[] = [];
+        const count = 24;
+        const ringDist = VILLAGE_HALF + 8.5; // Just outside the deployment boundary
 
-        // Primary backdrop arc across the Northern horizon: West (-x) -> North (-z) -> East (+x)
-        const count = 14;
         for (let i = 0; i < count; i++) {
-            // Arc spanning 210 degrees across the back: from 155° to 385°
-            const angle = Math.PI * 0.86 + (i / (count - 1)) * (Math.PI * 1.28) + (rng() - 0.5) * 0.12;
-            const dist = 32 + rng() * 10;
+            const angle = (i / count) * Math.PI * 2;
+            const dist = ringDist + (rng() - 0.5) * 1.2;
             const x = Math.cos(angle) * dist;
             const z = Math.sin(angle) * dist;
-            const r = 7 + rng() * 4.5;
-            const h = 10 + rng() * 10;
-            const rot = rng() * Math.PI * 2;
-            list.push({ pos: [x, 0, z], r, h, rot, w: r * 1.3, d: r * 1.1 });
-        }
-
-        // Secondary towering background peaks further in the distance
-        for (let i = 0; i < 9; i++) {
-            const angle = Math.PI * 0.88 + (i / 8) * (Math.PI * 1.24) + (rng() - 0.5) * 0.15;
-            const dist = 48 + rng() * 14;
-            const x = Math.cos(angle) * dist;
-            const z = Math.sin(angle) * dist;
-            const r = 9 + rng() * 6;
-            const h = 16 + rng() * 12;
-            const rot = rng() * Math.PI * 2;
-            list.push({ pos: [x, 0, z], r, h, rot, w: r * 1.5, d: r * 1.2 });
+            const w = 4.8 + rng() * 1.0;
+            const h = 0.9 + rng() * 0.45; // Small, low boundary (0.9 to 1.35 height)
+            const d = 2.4 + rng() * 0.8;
+            const rot = angle + Math.PI / 2 + (rng() - 0.5) * 0.3; // Aligned along the perimeter
+            list.push({ pos: [x, 0, z], w, h, d, rot });
         }
 
         return list;
     }, [rng]);
 
-    // Generate vegetation / foliage outside the deploy perimeter
+    // Small accent foliage scattered cleanly along the outer border
     const flora = useMemo(() => {
         const list: { pos: [number, number, number]; scale: number }[] = [];
-        for (let i = 0; i < 22; i++) {
-            // Arc around lateral flanks and northern perimeter (keeps camera foreground clear)
-            const angle = Math.PI * 0.8 + rng() * (Math.PI * 1.4);
-            const dist = VILLAGE_HALF + 3.8 + rng() * 9;
+        const count = 16;
+        for (let i = 0; i < count; i++) {
+            const angle = (i / count) * Math.PI * 2 + (rng() - 0.5) * 0.2;
+            const dist = 21.8 + rng() * 2.0;
             const x = Math.cos(angle) * dist;
             const z = Math.sin(angle) * dist;
-            const scale = 0.65 + rng() * 0.45;
+            const scale = 0.45 + rng() * 0.25; // Small, cute decorative scale
             list.push({ pos: [x, 0, z], scale });
         }
         return list;
@@ -287,16 +281,17 @@ export const KingdomDecor: React.FC<KingdomDecorProps> = ({ theme, seed = 42 }) 
             {/* Atmospheric weather particles */}
             <WeatherParticles type={theme.weatherType} color={weatherColor} />
 
-            {/* Kingdom Specific Mountains / Hills */}
+            {/* Kingdom-specific small low perimeter ridges */}
             {theme.mountainStyle === 'ice' && (
                 <group>
-                    {mountains.map((m, i) => (
-                        <SnowMountainPeak
-                            key={`peak_${i}`}
-                            position={m.pos}
-                            radius={m.r}
-                            height={m.h}
-                            rotation={m.rot}
+                    {borderRidges.map((b, i) => (
+                        <LowSnowRidge
+                            key={`ridge_${i}`}
+                            position={b.pos}
+                            width={b.w}
+                            height={b.h}
+                            depth={b.d}
+                            rotation={b.rot}
                         />
                     ))}
                     {flora.map((f, i) => (
@@ -307,14 +302,14 @@ export const KingdomDecor: React.FC<KingdomDecorProps> = ({ theme, seed = 42 }) 
 
             {theme.mountainStyle === 'desert' && (
                 <group>
-                    {mountains.map((m, i) => (
-                        <DesertMesa
-                            key={`mesa_${i}`}
-                            position={m.pos}
-                            width={m.w || m.r * 1.5}
-                            height={m.h * 0.7}
-                            depth={m.d || m.r * 1.2}
-                            rotation={m.rot}
+                    {borderRidges.map((b, i) => (
+                        <LowDesertRidge
+                            key={`ridge_${i}`}
+                            position={b.pos}
+                            width={b.w}
+                            height={b.h}
+                            depth={b.d}
+                            rotation={b.rot}
                         />
                     ))}
                     {flora.map((f, i) => (
@@ -325,12 +320,14 @@ export const KingdomDecor: React.FC<KingdomDecorProps> = ({ theme, seed = 42 }) 
 
             {theme.mountainStyle === 'forest' && (
                 <group>
-                    {mountains.map((m, i) => (
-                        <ForestHill
-                            key={`hill_${i}`}
-                            position={m.pos}
-                            radius={m.r * 1.2}
-                            height={m.h * 0.6}
+                    {borderRidges.map((b, i) => (
+                        <LowForestRidge
+                            key={`ridge_${i}`}
+                            position={b.pos}
+                            width={b.w}
+                            height={b.h}
+                            depth={b.d}
+                            rotation={b.rot}
                         />
                     ))}
                     {flora.map((f, i) => (
