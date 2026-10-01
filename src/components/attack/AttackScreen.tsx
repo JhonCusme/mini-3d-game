@@ -183,7 +183,7 @@ export const AttackScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => 
           <color attach="background" args={[oppTheme.skyColor]} />
           <fog attach="fog" args={[oppTheme.fogColor, oppTheme.fogNear, oppTheme.fogFar]} />
           <SceneLights theme={oppTheme} />
-          <RtsControls />
+          <RtsControls panLimit={6.5} />
           <group onClick={onGroundTap}>
             <VillageTerrain seed={hashString(opponent.playerId) % 1000} kingdom={opponent.kingdom} />
           </group>

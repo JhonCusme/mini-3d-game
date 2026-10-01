@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { VILLAGE_HALF } from '../../config/BuildingsConfig';
 import type { KingdomType } from '../../core/GameState';
 import { getKingdomConfig } from '../../config/KingdomsConfig';
-import { KingdomDecor } from './KingdomDecor';
+import { KingdomDecor, BORDER_HALF } from './KingdomDecor';
 
 const WALL_COLORS: Record<KingdomType, string[]> = {
   frost: ['#8ba7bd', '#99b8d1', '#adc9e0', '#b9d5ec', '#cae3f7', '#d9ecfa', '#e5f3fc', '#82cbf5'],
@@ -69,10 +69,16 @@ export const VillageTerrain: React.FC<{
 
   return (
     <group>
-      {/* Outer landscape terrain plane */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]} receiveShadow>
+      {/* Outer terrain plane beyond the square boundary */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.04, 0]} receiveShadow>
         <planeGeometry args={[160, 160]} />
         <meshStandardMaterial color={tint || theme.groundColor} roughness={1} />
+      </mesh>
+
+      {/* Raised playable battlefield square area inside BORDER_HALF */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.012, 0]} receiveShadow>
+        <planeGeometry args={[BORDER_HALF * 2, BORDER_HALF * 2]} />
+        <meshStandardMaterial color={theme.groundColor} roughness={0.9} />
       </mesh>
 
       {/* Inner village construction plot */}

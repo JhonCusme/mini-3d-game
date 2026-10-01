@@ -1,9 +1,7 @@
 import React, { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import type { Points } from 'three';
-import { VILLAGE_HALF } from '../../config/BuildingsConfig';
 import type { KingdomVisualTheme } from '../../config/KingdomsConfig';
-import { mulberry32 } from '../../core/pvp/PvpBattle';
 
 interface KingdomDecorProps {
     theme: KingdomVisualTheme;
@@ -231,44 +229,79 @@ const ForestTree: React.FC<{ position: [number, number, number]; scale?: number 
     </group>
 );
 
-export const KingdomDecor: React.FC<KingdomDecorProps> = ({ theme, seed = 42 }) => {
-    const rng = useMemo(() => mulberry32(seed), [seed]);
+/** Corner boundary post marking the 4 vertices of the square boundary */
+const CornerPost: React.FC<{
+    position: [number, number, number];
+    style: 'ice' | 'desert' | 'forest';
+}> = ({ position, style }) => {
+    const baseColor = style === 'ice' ? '#4a5d6e' : style === 'desert' ? '#b87a32' : '#4a443b';
+    const topColor = style === 'ice' ? '#ffffff' : style === 'desert' ? '#e5a952' : '#2d6a22';
+    return (
+        <group position={position}>
+            <mesh position={[0, 0.45, 0]} castShadow receiveShadow>
+                <boxGeometry args={[1.3, 0.9, 1.3]} />
+                <meshStandardMaterial color={baseColor} roughness={0.9} flatShading />
+            </mesh>
+            <mesh position={[0, 1.0, 0]} castShadow receiveShadow>
+                <coneGeometry args={[0.7, 0.45, 4]} />
+                <meshStandardMaterial color={topColor} roughness={0.8} flatShading />
+            </mesh>
+        </group>
+    );
+};
 
-    // Small, tidy perimeter border outlining the battlefield boundary (never giant)
-    const borderRidges = useMemo(() => {
+export const BORDER_HALF = 19.5; // Half-size of the square boundary (39x39 square map)
+
+export const KingdomDecor: React.FC<KingdomDecorProps> = ({ theme }) => {
+    // Square perimeter border segments (North, South, East, West)
+    const squareBorder = useMemo(() => {
         const list: { pos: [number, number, number]; w: number; h: number; d: number; rot: number }[] = [];
-        const count = 24;
-        const ringDist = VILLAGE_HALF + 8.5; // Just outside the deployment boundary
+        const B = BORDER_HALF;
+        const SEGMENTS_PER_SIDE = 8;
+        const segLen = (B * 2 - 2.4) / SEGMENTS_PER_SIDE; // ~4.57
+        const start = -B + 1.2 + segLen / 2;
 
-        for (let i = 0; i < count; i++) {
-            const angle = (i / count) * Math.PI * 2;
-            const dist = ringDist + (rng() - 0.5) * 1.2;
-            const x = Math.cos(angle) * dist;
-            const z = Math.sin(angle) * dist;
-            const w = 4.8 + rng() * 1.0;
-            const h = 0.9 + rng() * 0.45; // Small, low boundary (0.9 to 1.35 height)
-            const d = 2.4 + rng() * 0.8;
-            const rot = angle + Math.PI / 2 + (rng() - 0.5) * 0.3; // Aligned along the perimeter
-            list.push({ pos: [x, 0, z], w, h, d, rot });
+        for (let i = 0; i < SEGMENTS_PER_SIDE; i++) {
+            const coord = start + i * segLen;
+            const h = 0.72; // Small low boundary
+            const d = 1.0;
+            // North edge (z = -B)
+            list.push({ pos: [coord, 0, -B], w: segLen + 0.08, h, d, rot: 0 });
+            // South edge (z = +B)
+            list.push({ pos: [coord, 0, B], w: segLen + 0.08, h, d, rot: 0 });
+            // West edge (x = -B)
+            list.push({ pos: [-B, 0, coord], w: segLen + 0.08, h, d, rot: Math.PI / 2 });
+            // East edge (x = +B)
+            list.push({ pos: [B, 0, coord], w: segLen + 0.08, h, d, rot: Math.PI / 2 });
         }
-
         return list;
-    }, [rng]);
+    }, []);
 
-    // Small accent foliage scattered cleanly along the outer border
+    const cornerPosts: [number, number, number][] = useMemo(() => {
+        const B = BORDER_HALF;
+        return [
+            [-B, 0, -B],
+            [B, 0, -B],
+            [-B, 0, B],
+            [B, 0, B],
+        ];
+    }, []);
+
+    // Minimal small foliage along the outside of the square boundary
     const flora = useMemo(() => {
         const list: { pos: [number, number, number]; scale: number }[] = [];
-        const count = 16;
-        for (let i = 0; i < count; i++) {
-            const angle = (i / count) * Math.PI * 2 + (rng() - 0.5) * 0.2;
-            const dist = 21.8 + rng() * 2.0;
-            const x = Math.cos(angle) * dist;
-            const z = Math.sin(angle) * dist;
-            const scale = 0.45 + rng() * 0.25; // Small, cute decorative scale
-            list.push({ pos: [x, 0, z], scale });
-        }
+        const B = BORDER_HALF;
+        // 4 corner trees outside the boundary
+        list.push({ pos: [-B - 1.2, 0, -B - 1.2], scale: 0.5 });
+        list.push({ pos: [B + 1.2, 0, -B - 1.2], scale: 0.5 });
+        list.push({ pos: [-B - 1.2, 0, B + 1.2], scale: 0.5 });
+        list.push({ pos: [B + 1.2, 0, B + 1.2], scale: 0.5 });
+
+        // 2 small trees along Northern outside wall
+        list.push({ pos: [-6, 0, -B - 1.2], scale: 0.45 });
+        list.push({ pos: [6, 0, -B - 1.2], scale: 0.45 });
         return list;
-    }, [rng]);
+    }, []);
 
     const weatherColor = useMemo(() => {
         if (theme.weatherType === 'snow') return '#ffffff';
@@ -281,18 +314,21 @@ export const KingdomDecor: React.FC<KingdomDecorProps> = ({ theme, seed = 42 }) 
             {/* Atmospheric weather particles */}
             <WeatherParticles type={theme.weatherType} color={weatherColor} />
 
-            {/* Kingdom-specific small low perimeter ridges */}
+            {/* Kingdom-specific square perimeter ridges & corner posts */}
             {theme.mountainStyle === 'ice' && (
                 <group>
-                    {borderRidges.map((b, i) => (
+                    {squareBorder.map((b, i) => (
                         <LowSnowRidge
-                            key={`ridge_${i}`}
+                            key={`sq_ridge_${i}`}
                             position={b.pos}
                             width={b.w}
                             height={b.h}
                             depth={b.d}
                             rotation={b.rot}
                         />
+                    ))}
+                    {cornerPosts.map((cp, i) => (
+                        <CornerPost key={`cp_${i}`} position={cp} style="ice" />
                     ))}
                     {flora.map((f, i) => (
                         <SnowyPine key={`pine_${i}`} position={f.pos} scale={f.scale} />
@@ -302,15 +338,18 @@ export const KingdomDecor: React.FC<KingdomDecorProps> = ({ theme, seed = 42 }) 
 
             {theme.mountainStyle === 'desert' && (
                 <group>
-                    {borderRidges.map((b, i) => (
+                    {squareBorder.map((b, i) => (
                         <LowDesertRidge
-                            key={`ridge_${i}`}
+                            key={`sq_ridge_${i}`}
                             position={b.pos}
                             width={b.w}
                             height={b.h}
                             depth={b.d}
                             rotation={b.rot}
                         />
+                    ))}
+                    {cornerPosts.map((cp, i) => (
+                        <CornerPost key={`cp_${i}`} position={cp} style="desert" />
                     ))}
                     {flora.map((f, i) => (
                         <DesertPalm key={`palm_${i}`} position={f.pos} scale={f.scale} />
@@ -320,15 +359,18 @@ export const KingdomDecor: React.FC<KingdomDecorProps> = ({ theme, seed = 42 }) 
 
             {theme.mountainStyle === 'forest' && (
                 <group>
-                    {borderRidges.map((b, i) => (
+                    {squareBorder.map((b, i) => (
                         <LowForestRidge
-                            key={`ridge_${i}`}
+                            key={`sq_ridge_${i}`}
                             position={b.pos}
                             width={b.w}
                             height={b.h}
                             depth={b.d}
                             rotation={b.rot}
                         />
+                    ))}
+                    {cornerPosts.map((cp, i) => (
+                        <CornerPost key={`cp_${i}`} position={cp} style="forest" />
                     ))}
                     {flora.map((f, i) => (
                         <ForestTree key={`ftree_${i}`} position={f.pos} scale={f.scale} />

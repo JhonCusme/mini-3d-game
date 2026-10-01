@@ -11,7 +11,7 @@ import { VillageTerrain, Walls } from './VillageTerrain';
 import { VillageTroops } from './VillageTroops';
 
 export const CAMERA_POSITION: [number, number, number] = [13, 17, 13];
-const PAN_LIMIT = 18;
+export const PAN_LIMIT = 6.5; // Strictly bounds camera so it cannot pan beyond the square boundary
 const TAP_TOLERANCE = 8; // pixels a pointer may move and still count as a tap
 
 export function formatDuration(ms: number): string {
@@ -24,7 +24,7 @@ export function formatDuration(ms: number): string {
 }
 
 /** Isometric-style camera: pan with one finger / left mouse, pinch or wheel to zoom, no rotation. */
-export const RtsControls: React.FC<{ enabled?: boolean }> = ({ enabled = true }) => {
+export const RtsControls: React.FC<{ enabled?: boolean; panLimit?: number }> = ({ enabled = true, panLimit = PAN_LIMIT }) => {
   const ref = useRef<OrbitControlsImpl>(null);
   return (
     <OrbitControls
@@ -33,15 +33,15 @@ export const RtsControls: React.FC<{ enabled?: boolean }> = ({ enabled = true })
       enableRotate={false}
       screenSpacePanning={false}
       minDistance={14}
-      maxDistance={48}
+      maxDistance={38}
       mouseButtons={{ LEFT: MOUSE.PAN, MIDDLE: MOUSE.DOLLY, RIGHT: MOUSE.PAN }}
       touches={{ ONE: TOUCH.PAN, TWO: TOUCH.DOLLY_PAN }}
       onChange={() => {
         const c = ref.current;
         if (!c) return;
         const t = c.target;
-        const cx = Math.max(-PAN_LIMIT, Math.min(PAN_LIMIT, t.x));
-        const cz = Math.max(-PAN_LIMIT, Math.min(PAN_LIMIT, t.z));
+        const cx = Math.max(-panLimit, Math.min(panLimit, t.x));
+        const cz = Math.max(-panLimit, Math.min(panLimit, t.z));
         if (cx !== t.x || cz !== t.z || t.y !== 0) {
           c.object.position.x += cx - t.x;
           c.object.position.z += cz - t.z;
