@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import type { Group, Mesh } from 'three';
-import { BUILDINGS, type BuildingType } from '../../config/BuildingsConfig';
+import type { BuildingType } from '../../config/BuildingsConfig';
 import { ArcherModel, HeroKingModel } from '../common/StylizedCharacters';
 
 // ---------------------------------------------------------------------------
@@ -1094,6 +1094,241 @@ const AltarModel: React.FC<{ level: number }> = ({ level }) => {
 };
 
 // ===========================================================================
+// ===========================================================================
+// 8. ARMORY (ARMERÍA) - Distinctive with Hanging Weapons, Armor Mannequin & Crest
+// ===========================================================================
+const ArmoryModel: React.FC<{ level: number }> = ({ level }) => {
+  const tier = getBuildingTier(level);
+
+  return (
+    <group>
+      {/* Foundation & Base Building */}
+      {tier === 1 && (
+        <group>
+          <mesh position={[0, 0.65, 0]} castShadow receiveShadow>
+            <boxGeometry args={[2.2, 1.2, 1.8]} />
+            <meshStandardMaterial color="#6a3b1a" roughness={0.8} />
+          </mesh>
+          <mesh position={[0, 1.55, 0]} rotation={[0, Math.PI / 4, 0]} castShadow>
+            <coneGeometry args={[1.6, 0.8, 4]} />
+            <meshStandardMaterial color="#8b5a2b" />
+          </mesh>
+        </group>
+      )}
+      {tier === 2 && (
+        <group>
+          <mesh position={[0, 0.2, 0]} castShadow>
+            <boxGeometry args={[2.4, 0.4, 2.0]} />
+            <meshStandardMaterial color="#636e72" />
+          </mesh>
+          <mesh position={[0, 0.9, 0]} castShadow receiveShadow>
+            <boxGeometry args={[2.2, 1.1, 1.8]} />
+            <meshStandardMaterial color="#2f4f75" roughness={0.7} />
+          </mesh>
+          <mesh position={[0, 1.75, 0]} rotation={[0, Math.PI / 4, 0]} castShadow>
+            <coneGeometry args={[1.65, 0.9, 4]} />
+            <meshStandardMaterial color="#1e3799" />
+          </mesh>
+        </group>
+      )}
+      {tier >= 3 && (
+        <group>
+          <mesh position={[0, 0.85, 0]} castShadow receiveShadow>
+            <boxGeometry args={[2.4, 1.6, 2.0]} />
+            <meshStandardMaterial color={tier === 4 ? '#1e272e' : '#718093'} roughness={0.7} />
+          </mesh>
+          <mesh position={[0, 1.9, 0]} castShadow>
+            <boxGeometry args={[2.55, 0.25, 2.15]} />
+            <meshStandardMaterial color={tier === 4 ? '#ffd700' : '#4a4b4d'} metalness={tier === 4 ? 0.9 : 0.2} />
+          </mesh>
+          <mesh position={[0, 2.45, 0]} rotation={[0, Math.PI / 4, 0]} castShadow>
+            <coneGeometry args={[1.75, 1.0, 4]} />
+            <meshStandardMaterial color={tier === 4 ? '#0c2461' : '#1e3799'} />
+          </mesh>
+        </group>
+      )}
+
+      {/* --- PROMINENT DISTINCTIVE HALLMARKS --- */}
+
+      {/* 1. GIANT HERALDIC SHIELD ON FRONT FACADE */}
+      <group position={[0, 1.55, 0.98]}>
+        <mesh castShadow>
+          <boxGeometry args={[0.55, 0.7, 0.06]} />
+          <meshStandardMaterial color="#3867d6" metalness={0.5} roughness={0.3} />
+        </mesh>
+        <mesh position={[0, 0, -0.01]}>
+          <boxGeometry args={[0.6, 0.75, 0.05]} />
+          <meshStandardMaterial color="#dcdde1" metalness={0.9} roughness={0.2} />
+        </mesh>
+        {/* Golden Cross Emblem */}
+        <mesh position={[0, 0, 0.035]}>
+          <boxGeometry args={[0.12, 0.5, 0.02]} />
+          <meshStandardMaterial color="#ffd700" metalness={0.9} />
+        </mesh>
+        <mesh position={[0, 0.05, 0.035]}>
+          <boxGeometry args={[0.4, 0.12, 0.02]} />
+          <meshStandardMaterial color="#ffd700" metalness={0.9} />
+        </mesh>
+      </group>
+
+      {/* 2. EXTERIOR WEAPON RACK WITH HANGING SWORDS, AXES & HALBERD */}
+      <group position={[-1.18, 0.65, 0.1]} rotation={[0, -Math.PI / 2, 0]}>
+        {/* Wooden Rack */}
+        <mesh position={[0, 0, 0]}>
+          <boxGeometry args={[0.9, 0.8, 0.08]} />
+          <meshStandardMaterial color="#4a2810" roughness={0.8} />
+        </mesh>
+        {/* Hanging Sword */}
+        <group position={[-0.25, 0.05, 0.06]} rotation={[0, 0, 0.1]}>
+          <mesh>
+            <boxGeometry args={[0.04, 0.55, 0.02]} />
+            <meshStandardMaterial color="#dcdde1" metalness={0.9} roughness={0.2} />
+          </mesh>
+          <mesh position={[0, 0.22, 0]}>
+            <boxGeometry args={[0.14, 0.03, 0.03]} />
+            <meshStandardMaterial color="#ffd700" metalness={0.8} />
+          </mesh>
+        </group>
+        {/* Hanging Battleaxe */}
+        <group position={[0, 0.05, 0.06]}>
+          <mesh>
+            <cylinderGeometry args={[0.015, 0.015, 0.6, 6]} />
+            <meshStandardMaterial color="#5a3d1c" />
+          </mesh>
+          <mesh position={[0.08, 0.18, 0]}>
+            <boxGeometry args={[0.15, 0.18, 0.02]} />
+            <meshStandardMaterial color="#718093" metalness={0.85} />
+          </mesh>
+        </group>
+        {/* Hanging Spear / Halberd */}
+        <group position={[0.25, 0.05, 0.06]} rotation={[0, 0, -0.1]}>
+          <mesh>
+            <cylinderGeometry args={[0.015, 0.015, 0.65, 6]} />
+            <meshStandardMaterial color="#5a3d1c" />
+          </mesh>
+          <mesh position={[0, 0.32, 0]}>
+            <coneGeometry args={[0.04, 0.15, 4]} />
+            <meshStandardMaterial color="#dcdde1" metalness={0.9} />
+          </mesh>
+        </group>
+      </group>
+
+      {/* 3. SUIT OF ARMOR MANNEQUIN BESIDE ENTRANCE */}
+      <group position={[0.85, 0.45, 0.95]}>
+        <mesh position={[0, -0.35, 0]}>
+          <boxGeometry args={[0.38, 0.12, 0.38]} />
+          <meshStandardMaterial color="#4a2810" />
+        </mesh>
+        <mesh position={[0, 0, 0]} castShadow>
+          <boxGeometry args={[0.26, 0.32, 0.2]} />
+          <meshStandardMaterial color="#bdc3c7" metalness={0.85} roughness={0.25} />
+        </mesh>
+        <mesh position={[0, 0.26, 0]} castShadow>
+          <sphereGeometry args={[0.12, 8, 8]} />
+          <meshStandardMaterial color="#bdc3c7" metalness={0.85} roughness={0.25} />
+        </mesh>
+        <mesh position={[0, 0.25, 0.11]}>
+          <boxGeometry args={[0.14, 0.03, 0.02]} />
+          <meshStandardMaterial color="#1a1a1a" />
+        </mesh>
+      </group>
+    </group>
+  );
+};
+
+// ===========================================================================
+// 9. ARENA (COLISEO DE ENTRENAMIENTO) - Distinctive Dueling Ring with High Flags
+// ===========================================================================
+const ArenaModel: React.FC<{ level: number }> = ({ level }) => {
+  const tier = getBuildingTier(level);
+
+  return (
+    <group>
+      {/* Outer Circular Arena Barrier */}
+      <mesh position={[0, 0.35, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[1.35, 1.45, 0.7, 16, 1, true]} />
+        <meshStandardMaterial
+          color={tier === 4 ? '#2d3436' : tier >= 3 ? '#718093' : '#8b5a2b'}
+          roughness={0.8}
+          side={2}
+        />
+      </mesh>
+      {/* Golden Sand Combat Pit */}
+      <mesh position={[0, 0.04, 0]} receiveShadow rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[1.33, 16]} />
+        <meshStandardMaterial color="#f5cd79" roughness={0.9} />
+      </mesh>
+
+      {/* --- PROMINENT DISTINCTIVE HALLMARKS --- */}
+
+      {/* 1. TALL TOURNAMENT WAR BANNERS (RED & BLUE) */}
+      <group position={[-1.2, 0, 0]}>
+        <mesh position={[0, 1.4, 0]} castShadow>
+          <cylinderGeometry args={[0.03, 0.03, 2.8, 6]} />
+          <meshStandardMaterial color="#3d2110" />
+        </mesh>
+        {/* Flapping Crimson War Banner */}
+        <mesh position={[0, 2.2, 0.35]}>
+          <boxGeometry args={[0.02, 0.8, 0.6]} />
+          <meshStandardMaterial color="#e84118" />
+        </mesh>
+        <mesh position={[0, 2.8, 0]}>
+          <sphereGeometry args={[0.06, 6, 6]} />
+          <meshStandardMaterial color="#ffd700" metalness={0.9} />
+        </mesh>
+      </group>
+
+      <group position={[1.2, 0, 0]}>
+        <mesh position={[0, 1.4, 0]} castShadow>
+          <cylinderGeometry args={[0.03, 0.03, 2.8, 6]} />
+          <meshStandardMaterial color="#3d2110" />
+        </mesh>
+        {/* Flapping Royal Blue War Banner */}
+        <mesh position={[0, 2.2, 0.35]}>
+          <boxGeometry args={[0.02, 0.8, 0.6]} />
+          <meshStandardMaterial color="#0984e3" />
+        </mesh>
+        <mesh position={[0, 2.8, 0]}>
+          <sphereGeometry args={[0.06, 6, 6]} />
+          <meshStandardMaterial color="#ffd700" metalness={0.9} />
+        </mesh>
+      </group>
+
+      {/* 2. CENTRAL SPARRING WOODEN DUMMY */}
+      <group position={[0, 0.45, 0]}>
+        <mesh castShadow>
+          <cylinderGeometry args={[0.04, 0.04, 0.8, 6]} />
+          <meshStandardMaterial color="#5a3d1c" />
+        </mesh>
+        <mesh position={[0, 0.15, 0]} rotation={[0, 0.6, 0]}>
+          <boxGeometry args={[0.6, 0.08, 0.08]} />
+          <meshStandardMaterial color="#8b5a2b" />
+        </mesh>
+        <mesh position={[0, 0.38, 0]} castShadow>
+          <sphereGeometry args={[0.14, 8, 8]} />
+          <meshStandardMaterial color="#e5b158" />
+        </mesh>
+        <mesh position={[0, 0.48, 0]}>
+          <coneGeometry args={[0.15, 0.12, 6]} />
+          <meshStandardMaterial color="#718093" metalness={0.7} />
+        </mesh>
+      </group>
+
+      {/* 3. CROSSED TRAINING SWORDS AT ENTRANCE */}
+      <group position={[0, 0.6, 1.4]} rotation={[0, 0, 0]}>
+        <mesh rotation={[0, 0, 0.7]}>
+          <boxGeometry args={[0.04, 0.65, 0.02]} />
+          <meshStandardMaterial color="#bdc3c7" metalness={0.8} />
+        </mesh>
+        <mesh rotation={[0, 0, -0.7]}>
+          <boxGeometry args={[0.04, 0.65, 0.02]} />
+          <meshStandardMaterial color="#bdc3c7" metalness={0.8} />
+        </mesh>
+      </group>
+    </group>
+  );
+};
+
 // MAIN BUILDING MODEL DISPATCHER
 // ===========================================================================
 export const BuildingModel: React.FC<{
@@ -1116,22 +1351,12 @@ export const BuildingModel: React.FC<{
       return <ArcherTowerModel level={level} aimAngle={aimAngle} />;
     case 'altar':
       return <AltarModel level={level} />;
-    default: {
-      const d = BUILDINGS[type];
-      const s = d.size;
-      return (
-        <group>
-          <mesh position={[0, 0.65, 0]} castShadow receiveShadow>
-            <boxGeometry args={[s * 0.75, 1.3, s * 0.7]} />
-            <meshStandardMaterial color={d.color} roughness={0.8} />
-          </mesh>
-          <mesh position={[0, 1.65, 0]} rotation={[0, Math.PI / 4, 0]} castShadow>
-            <coneGeometry args={[s * 0.6, 0.9, 4]} />
-            <meshStandardMaterial color={d.roofColor} />
-          </mesh>
-        </group>
-      );
-    }
+    case 'armory':
+      return <ArmoryModel level={level} />;
+    case 'arena':
+      return <ArenaModel level={level} />;
+    default:
+      return null;
   }
 };
 
