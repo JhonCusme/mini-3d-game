@@ -38,7 +38,7 @@ export interface SimBuilding {
     aim: number;              // rotation for turrets
 }
 
-export interface SimWall { id: number; x: number; z: number; horizontal: boolean; hp: number; maxHp: number; destroyed: boolean }
+export interface SimWall { id: number; x: number; z: number; horizontal: boolean; hp: number; maxHp: number; destroyed: boolean; level?: number }
 
 export interface SimUnit {
     id: number;
@@ -126,21 +126,37 @@ export class AttackSim {
         const villageHpMult = isFrostVillage ? 1.25 : 1.0;
         const wallHpMult = isFrostVillage ? 1.30 : 1.0;
 
-        for (const b of layoutOf(village)) {
-            const size = BUILDINGS[b.type].size;
-            const maxHp = Math.round(buildingHp(b.type, b.level) * (1 + this.defGod.hpBonus) * villageHpMult);
-            this.buildings.push({
-                id: this.nextId++, type: b.type, level: b.level, x: b.x + size / 2, z: b.z + size / 2, size,
-                hp: maxHp, maxHp, destroyed: false, cooldown: 0, aim: 0,
-            });
+        const layout = layoutOf(village);
+        for (const b of layout) {
+            if (b.type === 'wall') {
+                const wallHp = Math.round(buildingHp('wall', b.level) * (1 + this.defGod.wallBonus) * wallHpMult);
+                this.walls.push({
+                    id: this.nextId++,
+                    x: b.x + 0.5,
+                    z: b.z + 0.5,
+                    horizontal: true,
+                    hp: wallHp,
+                    maxHp: wallHp,
+                    destroyed: false,
+                    level: b.level,
+                });
+            } else {
+                const size = BUILDINGS[b.type].size;
+                const maxHp = Math.round(buildingHp(b.type, b.level) * (1 + this.defGod.hpBonus) * villageHpMult);
+                this.buildings.push({
+                    id: this.nextId++, type: b.type, level: b.level, x: b.x + size / 2, z: b.z + size / 2, size,
+                    hp: maxHp, maxHp, destroyed: false, cooldown: 0, aim: 0,
+                });
+            }
         }
         this.totalBuildings = this.buildings.length;
 
-        if (village.wallsLevel > 0) {
+        // Legacy perimeter fallback if no placed wall blocks exist
+        if (this.walls.length === 0 && village.wallsLevel > 0) {
             const wallHp = Math.round((150 + village.wallsLevel * 120) * (1 + this.defGod.wallBonus) * wallHpMult);
             for (let i = -VILLAGE_HALF; i < VILLAGE_HALF; i++) {
                 for (const [x, z, h] of [[i + 0.5, -WALL_EDGE, true], [i + 0.5, WALL_EDGE, true], [-WALL_EDGE, i + 0.5, false], [WALL_EDGE, i + 0.5, false]] as const) {
-                    this.walls.push({ id: this.nextId++, x, z, horizontal: h, hp: wallHp, maxHp: wallHp, destroyed: false });
+                    this.walls.push({ id: this.nextId++, x, z, horizontal: h, hp: wallHp, maxHp: wallHp, destroyed: false, level: village.wallsLevel });
                 }
             }
         }
@@ -401,22 +417,29 @@ export class AttackSim {
     /** First intact wall segment crossed on the way from (x,z) to the target, if any. */
     private blockingWall(u: SimUnit, tx: number, tz: number): SimWall | null {
         if (this.walls.length === 0 || UNIT_STATS[u.type].flying || u.side === 'defender') return null;
-        const inside = (px: number, pz: number) => Math.max(Math.abs(px), Math.abs(pz)) < WALL_EDGE;
-        if (inside(u.x, u.z) || !inside(tx, tz)) return null;
-        // Walk along the segment to find where it crosses the ring
-        const steps = 40;
-        let cx = u.x, cz = u.z;
-        for (let i = 1; i <= steps; i++) {
-            const px = u.x + (tx - u.x) * i / steps, pz = u.z + (tz - u.z) * i / steps;
-            if (inside(px, pz)) break;
-            cx = px; cz = pz;
+
+        const dist = Math.hypot(tx - u.x, tz - u.z);
+        if (dist < 0.3) return null;
+
+        const steps = Math.min(50, Math.max(10, Math.ceil(dist * 4)));
+        for (let i = 1; i < steps; i++) {
+            const t = i / steps;
+            const px = u.x + (tx - u.x) * t;
+            const pz = u.z + (tz - u.z) * t;
+
+            let closest: SimWall | null = null;
+            let closestD = Infinity;
+            for (const w of this.walls) {
+                if (w.destroyed) continue;
+                const d = Math.hypot(w.x - px, w.z - pz);
+                if (d < 0.65 && d < closestD) {
+                    closest = w;
+                    closestD = d;
+                }
+            }
+            if (closest) return closest;
         }
-        let best: SimWall | null = null, bestD = Infinity;
-        for (const w of this.walls) {
-            const d = Math.hypot(w.x - cx, w.z - cz);
-            if (d < bestD) { best = w; bestD = d; }
-        }
-        return best && !best.destroyed && bestD < 1.5 ? best : null;
+        return null;
     }
 
     private pickTarget(u: SimUnit) {

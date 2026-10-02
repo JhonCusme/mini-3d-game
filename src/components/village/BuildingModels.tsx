@@ -1329,6 +1329,145 @@ const ArenaModel: React.FC<{ level: number }> = ({ level }) => {
   );
 };
 
+// ===========================================================================
+// 10. WALL BLOCK (MURO INDIVIDUAL 1x1) - 4 Tiers of Defensive Fortifications
+// ===========================================================================
+export const WallModel: React.FC<{ level: number }> = ({ level }) => {
+  const tier = getBuildingTier(level);
+
+  // TIER 1 (Nv 1-2): Palisade of sharpened tribal timber posts bound with rope
+  if (tier === 1) {
+    return (
+      <group>
+        {/* Dirt foot pad */}
+        <mesh position={[0, 0.04, 0]} receiveShadow>
+          <boxGeometry args={[0.9, 0.08, 0.9]} />
+          <meshStandardMaterial color="#533c2a" roughness={0.95} />
+        </mesh>
+        {/* 4 Pointed Timber Logs */}
+        {[
+          [-0.22, -0.22], [0.22, -0.22],
+          [-0.22, 0.22], [0.22, 0.22],
+        ].map(([x, z], i) => (
+          <group key={i} position={[x, 0, z]}>
+            <mesh position={[0, 0.45, 0]} castShadow>
+              <cylinderGeometry args={[0.13, 0.15, 0.82, 6]} />
+              <meshStandardMaterial color="#6a3b1a" roughness={0.85} />
+            </mesh>
+            <mesh position={[0, 0.92, 0]} castShadow>
+              <coneGeometry args={[0.13, 0.22, 6]} />
+              <meshStandardMaterial color="#4a2810" roughness={0.9} />
+            </mesh>
+          </group>
+        ))}
+        {/* Horizontal Crossbeam & binding */}
+        <mesh position={[0, 0.42, 0]} castShadow>
+          <boxGeometry args={[0.82, 0.1, 0.82]} />
+          <meshStandardMaterial color="#3d2110" />
+        </mesh>
+      </group>
+    );
+  }
+
+  // TIER 2 (Nv 3-4): Sturdy Carved Stone Block with Iron Brackets
+  if (tier === 2) {
+    return (
+      <group>
+        {/* Stone Foundation */}
+        <mesh position={[0, 0.08, 0]} castShadow receiveShadow>
+          <boxGeometry args={[0.94, 0.16, 0.94]} />
+          <meshStandardMaterial color="#4b4d4f" roughness={0.8} />
+        </mesh>
+        {/* Main Solid Stone Block */}
+        <mesh position={[0, 0.52, 0]} castShadow receiveShadow>
+          <boxGeometry args={[0.86, 0.72, 0.86]} />
+          <meshStandardMaterial color="#7f8c8d" roughness={0.75} />
+        </mesh>
+        {/* Stone Top Coping */}
+        <mesh position={[0, 0.92, 0]} castShadow>
+          <boxGeometry args={[0.92, 0.1, 0.92]} />
+          <meshStandardMaterial color="#57606f" roughness={0.7} />
+        </mesh>
+        {/* Iron Corner Brackets */}
+        {[[-0.43, -0.43], [0.43, -0.43], [-0.43, 0.43], [0.43, 0.43]].map(([x, z], i) => (
+          <mesh key={i} position={[x, 0.5, z]}>
+            <boxGeometry args={[0.06, 0.5, 0.06]} />
+            <meshStandardMaterial color="#2f3542" metalness={0.8} />
+          </mesh>
+        ))}
+      </group>
+    );
+  }
+
+  // TIER 3 (Nv 5-7): Castle Fortress Battlement with Crenellations
+  if (tier === 3) {
+    return (
+      <group>
+        {/* Fortress Stone Base */}
+        <mesh position={[0, 0.1, 0]} castShadow receiveShadow>
+          <boxGeometry args={[0.96, 0.2, 0.96]} />
+          <meshStandardMaterial color="#2f3542" roughness={0.8} />
+        </mesh>
+        {/* Towering Rampart Body */}
+        <mesh position={[0, 0.62, 0]} castShadow receiveShadow>
+          <boxGeometry args={[0.88, 0.84, 0.88]} />
+          <meshStandardMaterial color="#57606f" roughness={0.7} />
+        </mesh>
+        {/* Crenellations (Almenas) on top corners */}
+        {[
+          [-0.32, -0.32], [0.32, -0.32],
+          [-0.32, 0.32], [0.32, 0.32],
+        ].map(([x, z], i) => (
+          <mesh key={i} position={[x, 1.14, z]} castShadow>
+            <boxGeometry args={[0.26, 0.22, 0.26]} />
+            <meshStandardMaterial color="#353b48" roughness={0.65} />
+          </mesh>
+        ))}
+        {/* Central Embrasures Walkway */}
+        <mesh position={[0, 1.05, 0]}>
+          <boxGeometry args={[0.84, 0.06, 0.84]} />
+          <meshStandardMaterial color="#2f3542" />
+        </mesh>
+      </group>
+    );
+  }
+
+  // TIER 4 (Nv 8+): Imperial Obsidian Monolith with Polished Gold Crest
+  return (
+    <group>
+      {/* Imperial Dark Basalt Pedestal */}
+      <mesh position={[0, 0.12, 0]} castShadow receiveShadow>
+        <boxGeometry args={[0.98, 0.24, 0.98]} />
+        <meshStandardMaterial color="#1e272e" roughness={0.4} metalness={0.3} />
+      </mesh>
+      {/* Glossy Obsidian Wall Body */}
+      <mesh position={[0, 0.72, 0]} castShadow receiveShadow>
+        <boxGeometry args={[0.88, 0.96, 0.88]} />
+        <meshStandardMaterial color="#0f1418" roughness={0.25} metalness={0.5} />
+      </mesh>
+      {/* Gold Trim Corner Pillars */}
+      {[[-0.43, -0.43], [0.43, -0.43], [-0.43, 0.43], [0.43, 0.43]].map(([x, z], i) => (
+        <mesh key={i} position={[x, 0.72, z]} castShadow>
+          <boxGeometry args={[0.08, 0.98, 0.08]} />
+          <meshStandardMaterial color="#ffd700" metalness={0.95} roughness={0.2} />
+        </mesh>
+      ))}
+      {/* Radiant Gold Battlement Crown */}
+      <mesh position={[0, 1.25, 0]} castShadow>
+        <boxGeometry args={[0.92, 0.12, 0.92]} />
+        <meshStandardMaterial color="#ffd700" metalness={0.95} roughness={0.2} emissive="#b8860b" emissiveIntensity={0.2} />
+      </mesh>
+      {/* 4 Golden Spikes on Top Corners */}
+      {[[-0.34, -0.34], [0.34, -0.34], [-0.34, 0.34], [0.34, 0.34]].map(([x, z], i) => (
+        <mesh key={i} position={[x, 1.38, z]}>
+          <coneGeometry args={[0.07, 0.18, 6]} />
+          <meshStandardMaterial color="#ffd700" metalness={0.98} roughness={0.15} />
+        </mesh>
+      ))}
+    </group>
+  );
+};
+
 const BUILDING_MODEL_SCALES: Record<BuildingType, number> = {
   townhall: 0.74,
   goldmine: 0.70,
@@ -1339,6 +1478,7 @@ const BUILDING_MODEL_SCALES: Record<BuildingType, number> = {
   altar: 0.78,
   cannon: 0.80,
   archertower: 0.75,
+  wall: 1.0,
 };
 
 // MAIN BUILDING MODEL DISPATCHER
@@ -1370,6 +1510,8 @@ export const BuildingModel: React.FC<{
         return <ArmoryModel level={level} />;
       case 'arena':
         return <ArenaModel level={level} />;
+      case 'wall':
+        return <WallModel level={level} />;
       default:
         return null;
     }

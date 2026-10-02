@@ -2,9 +2,9 @@ import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Billboard } from '@react-three/drei';
 import type { Group, Mesh, MeshBasicMaterial } from 'three';
-import type { SimBuilding, SimEffect, SimProjectile, SimUnit } from '../../core/pvp/AttackSim';
+import type { SimBuilding, SimEffect, SimProjectile, SimUnit, SimWall } from '../../core/pvp/AttackSim';
 import { UNIT_STATS } from '../../core/pvp/AttackSim';
-import { BuildingModel } from '../village/BuildingModels';
+import { BuildingModel, WallModel } from '../village/BuildingModels';
 import { StylizedTroop } from '../common/StylizedCharacters';
 
 const TEAM = { attacker: '#3a7bd5', defender: '#d63a3a' };
@@ -85,6 +85,33 @@ export const BuildingActor: React.FC<{ b: SimBuilding }> = ({ b }) => {
           <circleGeometry args={[b.size * 0.5, 12]} />
           <meshStandardMaterial color="#2d2a26" />
         </mesh>
+      </group>
+    </group>
+  );
+};
+
+export const WallActor: React.FC<{ w: SimWall }> = ({ w }) => {
+  const alive = useRef<Group>(null);
+  const rubble = useRef<Group>(null);
+  useFrame(() => {
+    if (alive.current) alive.current.visible = !w.destroyed;
+    if (rubble.current) rubble.current.visible = w.destroyed;
+  });
+  return (
+    <group position={[w.x, 0, w.z]}>
+      <group ref={alive}>
+        <WallModel level={w.level || 1} />
+        {w.hp < w.maxHp && (
+          <HpBar y={1.2} width={0.8} get={() => w.hp / w.maxHp} />
+        )}
+      </group>
+      <group ref={rubble} visible={false}>
+        {[[-0.15, -0.1], [0.18, 0.05], [0, 0.2]].map(([x, z], i) => (
+          <mesh key={i} position={[x, 0.1, z]} rotation={[i, i * 2, 0]} castShadow>
+            <dodecahedronGeometry args={[0.16 + (i % 2) * 0.08, 0]} />
+            <meshStandardMaterial color="#4a4b4d" flatShading />
+          </mesh>
+        ))}
       </group>
     </group>
   );

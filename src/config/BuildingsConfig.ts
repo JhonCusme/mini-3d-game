@@ -2,7 +2,7 @@ import type { GameConfig } from './GameConfig';
 
 export type BuildingType =
     | 'townhall' | 'goldmine' | 'barracks' | 'blacksmith' | 'armory' | 'arena' | 'altar'
-    | 'cannon' | 'archertower';
+    | 'cannon' | 'archertower' | 'wall';
 
 type UpgradeId = keyof typeof GameConfig.upgrades;
 
@@ -82,6 +82,13 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
         baseHp: 380, hpPerLevel: 80, damage: 5, damagePerLevel: 2, range: 9, fireRate: 0.5,
         buildCost: 400, maxCount: th => (th < 2 ? 0 : Math.min(5, Math.floor(th / 1.5))),
     },
+    wall: {
+        type: 'wall', name: 'Muro', size: 1, color: '#7f8c8d', roofColor: '#5a5550',
+        description: 'Muro defensivo individual. Colócalo estratégicamente para diseñar barreras, embudos y compartimentos.',
+        baseHp: 300, hpPerLevel: 180, isDefense: false,
+        buildCost: 50,
+        maxCount: th => 20 + th * 20,
+    },
 };
 
 export const TOWNHALL_MAX_LEVEL = 10;
@@ -94,6 +101,10 @@ export function maxLevelFor(type: BuildingType, townhallLevel: number): number {
 
 /** Build/upgrade time in seconds to go from `level` to `level + 1`. */
 export function buildTimeSeconds(type: BuildingType, level: number): number {
+    if (type === 'wall') {
+        const wallTable = [3, 15, 45, 120, 300, 600, 1200, 2400, 4800, 7200, 14400];
+        return wallTable[Math.min(level, wallTable.length - 1)];
+    }
     const table = [5, 20, 60, 180, 600, 1800, 3600, 7200, 14400, 28800, 43200];
     const t = table[Math.min(level, table.length - 1)];
     return type === 'townhall' ? t * 2 : t;

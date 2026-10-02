@@ -71,6 +71,14 @@ export const BuildingPanel: React.FC<{ building: PlacedBuilding; onClose: () => 
             <Stat label="Cadencia" value={`${def.fireRate}s`} />
           </>
         );
+      case 'wall':
+        return (
+          <>
+            <Stat label="Puntos de Vida (HP)" value={buildingHp('wall', lvl)} next={buildingHp('wall', lvl + 1)} />
+            <Stat label="Tamaño en casillas" value="1x1" />
+            <Stat label="Material" value={lvl <= 2 ? '🪵 Troncos rústicos' : lvl <= 4 ? '🧱 Piedra reforzada' : lvl <= 7 ? '🏰 Almenas de castillo' : '👑 Obsidiana imperial y oro'} />
+          </>
+        );
       default:
         return null;
     }

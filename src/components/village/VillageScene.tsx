@@ -7,7 +7,7 @@ import { BUILDINGS, mineCapacity } from '../../config/BuildingsConfig';
 import type { PlacedBuilding, TroopCounts, KingdomType } from '../../core/GameState';
 import { getKingdomConfig, type KingdomVisualTheme } from '../../config/KingdomsConfig';
 import { BuildingModel, Scaffolding } from './BuildingModels';
-import { VillageTerrain, Walls } from './VillageTerrain';
+import { VillageTerrain } from './VillageTerrain';
 import { VillageTroops } from './VillageTroops';
 
 export const CAMERA_POSITION: [number, number, number] = [13, 17, 13];
@@ -82,7 +82,6 @@ export function buildingCenter(b: Pick<PlacedBuilding, 'type' | 'x' | 'z'>): [nu
 
 interface VillageSceneProps {
   village: PlacedBuilding[];
-  wallsLevel: number;
   now: number;
   selectedUid: string | null;
   moving: { uid: string; x: number; z: number; valid: boolean } | null;
@@ -92,7 +91,6 @@ interface VillageSceneProps {
   onSelect: (uid: string | null) => void;
   onMoveTo: (x: number, z: number) => void;
   onCollect: (uid: string) => void;
-  onWallClick?: () => void;
 }
 
 /** Spinning gold coin above the mine: tap it to collect. */
@@ -174,7 +172,7 @@ const BuildingNode: React.FC<{
 };
 
 export const VillageScene: React.FC<VillageSceneProps> = ({
-  village, wallsLevel, now, selectedUid, moving, kingdom = 'emerald', garrison, troops, onSelect, onMoveTo, onCollect, onWallClick,
+  village, now, selectedUid, moving, kingdom = 'emerald', garrison, troops, onSelect, onMoveTo, onCollect,
 }) => {
   const kingdomInfo = getKingdomConfig(kingdom);
   const theme = kingdomInfo.visual;
@@ -200,7 +198,6 @@ export const VillageScene: React.FC<VillageSceneProps> = ({
       >
         <VillageTerrain showGrid={!!moving} kingdom={kingdom} />
       </group>
-      <Walls level={wallsLevel} kingdom={kingdom} onClick={onWallClick} />
 
       {village.map(b => (
         <BuildingNode

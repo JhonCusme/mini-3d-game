@@ -97,26 +97,79 @@ export class TroopUpgradeManager {
         };
     }
 
+    static researchDuration(nextLevel: number): number {
+        const table = [0, 45, 120, 300, 900, 1800, 3600, 7200, 14400, 28800];
+        return table[Math.min(nextLevel - 1, table.length - 1)] || 60;
+    }
+
     static canUpgrade(state: GameState, troopId: TroopId): boolean {
+        if (state.troopUpgradesUntil?.[troopId]) return false;
         const details = this.getTroopDetails(state, troopId);
         return details.canUpgrade;
     }
 
-    static upgradeTroop(state: GameState, troopId: TroopId): GameState {
+    static upgradeTroop(state: GameState, troopId: TroopId, now = Date.now()): GameState {
         const details = this.getTroopDetails(state, troopId);
-        if (!details.canUpgrade) return state;
+        if (!details.canUpgrade || state.troopUpgradesUntil?.[troopId]) return state;
 
         const nextCoins = state.coins - details.upgradeCost;
         const currentLevels = { ...(state.troopLevels || {}) };
         const nextLevel = (currentLevels[troopId] || 1) + 1;
+        const durationSec = this.researchDuration(nextLevel);
+        const until = now + durationSec * 1000;
 
         return {
             ...state,
             coins: nextCoins,
+            troopUpgradesUntil: {
+                ...(state.troopUpgradesUntil || {}),
+                [troopId]: until,
+            },
+        };
+    }
+
+    static finishTroopWithGems(state: GameState, troopId: TroopId, now = Date.now()): GameState {
+        const until = state.troopUpgradesUntil?.[troopId];
+        if (!until || until <= now) return state;
+        const cost = Math.max(1, Math.ceil((until - now) / 60000));
+        if (state.gems < cost) return state;
+
+        const currentLevels = { ...(state.troopLevels || {}) };
+        const nextLevel = (currentLevels[troopId] || 1) + 1;
+        const nextUpgradesUntil = { ...(state.troopUpgradesUntil || {}) };
+        delete nextUpgradesUntil[troopId];
+
+        return {
+            ...state,
+            gems: state.gems - cost,
             troopLevels: {
                 ...currentLevels,
                 [troopId]: nextLevel,
             },
+            troopUpgradesUntil: nextUpgradesUntil,
+        };
+    }
+
+    static completeTroopUpgrades(state: GameState, now = Date.now()): GameState {
+        if (!state.troopUpgradesUntil) return state;
+        let changed = false;
+        const newUpgradesUntil = { ...state.troopUpgradesUntil };
+        const newLevels = { ...(state.troopLevels || {}) };
+
+        for (const [idStr, until] of Object.entries(newUpgradesUntil)) {
+            const id = idStr as TroopId;
+            if (until && until <= now) {
+                newLevels[id] = (newLevels[id] || 1) + 1;
+                delete newUpgradesUntil[id];
+                changed = true;
+            }
+        }
+
+        if (!changed) return state;
+        return {
+            ...state,
+            troopLevels: newLevels,
+            troopUpgradesUntil: newUpgradesUntil,
         };
     }
 }

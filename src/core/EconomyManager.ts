@@ -1,6 +1,7 @@
 import type { GameState } from './GameState';
 import { GameConfig } from '../config/GameConfig';
 import { VillageManager } from './VillageManager';
+import { TroopUpgradeManager } from './TroopUpgradeManager';
 
 export class EconomyManager {
     static tick(
@@ -33,8 +34,9 @@ export class EconomyManager {
             newState = VillageManager.produce(newState, deltaSeconds);
         }
 
-        // Building upgrades finish when upgradingUntil <= now
+        // Building and troop upgrades finish when timers expire
         newState = VillageManager.completeUpgrades(newState, now);
+        newState = TroopUpgradeManager.completeTroopUpgrades(newState, now);
 
         return newState;
     }

@@ -45,6 +45,7 @@ export interface GameState {
     upgrades: { [id: string]: number };
     troops: TroopCounts;
     troopLevels: Record<TroopId, number>;
+    troopUpgradesUntil?: Partial<Record<TroopId, number>>;
     territoryProgress: number; // Index of the highest unlocked territory (0-based)
     
     // Fase 2, 4 y 8: Recompensas, Misiones, Héroe y Prestigio

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGame } from '../../core/GameContext';
 import { GameConfig } from '../../config/GameConfig';
 import type { TroopId } from '../../core/GameState';
@@ -9,13 +9,20 @@ import { TROOP_ICONS, AVATAR_IMAGES } from '../troopIcons';
 import { getKingdomConfig } from '../../config/KingdomsConfig';
 import { panel } from './Panels';
 import { AudioManager } from '../../core/AudioManager';
+import { formatDuration } from '../village/VillageScene';
 
 const TROOP_ORDER: TroopId[] = ['infantry', 'archers', 'cavalry', 'mages', 'catapults', 'healers'];
 
 export const TroopUpgradePanel: React.FC<{ initialTab?: 'troops' | 'hero' }> = ({ initialTab = 'troops' }) => {
-  const { state, upgradeTroop, upgradeHero } = useGame();
+  const { state, upgradeTroop, finishTroopUpgradeWithGems, upgradeHero } = useGame();
   const [tab, setTab] = useState<'troops' | 'hero'>(initialTab);
   const [upgradedTroop, setUpgradedTroop] = useState<TroopId | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(id);
+  }, []);
 
   const maxLevel = TroopUpgradeManager.getMaxLevel(state);
   const blacksmithLevel = (state.upgrades.attackPower || 0) + 1;
@@ -232,7 +239,7 @@ export const TroopUpgradePanel: React.FC<{ initialTab?: 'troops' | 'hero' }> = (
                     </div>
                   </div>
 
-                  {/* Upgrade Button */}
+                  {/* Upgrade Button / Research Timer */}
                   {isMax ? (
                     <button
                       className="btn-primary"
@@ -247,26 +254,52 @@ export const TroopUpgradePanel: React.FC<{ initialTab?: 'troops' | 'hero' }> = (
                     >
                       👑 Nivel Máximo
                     </button>
-                  ) : (
-                    <button
-                      className={details.canUpgrade ? 'btn-upgrade' : 'btn-primary'}
-                      disabled={!details.canUpgrade}
-                      onClick={() => handleUpgradeTroop(id)}
-                      style={{
-                        padding: '9px',
-                        fontSize: '12px',
-                        fontWeight: 700,
-                        position: 'relative',
-                      }}
-                      title={details.blockerReason || ''}
-                    >
-                      {details.canUpgrade ? (
-                        <>⬆️ Mejorar — 🪙 {details.upgradeCost.toLocaleString()}</>
-                      ) : (
-                        details.blockerReason || `🪙 ${details.upgradeCost.toLocaleString()}`
-                      )}
-                    </button>
-                  )}
+                  ) : (() => {
+                    const researchingUntil = state.troopUpgradesUntil?.[id] || 0;
+                    const isResearching = researchingUntil > now;
+                    const finishGemsCost = isResearching ? Math.max(1, Math.ceil((researchingUntil - now) / 60000)) : 0;
+                    const durationSec = TroopUpgradeManager.researchDuration(details.level + 1);
+
+                    if (isResearching) {
+                      return (
+                        <div className="flex-row gap-2" style={{ width: '100%' }}>
+                          <button className="btn-primary" disabled style={{ flex: 1, padding: '9px', fontSize: '11px' }}>
+                            🔬 Investigando Nv.{details.level + 1} · ⏱️ {formatDuration(researchingUntil - now)}
+                          </button>
+                          <button
+                            className="btn-gem"
+                            disabled={state.gems < finishGemsCost}
+                            onClick={() => finishTroopUpgradeWithGems(id)}
+                            style={{ padding: '9px 12px', fontSize: '11px' }}
+                            title="Terminar investigación al instante con gemas"
+                          >
+                            ⏩ 💎 {finishGemsCost}
+                          </button>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <button
+                        className={details.canUpgrade ? 'btn-upgrade' : 'btn-primary'}
+                        disabled={!details.canUpgrade}
+                        onClick={() => handleUpgradeTroop(id)}
+                        style={{
+                          padding: '9px',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          position: 'relative',
+                        }}
+                        title={details.blockerReason || ''}
+                      >
+                        {details.canUpgrade ? (
+                          <>⬆️ Mejorar Nv.{details.level + 1} — 🪙 {details.upgradeCost.toLocaleString()} (⏱️ {formatDuration(durationSec * 1000)})</>
+                        ) : (
+                          details.blockerReason || `🪙 ${details.upgradeCost.toLocaleString()}`
+                        )}
+                      </button>
+                    );
+                  })()}
                 </div>
               );
             })}

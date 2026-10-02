@@ -13,7 +13,7 @@ export function defaultVillage(state: Pick<GameState, 'level' | 'upgrades' | 'he
     const up = state.upgrades;
     const b = (type: BuildingType, x: number, z: number, level: number): PlacedBuilding =>
         ({ uid: newUid(type), type, level, x, z, upgradingUntil: 0, stored: 0 });
-    return [
+    const list = [
         b('townhall', -2, -2, Math.max(1, state.level)),
         b('goldmine', -9, -3, (up.economy || 0) + 1),
         b('barracks', 6, -3, (up.troopCapacity || 0) + 1),
@@ -23,6 +23,17 @@ export function defaultVillage(state: Pick<GameState, 'level' | 'upgrades' | 'he
         b('altar', -1, -7, Math.max(1, state.heroLevel)),
         b('cannon', 3, -8, 1),
     ];
+    // Starter defensive wall ring enclosing the townhall core
+    const wallLvl = Math.max(1, up.walls || 1);
+    for (let x = -3; x <= 2; x++) {
+        list.push(b('wall', x, -4, wallLvl));
+        list.push(b('wall', x, 2, wallLvl));
+    }
+    for (let z = -3; z <= 1; z++) {
+        list.push(b('wall', -3, z, wallLvl));
+        list.push(b('wall', 2, z, wallLvl));
+    }
+    return list;
 }
 
 export class VillageManager {
@@ -82,7 +93,7 @@ export class VillageManager {
     // ---------- Builders ----------
 
     static busyBuilders(state: GameState): number {
-        return state.village.filter(b => b.upgradingUntil > 0).length;
+        return state.village.filter(b => b.type !== 'wall' && b.upgradingUntil > 0).length;
     }
 
     static freeBuilders(state: GameState): number {
@@ -109,6 +120,7 @@ export class VillageManager {
     static upgradeCost(b: PlacedBuilding): number {
         const def = BUILDINGS[b.type];
         if (b.type === 'townhall') return townhallUpgradeCost(b.level);
+        if (b.type === 'wall') return Math.floor(50 * Math.pow(1.7, Math.max(0, b.level)));
         if (def.upgradeId) return UpgradeManager.getCost(def.upgradeId, b.level - 1);
         return defenseUpgradeCost(b.type, b.level);
     }
@@ -124,7 +136,7 @@ export class VillageManager {
         if (b.level >= this.maxLevel(state, b)) {
             return b.type === 'townhall' ? 'Nivel máximo' : `Sube el Ayuntamiento para pasar del nivel ${b.level}`;
         }
-        if (this.freeBuilders(state) <= 0) return 'Todos los constructores están ocupados';
+        if (b.type !== 'wall' && this.freeBuilders(state) <= 0) return 'Todos los constructores están ocupados';
         if (state.coins < this.upgradeCost(b)) return 'Oro insuficiente';
         return null;
     }
@@ -184,7 +196,7 @@ export class VillageManager {
         if (this.countOf(state, type) >= max) {
             return max === 0 ? 'Requiere un Ayuntamiento de mayor nivel' : `Máximo ${max} con este Ayuntamiento`;
         }
-        if (this.freeBuilders(state) <= 0) return 'Todos los constructores están ocupados';
+        if (type !== 'wall' && this.freeBuilders(state) <= 0) return 'Todos los constructores están ocupados';
         if (state.coins < (def.buildCost || 0)) return 'Oro insuficiente';
         if (!this.findFreeSpot(state, type)) return 'No queda espacio';
         return null;
@@ -238,11 +250,27 @@ export class VillageManager {
         };
     }
 
-    /** Fixes up saves from before the village existed. */
+    /** Fixes up saves from before individual walls existed. */
     static ensureVillage(state: GameState): GameState {
-        if (Array.isArray(state.village) && state.village.length > 0) {
-            return { ...state, builders: state.builders || 2 };
+        let village = state.village;
+        if (!Array.isArray(village) || village.length === 0) {
+            village = defaultVillage(state);
+        } else if (!village.some(b => b.type === 'wall')) {
+            // Migrate walls for existing player saves
+            const wallLvl = Math.max(1, state.upgrades.walls || 1);
+            const b = (type: BuildingType, x: number, z: number, level: number): PlacedBuilding =>
+                ({ uid: newUid(type), type, level, x, z, upgradingUntil: 0, stored: 0 });
+            const newWalls: PlacedBuilding[] = [];
+            for (let x = -3; x <= 2; x++) {
+                if (!this.overlaps(state, 'wall', x, -4)) newWalls.push(b('wall', x, -4, wallLvl));
+                if (!this.overlaps(state, 'wall', x, 2)) newWalls.push(b('wall', x, 2, wallLvl));
+            }
+            for (let z = -3; z <= 1; z++) {
+                if (!this.overlaps(state, 'wall', -3, z)) newWalls.push(b('wall', -3, z, wallLvl));
+                if (!this.overlaps(state, 'wall', 2, z)) newWalls.push(b('wall', 2, z, wallLvl));
+            }
+            village = [...village, ...newWalls];
         }
-        return { ...state, village: defaultVillage(state), builders: state.builders || 2 };
+        return { ...state, village, builders: state.builders || 2 };
     }
 }

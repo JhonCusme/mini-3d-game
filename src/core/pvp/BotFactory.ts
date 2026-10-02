@@ -150,6 +150,18 @@ export function createBotLayout(seed: number, th: number): LayoutBuilding[] {
             }
         }
     }
+
+    // Add fortified wall ring around townhall
+    const wallLvl = Math.max(1, Math.min(10, th - 1 + Math.floor(rng() * 2)));
+    for (let x = thPos.x - 1; x <= thPos.x + 3; x++) {
+        if (!overlaps(list, 'wall', x, thPos.z - 1)) list.push({ type: 'wall', level: wallLvl, x, z: thPos.z - 1 });
+        if (!overlaps(list, 'wall', x, thPos.z + 3)) list.push({ type: 'wall', level: wallLvl, x, z: thPos.z + 3 });
+    }
+    for (let z = thPos.z; z <= thPos.z + 2; z++) {
+        if (!overlaps(list, 'wall', thPos.x - 1, z)) list.push({ type: 'wall', level: wallLvl, x: thPos.x - 1, z });
+        if (!overlaps(list, 'wall', thPos.x + 3, z)) list.push({ type: 'wall', level: wallLvl, x: thPos.x + 3, z });
+    }
+
     return list;
 }
 

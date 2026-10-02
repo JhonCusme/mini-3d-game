@@ -15,7 +15,7 @@ import type { VillageSnapshot } from '../../core/pvp/PvpTypes';
 import { EffectManager } from '../../core/EffectManager';
 import { RtsControls, SceneLights } from '../village/VillageScene';
 import { VillageTerrain, Walls } from '../village/VillageTerrain';
-import { BuildingActor, EffectActor, ProjectileActor, UnitActor } from './AttackActors';
+import { BuildingActor, EffectActor, ProjectileActor, UnitActor, WallActor } from './AttackActors';
 import { AVATAR_IMAGES, TROOP_ICONS } from '../troopIcons';
 import { AudioManager } from '../../core/AudioManager';
 
@@ -40,10 +40,13 @@ const SimWorld: React.FC<{ sim: AttackSim; running: boolean; onTick: () => void 
   });
 
   const broken = useMemo(() => new Set(sim.walls.map((w, i) => (w.destroyed ? i : -1)).filter(i => i >= 0)), [sim.walls, sim.version]); // eslint-disable-line react-hooks/exhaustive-deps
+  const hasPlacedWalls = sim.walls.some(w => w.level !== undefined);
 
   return (
     <>
-      <Walls level={sim.village.wallsLevel} broken={broken} kingdom={sim.village.kingdom} />
+      {hasPlacedWalls
+        ? sim.walls.map(w => <WallActor key={w.id} w={w} />)
+        : <Walls level={sim.village.wallsLevel} broken={broken} kingdom={sim.village.kingdom} />}
       {sim.buildings.map(b => <BuildingActor key={b.id} b={b} />)}
       {sim.units.filter(u => !u.dead).map(u => <UnitActor key={u.id} u={u} />)}
       {sim.projectiles.map(p => <ProjectileActor key={p.id} p={p} />)}

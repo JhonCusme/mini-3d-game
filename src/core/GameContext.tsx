@@ -30,6 +30,7 @@ interface GameContextType {
     purchaseUpgrade: (upgradeId: keyof typeof GameConfig.upgrades) => void;
     trainTroop: (troopId: keyof typeof GameConfig.troops) => void;
     upgradeTroop: (troopId: TroopId) => boolean;
+    finishTroopUpgradeWithGems: (troopId: TroopId) => boolean;
     fightTerritory: (territoryIndex: number) => BattleResult | null;
     claimQuest: (questId: string) => void;
     openChest: () => void;
@@ -68,7 +69,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
         delete loaded._isFirstOpen;
         if (!loaded.playerId) loaded.playerId = newPlayerId();
-        return VillageManager.completeUpgrades(VillageManager.ensureVillage(loaded as GameState));
+        return TroopUpgradeManager.completeTroopUpgrades(VillageManager.completeUpgrades(VillageManager.ensureVillage(loaded as GameState)));
     });
     const stateRef = useRef(state);
     useEffect(() => { stateRef.current = state; }, [state]);
@@ -84,7 +85,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             loadFromCloud().then((cloudData) => {
                 if (!active) return;
                 if (cloudData && cloudData.hasCompletedSetup) {
-                    const prepared = VillageManager.completeUpgrades(VillageManager.ensureVillage(cloudData));
+                    const prepared = TroopUpgradeManager.completeTroopUpgrades(VillageManager.completeUpgrades(VillageManager.ensureVillage(cloudData)));
                     const now = Date.now();
                     const seconds = Math.max(0, (now - (cloudData.lastSaveTime || now)) / 1000);
                     const caughtUp = EconomyManager.tick(prepared, seconds, now);
@@ -375,9 +376,24 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const upgradeTroop = (troopId: TroopId): boolean => {
         const prev = stateRef.current;
         if (!TroopUpgradeManager.canUpgrade(prev, troopId)) return false;
-        AudioManager.playVictory();
+        AudioManager.playClick();
         setState((s) => {
             const next = TroopUpgradeManager.upgradeTroop(s, troopId);
+            SaveManager.save(next);
+            return next;
+        });
+        return true;
+    };
+
+    const finishTroopUpgradeWithGems = (troopId: TroopId): boolean => {
+        const prev = stateRef.current;
+        const until = prev.troopUpgradesUntil?.[troopId];
+        if (!until || until <= Date.now()) return false;
+        const cost = Math.max(1, Math.ceil((until - Date.now()) / 60000));
+        if (prev.gems < cost) return false;
+        AudioManager.playLevelUp();
+        setState((s) => {
+            const next = TroopUpgradeManager.finishTroopWithGems(s, troopId);
             SaveManager.save(next);
             return next;
         });
@@ -512,7 +528,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return (
         <GameContext.Provider value={{ 
             state, offlineEarnings, dismissOfflineEarnings: () => setOfflineEarnings(0),
-            completeSetup, purchaseUpgrade, trainTroop, upgradeTroop, fightTerritory, 
+            completeSetup, purchaseUpgrade, trainTroop, upgradeTroop, finishTroopUpgradeWithGems, fightTerritory, 
             claimQuest, openChest, claimDailyReward, watchAdForReward, buyIAP,
             upgradeHero, prestigeAscension, toggleMute, resetGame,
             pvpMode: pvpService.mode, moveTroops, unlockGod, levelUpGod, equipGod, completeAttack, payCoins, markDefenseLogSeen,
