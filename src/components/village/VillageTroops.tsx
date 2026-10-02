@@ -4,13 +4,17 @@ import { Html } from '@react-three/drei';
 import type { Group } from 'three';
 import type { PlacedBuilding, TroopCounts, TroopId } from '../../core/GameState';
 import { GameConfig } from '../../config/GameConfig';
-import { StylizedTroop } from '../common/StylizedCharacters';
+import { StylizedTroop, HeroKingModel } from '../common/StylizedCharacters';
+import { AudioManager } from '../../core/AudioManager';
 
 interface VillageTroopsProps {
   village: PlacedBuilding[];
   garrison?: TroopCounts;
   troops?: TroopCounts;
   kingdom?: string;
+  heroLevel?: number;
+  heroRecoveringUntil?: number;
+  now?: number;
 }
 
 const EMPTY_COUNTS: TroopCounts = {
@@ -23,7 +27,7 @@ const EMPTY_COUNTS: TroopCounts = {
 };
 
 // ---------------------------------------------------------------------------
-// 3D Unit Mesh (Low-poly Clash style with animated appendages)
+// 3D Unit Mesh (Stylized Characters with training/marching animations)
 // ---------------------------------------------------------------------------
 
 interface UnitMeshProps {
@@ -55,7 +59,7 @@ const VillageUnitMesh: React.FC<UnitMeshProps> = ({
 };
 
 // ---------------------------------------------------------------------------
-// Patrolling Guard (Wandering around the Village)
+// Patrolling Guard (Wandering around the Village pathways & defenses)
 // ---------------------------------------------------------------------------
 
 interface PatrollingGuardProps {
@@ -64,16 +68,46 @@ interface PatrollingGuardProps {
   initialX: number;
   initialZ: number;
   teamColor: string;
-  onClick: (name: string, phrase: string) => void;
+  onClick: (name: string, phrase: string, pos: [number, number, number]) => void;
 }
 
 const GUARD_PHRASES: Record<TroopId, string[]> = {
-  infantry: ['¡Aldea protegida!', '¡Por el honor del Reino!', '¡Murallas vigiladas!'],
-  archers: ['¡Perímetro despejado!', '¡Flechas listas!', '¡Ningún invasor pasará!'],
-  cavalry: ['¡Patrulla rápida!', '¡Todo en orden en el frente!', '¡A galope por la paz!'],
-  mages: ['¡Los orbes no detectan peligro!', '¡Magia defensiva activa!', '¡Paz en las torres!'],
-  catapults: ['¡Rocas de defensa cargadas!', '¡Calibración lista!', '¡Que intenten cruzar!'],
-  healers: ['¡Bendiciones a la aldea!', '¡Tropas con salud plena!', '¡Luz en las murallas!'],
+  infantry: [
+    '¡Aldea protegida mi señor!',
+    '¡Por el honor del Reino!',
+    '¡Murallas vigiladas y en guardia!',
+    '¡Mi espada está a vuestro servicio!'
+  ],
+  archers: [
+    '¡Perímetro despejado desde la distancia!',
+    '¡Flechas en el carcaj listas!',
+    '¡Ningún invasor pasará este muro!',
+    '¡Vista de lince en las almenas!'
+  ],
+  cavalry: [
+    '¡Patrulla rápida por los caminos!',
+    '¡Todo en orden en el frente!',
+    '¡A galope por la paz del reino!',
+    '¡La caballería está lista para la carga!'
+  ],
+  mages: [
+    '¡Los orbes no detectan peligro!',
+    '¡Barrera arcana en torno a la aldea!',
+    '¡La energía mágica fluye en calma!',
+    '¡Hechizos listos para el asedio!'
+  ],
+  catapults: [
+    '¡Rocas de defensa cargadas!',
+    '¡Mecanismos engrasados y listos!',
+    '¡Que intenten cruzar el foso!',
+    '¡Potencia máxima de disparo!'
+  ],
+  healers: [
+    '¡Bendiciones a toda la aldea!',
+    '¡Tropas con salud y ánimo pleno!',
+    '¡Luz sagrada sobre el reino!',
+    '¡La salud de los soldados está asegurada!'
+  ],
 };
 
 const PatrollingGuard: React.FC<PatrollingGuardProps> = ({
@@ -86,30 +120,28 @@ const PatrollingGuard: React.FC<PatrollingGuardProps> = ({
   const rootRef = useRef<Group>(null);
   const bodyRef = useRef<Group>(null);
 
-  // Patrol state stored in ref for 60fps performance without React re-renders
   const patrolState = useRef({
     x: initialX,
     z: initialZ,
     targetX: initialX,
     targetZ: initialZ,
     isIdle: true,
-    idleTimer: 2.0 + Math.random() * 2,
+    idleTimer: 2.0 + Math.random() * 3,
     heading: Math.random() * Math.PI * 2,
-    speed: 0.9 + Math.random() * 0.4,
+    speed: 0.85 + Math.random() * 0.35,
     jumpTimer: 0,
   });
 
   const pickNewTarget = () => {
-    // Keep patrol inside the main secure village perimeter (-8.5 to 8.5)
+    // Keep patrol inside the main secure village perimeter
     const angle = Math.random() * Math.PI * 2;
-    const dist = 3 + Math.random() * 5;
+    const dist = 3.5 + Math.random() * 5.0;
     const nx = Math.max(-8.5, Math.min(8.5, patrolState.current.x + Math.cos(angle) * dist));
     const nz = Math.max(-8.5, Math.min(8.5, patrolState.current.z + Math.sin(angle) * dist));
     patrolState.current.targetX = nx;
     patrolState.current.targetZ = nz;
     patrolState.current.isIdle = false;
 
-    // Calculate heading toward target
     const dx = nx - patrolState.current.x;
     const dz = nz - patrolState.current.z;
     patrolState.current.heading = Math.atan2(dx, dz);
@@ -123,44 +155,37 @@ const PatrollingGuard: React.FC<PatrollingGuardProps> = ({
 
     if (s.jumpTimer > 0) {
       s.jumpTimer -= dt;
-      root.position.y = Math.sin(s.jumpTimer * Math.PI * 4) * 0.4;
+      root.position.y = Math.sin(s.jumpTimer * Math.PI * 4) * 0.45;
     } else {
       root.position.y = 0;
     }
 
     if (s.isIdle) {
       s.idleTimer -= dt;
-      // Gentle idle breathing
       body.position.y = Math.sin(clock.elapsedTime * 2 + initialX) * 0.03;
       if (s.idleTimer <= 0) {
         pickNewTarget();
       }
     } else {
-      // Move towards target
       const dx = s.targetX - s.x;
       const dz = s.targetZ - s.z;
       const dist = Math.sqrt(dx * dx + dz * dz);
 
       if (dist < 0.25) {
-        // Reached destination, pause for a guard watch
         s.isIdle = true;
-        s.idleTimer = 3.0 + Math.random() * 3.5;
+        s.idleTimer = 3.0 + Math.random() * 4.0;
         body.position.y = 0;
       } else {
-        // Move step
         const step = Math.min(dist, s.speed * dt);
         s.x += (dx / dist) * step;
         s.z += (dz / dist) * step;
 
-        // Walking bob
         const isFlying = type === 'mages' || type === 'healers';
         body.position.y = isFlying
           ? Math.sin(clock.elapsedTime * 3) * 0.08
           : Math.abs(Math.sin(clock.elapsedTime * 9)) * 0.07;
 
-        // Smooth rotation to heading
-        const targetRot = Math.atan2(dx, dz);
-        body.rotation.y = targetRot;
+        body.rotation.y = Math.atan2(dx, dz);
       }
     }
 
@@ -170,10 +195,11 @@ const PatrollingGuard: React.FC<PatrollingGuardProps> = ({
 
   const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
-    patrolState.current.jumpTimer = 0.5;
+    patrolState.current.jumpTimer = 0.55;
+    AudioManager.playClick();
     const phrases = GUARD_PHRASES[type] || ['¡En guardia!'];
     const p = phrases[Math.floor(Math.random() * phrases.length)];
-    onClick(GameConfig.troops[type]?.name || 'Guardián', p);
+    onClick(GameConfig.troops[type]?.name || 'Guardián', p, [patrolState.current.x, 0, patrolState.current.z]);
   };
 
   return (
@@ -181,21 +207,144 @@ const PatrollingGuard: React.FC<PatrollingGuardProps> = ({
       <group ref={bodyRef}>
         <VillageUnitMesh type={type} teamColor={teamColor} isPracticing={false} />
       </group>
-
-      {/* Subtle glowing guard base aura */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-        <circleGeometry args={[0.32, 16]} />
-        <meshBasicMaterial color={teamColor} transparent opacity={0.25} />
-      </mesh>
     </group>
   );
 };
 
 // ---------------------------------------------------------------------------
-// Training Grounds Scenery (Target Dummies, Archery Targets, Campfire)
+// Hero King Patrol (Walking across the Village with Crown & Cape)
 // ---------------------------------------------------------------------------
 
-const TrainingCampScenery: React.FC<{ x: number; z: number }> = ({ x, z }) => {
+interface HeroKingPatrolProps {
+  heroLevel: number;
+  isRecovering: boolean;
+  village: PlacedBuilding[];
+  onClick: (name: string, phrase: string, pos: [number, number, number]) => void;
+}
+
+const HERO_PHRASES = [
+  '¡Por el honor y la gloria del Reino!',
+  '¡Nuestras murallas son invencibles!',
+  '¡Mis tropas están listas para conquistar cualquier aldea enemiga!',
+  '¡Vigilad los límites! Mi espada defenderá a nuestro pueblo.',
+  '¡Adelante valientes guerreros! La victoria es nuestra.'
+];
+
+const HeroKingPatrol: React.FC<HeroKingPatrolProps> = ({
+  heroLevel,
+  isRecovering,
+  onClick,
+  village,
+}) => {
+  const rootRef = useRef<Group>(null);
+  const bodyRef = useRef<Group>(null);
+
+  const th = village.find((b) => b.type === 'townhall') || { x: 0, z: 0 };
+  const altar = village.find((b) => b.type === 'altar');
+
+  const startX = altar ? altar.x + 1.2 : th.x + 1.8;
+  const startZ = altar ? altar.z + 1.2 : th.z + 2.2;
+
+  const state = useRef({
+    x: startX,
+    z: startZ,
+    targetX: startX,
+    targetZ: startZ,
+    isIdle: true,
+    idleTimer: 2.0,
+    heading: 0,
+    speed: 0.8,
+    jumpTimer: 0,
+  });
+
+  const pickTarget = () => {
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 2.5 + Math.random() * 4.5;
+    const nx = Math.max(-7.5, Math.min(7.5, th.x + Math.cos(angle) * dist));
+    const nz = Math.max(-7.5, Math.min(7.5, th.z + Math.sin(angle) * dist));
+    state.current.targetX = nx;
+    state.current.targetZ = nz;
+    state.current.isIdle = false;
+    const dx = nx - state.current.x;
+    const dz = nz - state.current.z;
+    state.current.heading = Math.atan2(dx, dz);
+  };
+
+  useFrame(({ clock }, dt) => {
+    const s = state.current;
+    const root = rootRef.current;
+    const body = bodyRef.current;
+    if (!root || !body) return;
+
+    if (s.jumpTimer > 0) {
+      s.jumpTimer -= dt;
+      root.position.y = Math.sin(s.jumpTimer * Math.PI * 4) * 0.45;
+    } else {
+      root.position.y = 0;
+    }
+
+    if (isRecovering) {
+      body.position.y = 0;
+      return;
+    }
+
+    if (s.isIdle) {
+      s.idleTimer -= dt;
+      body.position.y = Math.sin(clock.elapsedTime * 2) * 0.025;
+      if (s.idleTimer <= 0) {
+        pickTarget();
+      }
+    } else {
+      const dx = s.targetX - s.x;
+      const dz = s.targetZ - s.z;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      if (dist < 0.25) {
+        s.isIdle = true;
+        s.idleTimer = 4.0 + Math.random() * 4.0;
+        body.position.y = 0;
+      } else {
+        const step = Math.min(dist, s.speed * dt);
+        s.x += (dx / dist) * step;
+        s.z += (dz / dist) * step;
+        body.position.y = Math.abs(Math.sin(clock.elapsedTime * 7)) * 0.08;
+        body.rotation.y = Math.atan2(dx, dz);
+      }
+    }
+
+    root.position.x = s.x;
+    root.position.z = s.z;
+  });
+
+  const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
+    e.stopPropagation();
+    state.current.jumpTimer = 0.6;
+    AudioManager.playVictory();
+    if (isRecovering) {
+      onClick(`Rey Héroe (Nv.${heroLevel})`, 'Zzz... Reponiendo fuerzas tras la última batalla...', [state.current.x, 0, state.current.z]);
+    } else {
+      const p = HERO_PHRASES[Math.floor(Math.random() * HERO_PHRASES.length)];
+      onClick(`Rey Héroe (Nv.${heroLevel})`, p, [state.current.x, 0, state.current.z]);
+    }
+  };
+
+  return (
+    <group ref={rootRef} position={[startX, 0, startZ]} onPointerDown={handlePointerDown}>
+      <group ref={bodyRef}>
+        <HeroKingModel level={heroLevel} scale={0.95} />
+      </group>
+    </group>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// 3D Military Campgrounds Scenery (Command Tent, Campfire, Dummies & Targets)
+// ---------------------------------------------------------------------------
+
+const TrainingCampScenery: React.FC<{ x: number; z: number; teamColor?: string }> = ({
+  x,
+  z,
+  teamColor = '#3a7bd5',
+}) => {
   const fireRef = useRef<Group>(null);
 
   useFrame(({ clock }) => {
@@ -209,24 +358,74 @@ const TrainingCampScenery: React.FC<{ x: number; z: number }> = ({ x, z }) => {
     <group position={[x, 0, z]}>
       {/* Sandy training ground floor pad */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, 0]} receiveShadow>
-        <circleGeometry args={[3.2, 24]} />
+        <circleGeometry args={[3.3, 24]} />
         <meshStandardMaterial color="#c29b68" roughness={0.9} />
       </mesh>
 
-      {/* Decorative training ring border stakes */}
+      {/* Decorative training ring border stakes with torch brackets */}
       {Array.from({ length: 8 }).map((_, i) => {
         const angle = (i / 8) * Math.PI * 2;
-        const px = Math.cos(angle) * 3.0;
-        const pz = Math.sin(angle) * 3.0;
+        const px = Math.cos(angle) * 3.1;
+        const pz = Math.sin(angle) * 3.1;
         return (
-          <mesh key={i} position={[px, 0.25, pz]} castShadow>
-            <cylinderGeometry args={[0.06, 0.08, 0.5, 6]} />
-            <meshStandardMaterial color="#593b22" />
-          </mesh>
+          <group key={i} position={[px, 0, pz]}>
+            <mesh position={[0, 0.25, 0]} castShadow>
+              <cylinderGeometry args={[0.06, 0.08, 0.5, 6]} />
+              <meshStandardMaterial color="#593b22" />
+            </mesh>
+            {i % 2 === 0 && (
+              <mesh position={[0, 0.52, 0]}>
+                <sphereGeometry args={[0.06, 6, 6]} />
+                <meshStandardMaterial color="#f1c40f" emissive="#e67e22" emissiveIntensity={0.8} />
+              </mesh>
+            )}
+          </group>
         );
       })}
 
-      {/* Campfire in the center */}
+      {/* Military Command Tent with Team Color Canvas */}
+      <group position={[-1.2, 0, -2.1]} rotation={[0, 0.35, 0]}>
+        {/* Tent A-Frame Support Posts */}
+        {[-0.6, 0.6].map((postX, i) => (
+          <group key={i} position={[postX, 0, 0]}>
+            <mesh position={[0, 0.6, -0.4]} rotation={[0.45, 0, 0]} castShadow>
+              <cylinderGeometry args={[0.03, 0.03, 1.4, 5]} />
+              <meshStandardMaterial color="#4a2e12" />
+            </mesh>
+            <mesh position={[0, 0.6, 0.4]} rotation={[-0.45, 0, 0]} castShadow>
+              <cylinderGeometry args={[0.03, 0.03, 1.4, 5]} />
+              <meshStandardMaterial color="#4a2e12" />
+            </mesh>
+          </group>
+        ))}
+        {/* Ridgepole */}
+        <mesh position={[0, 1.15, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.03, 0.03, 1.3, 5]} />
+          <meshStandardMaterial color="#4a2e12" />
+        </mesh>
+        {/* Fabric Canvas Roof */}
+        <mesh position={[0, 0.65, 0]} castShadow>
+          <coneGeometry args={[1.0, 1.1, 4]} />
+          <meshStandardMaterial color={teamColor} roughness={0.7} />
+        </mesh>
+        {/* Golden Pennant Flag */}
+        <mesh position={[0, 1.35, 0]}>
+          <boxGeometry args={[0.32, 0.15, 0.02]} />
+          <meshStandardMaterial color="#ffd700" metalness={0.85} roughness={0.2} />
+        </mesh>
+        {/* Supply Wooden Crate */}
+        <mesh position={[0.7, 0.18, 0.2]} castShadow>
+          <boxGeometry args={[0.36, 0.36, 0.36]} />
+          <meshStandardMaterial color="#6a4521" roughness={0.8} />
+        </mesh>
+        {/* Hay bale for horses */}
+        <mesh position={[-0.8, 0.16, 0.4]} castShadow>
+          <boxGeometry args={[0.5, 0.32, 0.32]} />
+          <meshStandardMaterial color="#d4a373" roughness={1} />
+        </mesh>
+      </group>
+
+      {/* Central Warming Campfire */}
       <group position={[0, 0, 0]}>
         {/* Stone ring */}
         {Array.from({ length: 7 }).map((_, i) => {
@@ -238,7 +437,7 @@ const TrainingCampScenery: React.FC<{ x: number; z: number }> = ({ x, z }) => {
             </mesh>
           );
         })}
-        {/* Burning wood logs */}
+        {/* Wood logs */}
         <mesh position={[0, 0.12, 0]} rotation={[0.4, 0.8, 0]}>
           <cylinderGeometry args={[0.05, 0.05, 0.5]} />
           <meshStandardMaterial color="#2f1a08" />
@@ -266,22 +465,18 @@ const TrainingCampScenery: React.FC<{ x: number; z: number }> = ({ x, z }) => {
 
       {/* Target Dummy 1 (Wooden sparring doll) */}
       <group position={[-1.6, 0, 1.2]} rotation={[0, 0.8, 0]}>
-        {/* Stand post */}
         <mesh position={[0, 0.55, 0]} castShadow>
           <cylinderGeometry args={[0.06, 0.08, 1.1]} />
           <meshStandardMaterial color="#8b5a2b" />
         </mesh>
-        {/* Cross arms */}
         <mesh position={[0, 0.75, 0]} rotation={[0, 0, Math.PI / 2]}>
           <cylinderGeometry args={[0.05, 0.05, 0.7]} />
           <meshStandardMaterial color="#8b5a2b" />
         </mesh>
-        {/* Straw body bag */}
         <mesh position={[0, 0.65, 0]} castShadow>
           <capsuleGeometry args={[0.16, 0.25, 4, 8]} />
           <meshStandardMaterial color="#d4a373" roughness={1} />
         </mesh>
-        {/* Old battle helmet on top */}
         <mesh position={[0, 0.95, 0]} rotation={[0.2, 0, 0]}>
           <coneGeometry args={[0.14, 0.16, 6]} />
           <meshStandardMaterial color="#747d8c" metalness={0.7} />
@@ -290,7 +485,6 @@ const TrainingCampScenery: React.FC<{ x: number; z: number }> = ({ x, z }) => {
 
       {/* Archery Target Board */}
       <group position={[1.8, 0, -1.2]} rotation={[0, -2.2, 0]}>
-        {/* Wooden legs */}
         <mesh position={[-0.2, 0.5, -0.1]} rotation={[0.2, 0, 0]}>
           <cylinderGeometry args={[0.03, 0.03, 1.1]} />
           <meshStandardMaterial color="#573a1d" />
@@ -299,12 +493,10 @@ const TrainingCampScenery: React.FC<{ x: number; z: number }> = ({ x, z }) => {
           <cylinderGeometry args={[0.03, 0.03, 1.1]} />
           <meshStandardMaterial color="#573a1d" />
         </mesh>
-        {/* Target face */}
-        <mesh position={[0, 0.8, 0]} rotation={[0, 0, 0]}>
+        <mesh position={[0, 0.8, 0]}>
           <cylinderGeometry args={[0.38, 0.38, 0.08, 18]} />
           <meshStandardMaterial color="#ffffff" />
         </mesh>
-        {/* Target rings */}
         <mesh position={[0, 0.8, 0.045]}>
           <circleGeometry args={[0.26, 16]} />
           <meshBasicMaterial color="#ff4757" />
@@ -313,7 +505,6 @@ const TrainingCampScenery: React.FC<{ x: number; z: number }> = ({ x, z }) => {
           <circleGeometry args={[0.12, 16]} />
           <meshBasicMaterial color="#ffd700" />
         </mesh>
-        {/* Arrows stuck into the bullseye */}
         <mesh position={[0.04, 0.82, 0.22]} rotation={[1.5, 0.2, 0]}>
           <cylinderGeometry args={[0.015, 0.015, 0.4]} />
           <meshStandardMaterial color="#dfe4ea" />
@@ -325,7 +516,7 @@ const TrainingCampScenery: React.FC<{ x: number; z: number }> = ({ x, z }) => {
       </group>
 
       {/* Weapon Rack */}
-      <group position={[-1.7, 0, -1.1]} rotation={[0, 0.6, 0]}>
+      <group position={[-1.7, 0, -0.9]} rotation={[0, 0.6, 0]}>
         <mesh position={[0, 0.4, 0]}>
           <boxGeometry args={[0.8, 0.06, 0.1]} />
           <meshStandardMaterial color="#593b22" />
@@ -338,7 +529,6 @@ const TrainingCampScenery: React.FC<{ x: number; z: number }> = ({ x, z }) => {
           <cylinderGeometry args={[0.03, 0.03, 0.4]} />
           <meshStandardMaterial color="#593b22" />
         </mesh>
-        {/* Racked swords */}
         {[-0.2, 0, 0.2].map((xOffset, i) => (
           <mesh key={i} position={[xOffset, 0.4, 0.08]} rotation={[0.4, 0, 0]}>
             <cylinderGeometry args={[0.015, 0.015, 0.55]} />
@@ -361,16 +551,46 @@ interface PracticingTroopProps {
   rotationY: number;
   practiceType: 'sword' | 'bow' | 'horse' | 'magic' | 'siege' | 'heal';
   animOffset: number;
-  onClick: (name: string, phrase: string) => void;
+  onClick: (name: string, phrase: string, pos: [number, number, number]) => void;
 }
 
 const PRACTICE_PHRASES: Record<TroopId, string[]> = {
-  infantry: ['¡Entrenando para el ataque!', '¡Golpe 1, 2, estocada!', '¡Espadas afiladas y listas!'],
-  archers: ['¡Afinando la puntería!', '¡Diana perfecta!', '¡Diez flechas seguidas al centro!'],
-  cavalry: ['¡Calentando para la carga!', '¡Jinetes listos para el asalto!', '¡Fuerza y velocidad!'],
-  mages: ['¡Concentrando energía arcana!', '¡Conjuros de batalla al 100%!', '¡Poder elemental cargado!'],
-  catapults: ['¡Ajustando la catapulta!', '¡Tensión de cuerda máxima!', '¡Listas para destruir murallas!'],
-  healers: ['¡Canalizando auras de curación!', '¡El ejército no caerá!', '¡Bendición de combate lista!'],
+  infantry: [
+    '¡Entrenando para el asedio!',
+    '¡Golpe 1, 2, estocada!',
+    '¡Espadas afiladas y listas para la orden!',
+    '¡Un buen soldado nunca deja de practicar!'
+  ],
+  archers: [
+    '¡Afinando la puntería!',
+    '¡Diana perfecta!',
+    '¡Diez flechas seguidas al centro del blanco!',
+    '¡Listas para cubrir el avance!'
+  ],
+  cavalry: [
+    '¡Calentando para la carga!',
+    '¡Jinetes listos para el asalto!',
+    '¡Fuerza, velocidad y disciplina!',
+    '¡El corcel está impaciente por galopar!'
+  ],
+  mages: [
+    '¡Concentrando energía arcana!',
+    '¡Conjuros de batalla al 100%!',
+    '¡Poder elemental en sincronía!',
+    '¡La magia pulverizará las defensas!'
+  ],
+  catapults: [
+    '¡Ajustando la tensión de disparo!',
+    '¡Cálculo balístico exacto!',
+    '¡Listas para destruir murallas y torres!',
+    '¡Piedras pesadas listas para volar!'
+  ],
+  healers: [
+    '¡Canalizando auras de protección!',
+    '¡El ejército no caerá en batalla!',
+    '¡Bendición de combate lista!',
+    '¡Sanan las heridas de los valientes!'
+  ],
 };
 
 const PracticingTroop: React.FC<PracticingTroopProps> = ({
@@ -389,7 +609,7 @@ const PracticingTroop: React.FC<PracticingTroopProps> = ({
     if (jump > 0) {
       setJump((j) => Math.max(0, j - dt * 2.5));
       if (rootRef.current) {
-        rootRef.current.position.y = Math.sin(jump * Math.PI) * 0.4;
+        rootRef.current.position.y = Math.sin(jump * Math.PI) * 0.45;
       }
     } else if (rootRef.current) {
       rootRef.current.position.y = 0;
@@ -399,9 +619,10 @@ const PracticingTroop: React.FC<PracticingTroopProps> = ({
   const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
     setJump(1);
+    AudioManager.playClick();
     const phrases = PRACTICE_PHRASES[type] || ['¡Entrenando!'];
     const p = phrases[Math.floor(Math.random() * phrases.length)];
-    onClick(GameConfig.troops[type]?.name || 'Tropa de Asalto', p);
+    onClick(GameConfig.troops[type]?.name || 'Tropa de Asalto', p, [x, 0, z]);
   };
 
   return (
@@ -426,17 +647,21 @@ export const VillageTroops: React.FC<VillageTroopsProps> = ({
   garrison = EMPTY_COUNTS,
   troops = EMPTY_COUNTS,
   kingdom = 'emerald',
+  heroLevel = 0,
+  heroRecoveringUntil = 0,
+  now = Date.now(),
 }) => {
-  const [balloon, setBalloon] = useState<{ name: string; phrase: string } | null>(null);
+  const [balloon, setBalloon] = useState<{
+    name: string;
+    phrase: string;
+    pos: [number, number, number];
+  } | null>(null);
 
-  // Position training grounds near the barracks or fallback location
   const barracks = village.find((b) => b.type === 'barracks');
   const campPos = useMemo<[number, number]>(() => {
     if (barracks) {
-      // Offset camp adjacent to barracks
       const cx = barracks.x + 3.8;
       const cz = barracks.z + 1.2;
-      // Clamp inside village bounds
       return [Math.max(-8, Math.min(8, cx)), Math.max(-8, Math.min(8, cz))];
     }
     return [6.5, -0.5];
@@ -446,44 +671,40 @@ export const VillageTroops: React.FC<VillageTroopsProps> = ({
     switch (kingdom) {
       case 'frost':
         return '#38ada9';
-      case 'fire':
-        return '#e55039';
       case 'golden':
         return '#f6b93b';
-      case 'shadow':
-        return '#6a0dad';
       default:
         return '#2ed573';
     }
   }, [kingdom]);
 
-  // Generate patrolling guards from garrison
+  // Generate patrolling guards from BOTH active troops and garrison!
   const patrollingGuards = useMemo(() => {
     const list: { id: string; type: TroopId; x: number; z: number }[] = [];
     const types = Object.keys(GameConfig.troops) as TroopId[];
 
     types.forEach((type) => {
-      const count = garrison[type] || 0;
+      const count = (troops[type] || 0) + ((garrison && garrison[type]) || 0);
       if (count > 0) {
-        // Spawn 1 to 2 representative patrol actors per troop type in garrison
-        const numActors = Math.min(2, Math.max(1, Math.ceil(count / 8)));
+        // Spawn 1 to 3 representative patrol actors based on troop count
+        const numActors = Math.min(3, Math.max(1, Math.ceil(count / 5)));
         for (let i = 0; i < numActors; i++) {
           const angle = Math.random() * Math.PI * 2;
-          const r = 2 + Math.random() * 5.5;
+          const r = 2.0 + Math.random() * 6.5;
           list.push({
             id: `patrol_${type}_${i}`,
             type,
-            x: Math.cos(angle) * r,
-            z: Math.sin(angle) * r,
+            x: Math.max(-8, Math.min(8, Math.cos(angle) * r)),
+            z: Math.max(-8, Math.min(8, Math.sin(angle) * r)),
           });
         }
       }
     });
 
-    return list.slice(0, 10); // Performance cap
-  }, [garrison]);
+    return list.slice(0, 16); // High performance cap
+  }, [troops, garrison]);
 
-  // Generate practicing troops positioned around the training grounds
+  // Generate practicing troops positioned around the training camp
   const practicingTroops = useMemo(() => {
     const list: {
       id: string;
@@ -496,21 +717,21 @@ export const VillageTroops: React.FC<VillageTroopsProps> = ({
 
     const [cx, cz] = campPos;
 
-    // Fixed sparring slots in the training circle
+    // Swordsmen sparring near the dummy
     if ((troops.infantry || 0) > 0) {
       list.push({
         id: 'train_infantry_1',
         type: 'infantry',
         x: cx - 1.0,
         z: cz + 0.9,
-        rot: 2.2, // Facing the dummy
+        rot: 2.2,
         practiceType: 'sword',
       });
-      if (troops.infantry > 8) {
+      if (troops.infantry > 6) {
         list.push({
           id: 'train_infantry_2',
           type: 'infantry',
-          x: cx - 1.2,
+          x: cx - 1.3,
           z: cz + 0.3,
           rot: 1.8,
           practiceType: 'sword',
@@ -518,16 +739,17 @@ export const VillageTroops: React.FC<VillageTroopsProps> = ({
       }
     }
 
+    // Archers taking aim at target boards
     if ((troops.archers || 0) > 0) {
       list.push({
         id: 'train_archers_1',
         type: 'archers',
         x: cx + 0.8,
         z: cz - 0.7,
-        rot: 0.9, // Aiming at target board
+        rot: 0.9,
         practiceType: 'bow',
       });
-      if (troops.archers > 8) {
+      if (troops.archers > 6) {
         list.push({
           id: 'train_archers_2',
           type: 'archers',
@@ -539,6 +761,7 @@ export const VillageTroops: React.FC<VillageTroopsProps> = ({
       }
     }
 
+    // Cavalry practicing trotting/lance
     if ((troops.cavalry || 0) > 0) {
       list.push({
         id: 'train_cavalry',
@@ -550,6 +773,7 @@ export const VillageTroops: React.FC<VillageTroopsProps> = ({
       });
     }
 
+    // Mages channeling arcane glyphs
     if ((troops.mages || 0) > 0) {
       list.push({
         id: 'train_mages',
@@ -561,6 +785,7 @@ export const VillageTroops: React.FC<VillageTroopsProps> = ({
       });
     }
 
+    // Healers praying for victory
     if ((troops.healers || 0) > 0) {
       list.push({
         id: 'train_healers',
@@ -572,6 +797,7 @@ export const VillageTroops: React.FC<VillageTroopsProps> = ({
       });
     }
 
+    // Catapults tuning siege counterweights
     if ((troops.catapults || 0) > 0) {
       list.push({
         id: 'train_catapult',
@@ -586,23 +812,24 @@ export const VillageTroops: React.FC<VillageTroopsProps> = ({
     return list;
   }, [troops, campPos]);
 
-  const handleTroopClick = (name: string, phrase: string) => {
-    setBalloon({ name, phrase });
+  const handleTroopClick = (name: string, phrase: string, pos?: [number, number, number]) => {
+    setBalloon({ name, phrase, pos: pos || [campPos[0], 2.2, campPos[1]] });
     setTimeout(() => {
       setBalloon(null);
-    }, 2400);
+    }, 2800);
   };
 
   const totalAttackTroops = Object.values(troops || {}).reduce((a, b) => a + (b || 0), 0);
+  const isHeroRecovering = heroRecoveringUntil > now;
 
   return (
     <group>
-      {/* 1. Training Grounds Scenery (always visible if player has attack troops or barracks) */}
+      {/* 1. Training Grounds & Military Campgrounds (visible if player has troops or barracks) */}
       {(totalAttackTroops > 0 || barracks) && (
-        <TrainingCampScenery x={campPos[0]} z={campPos[1]} />
+        <TrainingCampScenery x={campPos[0]} z={campPos[1]} teamColor={teamColor} />
       )}
 
-      {/* 2. Practicing Attack Troops */}
+      {/* 2. Practicing Attack Troops in the Camp */}
       {practicingTroops.map((t, idx) => (
         <PracticingTroop
           key={t.id}
@@ -616,7 +843,7 @@ export const VillageTroops: React.FC<VillageTroopsProps> = ({
         />
       ))}
 
-      {/* 3. Patrolling Village Garrison Troops */}
+      {/* 3. Patrolling Village Troops wandering pathways and defenses */}
       {patrollingGuards.map((g) => (
         <PatrollingGuard
           key={g.id}
@@ -629,27 +856,52 @@ export const VillageTroops: React.FC<VillageTroopsProps> = ({
         />
       ))}
 
-      {/* Speech Balloon on click */}
+      {/* 4. Royal Hero King inspecting defenses and troops */}
+      {heroLevel >= 1 && (
+        <HeroKingPatrol
+          heroLevel={heroLevel}
+          isRecovering={isHeroRecovering}
+          village={village}
+          onClick={handleTroopClick}
+        />
+      )}
+
+      {/* Speech Balloon positioned in 3D right above the clicked soldier */}
       {balloon && (
-        <Html position={[0, 4.5, 0]} center zIndexRange={[100, 0]} style={{ pointerEvents: 'none' }}>
+        <Html position={[balloon.pos[0], balloon.pos[1] + 1.6, balloon.pos[2]]} center zIndexRange={[120, 0]} style={{ pointerEvents: 'none' }}>
           <div
             style={{
-              background: 'rgba(20, 20, 30, 0.92)',
+              background: 'linear-gradient(135deg, rgba(20, 20, 32, 0.95), rgba(35, 25, 55, 0.95))',
               border: '2px solid var(--accent-gold)',
               borderRadius: '12px',
               padding: '8px 14px',
               color: '#ffffff',
-              boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.6), 0 0 12px rgba(255, 215, 0, 0.3)',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               gap: '2px',
-              animation: 'popIn 0.25s ease-out',
+              animation: 'popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
               whiteSpace: 'nowrap',
+              position: 'relative'
             }}
           >
-            <b style={{ fontSize: '11px', color: 'var(--accent-gold)' }}>{balloon.name}</b>
-            <span style={{ fontSize: '12px', fontWeight: 600 }}>{balloon.phrase}</span>
+            <b style={{ fontSize: '11px', color: 'var(--accent-gold)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{balloon.name}</b>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: '#f8fafc' }}>{balloon.phrase}</span>
+            {/* Balloon triangle tail pointing down to unit */}
+            <div
+              style={{
+                position: 'absolute',
+                bottom: '-8px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: 0,
+                height: 0,
+                borderLeft: '7px solid transparent',
+                borderRight: '7px solid transparent',
+                borderTop: '8px solid var(--accent-gold)'
+              }}
+            />
           </div>
         </Html>
       )}

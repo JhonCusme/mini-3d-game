@@ -191,6 +191,7 @@ export const VillageScreen: React.FC<{
         kingdom={state.playerKingdom}
         garrison={state.garrison}
         troops={state.troops}
+        heroLevel={state.heroLevel}
         heroRecoveringUntil={state.heroRecoveringUntil}
         onSelect={setSelectedUid}
         onMoveTo={onMoveTo}

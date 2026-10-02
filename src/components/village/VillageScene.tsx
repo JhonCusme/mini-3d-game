@@ -91,6 +91,7 @@ interface VillageSceneProps {
   onSelect: (uid: string | null) => void;
   onMoveTo: (x: number, z: number) => void;
   onCollect: (uid: string) => void;
+  heroLevel?: number;
   heroRecoveringUntil?: number;
 }
 
@@ -180,7 +181,7 @@ const BuildingNode: React.FC<{
 };
 
 export const VillageScene: React.FC<VillageSceneProps> = ({
-  village, now, selectedUid, moving, kingdom = 'emerald', garrison, troops, heroRecoveringUntil, onSelect, onMoveTo, onCollect,
+  village, now, selectedUid, moving, kingdom = 'emerald', garrison, troops, heroLevel, heroRecoveringUntil, onSelect, onMoveTo, onCollect,
 }) => {
   const kingdomInfo = getKingdomConfig(kingdom);
   const theme = kingdomInfo.visual;
@@ -226,6 +227,9 @@ export const VillageScene: React.FC<VillageSceneProps> = ({
         garrison={garrison}
         troops={troops}
         kingdom={kingdom}
+        heroLevel={heroLevel}
+        heroRecoveringUntil={heroRecoveringUntil}
+        now={now}
       />
     </Canvas>
   );
