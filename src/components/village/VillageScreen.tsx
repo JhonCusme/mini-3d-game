@@ -5,6 +5,7 @@ import { VillageManager } from '../../core/VillageManager';
 import { VillageScene, formatDuration } from './VillageScene';
 import { BuildingPanel } from './BuildingPanel';
 import { Sheet } from '../ui/Sheet';
+import { AudioManager } from '../../core/AudioManager';
 
 type Moving = { uid: string; x: number; z: number; valid: boolean; origX: number; origZ: number };
 
@@ -105,7 +106,10 @@ export const VillageScreen: React.FC<{ buildOpen: boolean; onCloseBuild: () => v
 
   const collect = (uid: string) => {
     const amount = collectMine(uid);
-    if (amount > 0) setToast(`+${amount} 🪙`);
+    if (amount > 0) {
+      AudioManager.playCoins();
+      setToast(`+${amount} 🪙`);
+    }
   };
 
   const renderActionBar = () => {
@@ -135,13 +139,13 @@ export const VillageScreen: React.FC<{ buildOpen: boolean; onCloseBuild: () => v
         {upgrading ? (
           <>
             <button className="action-btn" disabled>🔨<span>{formatDuration(selected.upgradingUntil - now)}</span></button>
-            <button className="action-btn gem" disabled={state.gems < finishCost} onClick={() => finishBuildingUpgrade(selected.uid)}>
+            <button className="action-btn gem" disabled={state.gems < finishCost} onClick={() => { finishBuildingUpgrade(selected.uid); AudioManager.playLevelUp(); }}>
               ⏩<span>💎 {finishCost}</span>
             </button>
           </>
         ) : VillageManager.isUpgradable(selected.type) && (
           <button className="action-btn upgrade" disabled={!!blocker} title={blocker ?? ''}
-            onClick={() => startBuildingUpgrade(selected.uid)}>
+            onClick={() => { startBuildingUpgrade(selected.uid); AudioManager.playBuildingHit(); }}>
             ⬆️<span>{blocker && blocker !== 'Oro insuficiente' ? blocker : `🪙 ${cost}`}</span>
           </button>
         )}

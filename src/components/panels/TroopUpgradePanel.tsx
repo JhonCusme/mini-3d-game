@@ -8,6 +8,7 @@ import { EffectManager } from '../../core/EffectManager';
 import { TROOP_ICONS, AVATAR_IMAGES } from '../troopIcons';
 import { getKingdomConfig } from '../../config/KingdomsConfig';
 import { panel } from './Panels';
+import { AudioManager } from '../../core/AudioManager';
 
 const TROOP_ORDER: TroopId[] = ['infantry', 'archers', 'cavalry', 'mages', 'catapults', 'healers'];
 
@@ -26,6 +27,7 @@ export const TroopUpgradePanel: React.FC<{ initialTab?: 'troops' | 'hero' }> = (
     if (success) {
       setUpgradedTroop(troopId);
       EffectManager.fireTroopUpgrade();
+      AudioManager.playLevelUp();
       setTimeout(() => setUpgradedTroop(null), 1200);
     }
   };
@@ -33,6 +35,7 @@ export const TroopUpgradePanel: React.FC<{ initialTab?: 'troops' | 'hero' }> = (
   const handleUpgradeHero = () => {
     upgradeHero();
     EffectManager.fireHeroUpgrade();
+    AudioManager.playLevelUp();
   };
 
   return (

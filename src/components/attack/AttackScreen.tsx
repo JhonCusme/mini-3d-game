@@ -17,6 +17,7 @@ import { RtsControls, SceneLights } from '../village/VillageScene';
 import { VillageTerrain, Walls } from '../village/VillageTerrain';
 import { BuildingActor, EffectActor, ProjectileActor, UnitActor } from './AttackActors';
 import { AVATAR_IMAGES, TROOP_ICONS } from '../troopIcons';
+import { AudioManager } from '../../core/AudioManager';
 
 import { getKingdomConfig } from '../../config/KingdomsConfig';
 
@@ -122,7 +123,12 @@ export const AttackScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => 
       if (!sim.started) return;
       const result = sim.toResult(seedRef.current);
       setOutcome(completeAttack(opponent, result));
-      if (result.stars > 0) EffectManager.fireVictoryConfetti();
+      if (result.stars > 0) {
+        EffectManager.fireVictoryConfetti();
+        AudioManager.playVictory();
+      } else {
+        AudioManager.playDefeat();
+      }
     }
   };
 
@@ -130,14 +136,20 @@ export const AttackScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => 
     if (!sim || sim.finished || e.delta > TAP_TOLERANCE || !selected) return;
     const { x, z } = e.point;
     if (selected === 'spell') {
-      if (sim.castGodSpell(x, z)) setSelected(TROOP_IDS.find(id => sim.remaining[id] > 0) ?? null);
+      if (sim.castGodSpell(x, z)) {
+        AudioManager.playMagic();
+        setSelected(TROOP_IDS.find(id => sim.remaining[id] > 0) ?? null);
+      }
       return;
     }
     if (!hasEnergy && !sim.started) { setMessage('⚡ Necesitas energía para atacar'); return; }
     if (!AttackSim.isDeployable(x, z)) { setMessage('Suelta tus tropas fuera de la zona roja'); return; }
     const n = sim.deploy(selected, x, z, burst ? 5 : 1);
     if (n === 0) setMessage('No te quedan de esas tropas');
-    else if (sim.remaining[selected] === 0) setSelected(TROOP_IDS.find(id => sim.remaining[id] > 0) ?? (sim.godSpellUsed || !state.attackGod ? null : 'spell'));
+    else {
+      AudioManager.playDeploy();
+      if (sim.remaining[selected] === 0) setSelected(TROOP_IDS.find(id => sim.remaining[id] > 0) ?? (sim.godSpellUsed || !state.attackGod ? null : 'spell'));
+    }
   };
 
   const next = () => {
@@ -158,6 +170,7 @@ export const AttackScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => 
     if (!sim) return;
     if (!sim.started) { handleReturnHome(); return; }
     sim.surrender();
+    AudioManager.playDefeat();
     onTick();
   };
 

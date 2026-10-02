@@ -7,6 +7,7 @@ import { GodManager, type GodEffects } from '../GodManager';
 import { layoutOf } from './BotFactory';
 import { mulberry32 } from './PvpBattle';
 import type { AttackArmy, PvpBattleResult, VillageSnapshot } from './PvpTypes';
+import { AudioManager } from '../AudioManager';
 
 /** Real-time combat stats per troop type (tiles, seconds). */
 export const UNIT_STATS: Record<TroopId, { hp: number; dps: number; speed: number; range: number; flying?: boolean; prefers?: 'defense'; healer?: boolean; siege?: boolean }> = {
@@ -346,6 +347,14 @@ export class AttackSim {
         this.projectiles.push({ id, fromX: fx, fromY: fy, fromZ: fz, toX: tx, toZ: tz, t: 0, duration, kind });
         this.pending.push({ projectileId: id, delay: duration, apply });
         this.version++;
+
+        if (kind === 'cannonball' || kind === 'boulder') {
+            AudioManager.playCannon();
+        } else if (kind === 'arrow') {
+            AudioManager.playArrow();
+        } else if (kind === 'magic' || kind === 'lightning') {
+            AudioManager.playMagic();
+        }
     }
 
     private addEffect(kind: SimEffect['kind'], x: number, z: number, radius: number) {
@@ -360,13 +369,22 @@ export class AttackSim {
             b.hp = 0;
             b.destroyed = true;
             this.addEffect('explosion', b.x, b.z, b.size * 0.6);
+            AudioManager.playExplosion();
+            AudioManager.playCoins();
+        } else {
+            AudioManager.playBuildingHit();
         }
     }
 
     private damageWall(w: SimWall, dmg: number) {
         if (w.destroyed) return;
         w.hp -= dmg;
-        if (w.hp <= 0) { w.hp = 0; w.destroyed = true; this.version++; }
+        if (w.hp <= 0) {
+            w.hp = 0;
+            w.destroyed = true;
+            this.version++;
+            AudioManager.playBuildingHit();
+        }
     }
 
     private damageUnit(u: SimUnit, dmg: number) {
