@@ -1,9 +1,10 @@
 import React, { useRef, useMemo, useState } from 'react';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
-import type { Group, Mesh } from 'three';
+import type { Group } from 'three';
 import type { PlacedBuilding, TroopCounts, TroopId } from '../../core/GameState';
 import { GameConfig } from '../../config/GameConfig';
+import { StylizedTroop } from '../common/StylizedCharacters';
 
 interface VillageTroopsProps {
   village: PlacedBuilding[];
@@ -40,261 +41,17 @@ const VillageUnitMesh: React.FC<UnitMeshProps> = ({
   practiceType = 'sword',
   animOffset = 0,
 }) => {
-  const armRef = useRef<Group>(null);
-  const headRef = useRef<Group>(null);
-  const weaponRef = useRef<Group>(null);
-  const auraRef = useRef<Mesh>(null);
-
-  useFrame(({ clock }) => {
-    const t = clock.elapsedTime * 4 + animOffset;
-
-    if (isPracticing) {
-      if (practiceType === 'sword' && armRef.current) {
-        // Slashing sword drill
-        const slash = Math.sin(t * 1.5);
-        armRef.current.rotation.x = Math.max(-0.4, slash * 1.2);
-        armRef.current.rotation.z = Math.sin(t * 1.5) * 0.3;
-      } else if (practiceType === 'bow' && armRef.current) {
-        // Pull string, aim, release drill
-        const cycle = (t * 0.7) % (Math.PI * 2);
-        const pull = Math.sin(cycle);
-        armRef.current.rotation.x = -0.7 + pull * 0.3;
-      } else if (practiceType === 'magic' && auraRef.current) {
-        // Pulsing magical aura
-        const pulse = 1 + Math.sin(t * 2) * 0.25;
-        auraRef.current.scale.set(pulse, pulse, pulse);
-        auraRef.current.rotation.y = t * 0.5;
-      } else if (practiceType === 'heal' && auraRef.current) {
-        const pulse = 1 + Math.cos(t * 1.8) * 0.2;
-        auraRef.current.scale.set(pulse, pulse, pulse);
-      }
-    } else {
-      // Idle head turning looking for intruders
-      if (headRef.current) {
-        headRef.current.rotation.y = Math.sin(t * 0.3) * 0.5;
-      }
-    }
-  });
-
-  switch (type) {
-    case 'cavalry':
-      return (
-        <group scale={0.85}>
-          {/* Horse body */}
-          <mesh position={[0, 0.35, 0]} castShadow>
-            <boxGeometry args={[0.32, 0.32, 0.75]} />
-            <meshStandardMaterial color="#8b5a2b" roughness={0.7} />
-          </mesh>
-          {/* Horse neck & head */}
-          <mesh position={[0, 0.55, 0.38]} rotation={[-0.4, 0, 0]} castShadow>
-            <boxGeometry args={[0.18, 0.35, 0.22]} />
-            <meshStandardMaterial color="#6e3e18" />
-          </mesh>
-          {/* Saddle */}
-          <mesh position={[0, 0.52, -0.02]}>
-            <boxGeometry args={[0.34, 0.05, 0.3]} />
-            <meshStandardMaterial color="#ffd700" metalness={0.6} roughness={0.3} />
-          </mesh>
-          {/* Rider */}
-          <group position={[0, 0.75, -0.05]}>
-            <mesh castShadow>
-              <capsuleGeometry args={[0.12, 0.26, 4, 8]} />
-              <meshStandardMaterial color={teamColor} />
-            </mesh>
-            <mesh position={[0, 0.26, 0]} castShadow>
-              <sphereGeometry args={[0.1, 8, 6]} />
-              <meshStandardMaterial color="#f1c27d" />
-            </mesh>
-            <mesh position={[0, 0.35, 0]}>
-              <coneGeometry args={[0.12, 0.16, 8]} />
-              <meshStandardMaterial color="#333" metalness={0.8} />
-            </mesh>
-            {/* Lance / Spear */}
-            <mesh position={[0.2, 0.2, 0.3]} rotation={[1.1, 0, 0]}>
-              <cylinderGeometry args={[0.02, 0.02, 1.2]} />
-              <meshStandardMaterial color="#dcdde1" metalness={0.8} />
-            </mesh>
-          </group>
-        </group>
-      );
-
-    case 'catapults':
-      return (
-        <group scale={0.8}>
-          {/* Wood chassis */}
-          <mesh position={[0, 0.25, 0]} castShadow>
-            <boxGeometry args={[0.65, 0.22, 0.85]} />
-            <meshStandardMaterial color="#8b5a2b" roughness={0.8} />
-          </mesh>
-          {/* Wheels */}
-          {[-0.35, 0.35].map((x, i) =>
-            [-0.3, 0.3].map((z, j) => (
-              <mesh key={`${i}-${j}`} position={[x, 0.18, z]} rotation={[0, 0, Math.PI / 2]} castShadow>
-                <cylinderGeometry args={[0.18, 0.18, 0.08, 12]} />
-                <meshStandardMaterial color="#4a2e16" />
-              </mesh>
-            ))
-          )}
-          {/* Throwing arm */}
-          <group ref={armRef} position={[0, 0.3, -0.2]}>
-            <mesh position={[0, 0.35, 0.2]} rotation={[0.5, 0, 0]} castShadow>
-              <boxGeometry args={[0.08, 0.08, 0.85]} />
-              <meshStandardMaterial color="#633917" />
-            </mesh>
-            {/* Rock cup */}
-            <mesh position={[0, 0.65, -0.1]}>
-              <cylinderGeometry args={[0.15, 0.08, 0.1, 8]} />
-              <meshStandardMaterial color="#2f3542" />
-            </mesh>
-            <mesh position={[0, 0.72, -0.1]} castShadow>
-              <dodecahedronGeometry args={[0.12, 0]} />
-              <meshStandardMaterial color="#747d8c" roughness={0.9} />
-            </mesh>
-          </group>
-        </group>
-      );
-
-    case 'mages':
-      return (
-        <group position={[0, 0.85, 0]} scale={0.9}>
-          {/* Floating magic aura circle */}
-          <mesh ref={auraRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]}>
-            <ringGeometry args={[0.25, 0.45, 16]} />
-            <meshBasicMaterial color="#a55eea" transparent opacity={0.6} />
-          </mesh>
-          {/* Robes */}
-          <mesh castShadow>
-            <coneGeometry args={[0.22, 0.65, 8]} />
-            <meshStandardMaterial color="#574b90" emissive="#301b5e" emissiveIntensity={0.3} />
-          </mesh>
-          {/* Head & beard */}
-          <mesh position={[0, 0.42, 0]}>
-            <sphereGeometry args={[0.13, 8, 6]} />
-            <meshStandardMaterial color="#f1c27d" />
-          </mesh>
-          {/* Pointy wizard hat */}
-          <mesh position={[0, 0.62, 0]}>
-            <coneGeometry args={[0.18, 0.35, 8]} />
-            <meshStandardMaterial color="#301b5e" />
-          </mesh>
-          {/* Glowing Orb / Staff */}
-          <group position={[0.24, 0.2, 0.15]}>
-            <mesh position={[0, -0.2, 0]}>
-              <cylinderGeometry args={[0.02, 0.02, 0.8]} />
-              <meshStandardMaterial color="#5a3d1c" />
-            </mesh>
-            <mesh position={[0, 0.22, 0]}>
-              <sphereGeometry args={[0.09, 12, 8]} />
-              <meshStandardMaterial color="#00d2d3" emissive="#00d2d3" emissiveIntensity={0.9} />
-            </mesh>
-          </group>
-        </group>
-      );
-
-    case 'healers':
-      return (
-        <group position={[0, 0.75, 0]} scale={0.88}>
-          {/* Angelic floating aura */}
-          <mesh ref={auraRef} position={[0, 0.65, 0]} rotation={[Math.PI / 2, 0, 0]}>
-            <torusGeometry args={[0.16, 0.03, 8, 16]} />
-            <meshBasicMaterial color="#ffd700" />
-          </mesh>
-          {/* White pristine robe */}
-          <mesh castShadow>
-            <coneGeometry args={[0.22, 0.65, 8]} />
-            <meshStandardMaterial color="#f5f6fa" roughness={0.5} />
-          </mesh>
-          {/* Head */}
-          <mesh position={[0, 0.42, 0]}>
-            <sphereGeometry args={[0.12, 8, 6]} />
-            <meshStandardMaterial color="#f5cd79" />
-          </mesh>
-          {/* Wings */}
-          {[-1, 1].map((dir, i) => (
-            <mesh key={i} position={[dir * 0.16, 0.25, -0.1]} rotation={[0, dir * 0.4, dir * 0.3]}>
-              <boxGeometry args={[0.22, 0.35, 0.03]} />
-              <meshStandardMaterial color="#ffffff" transparent opacity={0.85} />
-            </mesh>
-          ))}
-          {/* Emerald cross */}
-          <mesh position={[0, 0.22, 0.16]}>
-            <boxGeometry args={[0.12, 0.04, 0.02]} />
-            <meshBasicMaterial color="#2ed573" />
-          </mesh>
-          <mesh position={[0, 0.22, 0.16]}>
-            <boxGeometry args={[0.04, 0.12, 0.02]} />
-            <meshBasicMaterial color="#2ed573" />
-          </mesh>
-        </group>
-      );
-
-    default: {
-      // Infantry and Archers
-      const isArcher = type === 'archers';
-      const hatColor = isArcher ? '#2ed573' : '#747d8c';
-
-      return (
-        <group scale={0.85}>
-          {/* Body */}
-          <mesh position={[0, 0.36, 0]} castShadow>
-            <capsuleGeometry args={[0.16, 0.32, 4, 8]} />
-            <meshStandardMaterial color={teamColor} roughness={0.6} />
-          </mesh>
-          {/* Head */}
-          <group ref={headRef} position={[0, 0.68, 0]}>
-            <mesh castShadow>
-              <sphereGeometry args={[0.12, 8, 6]} />
-              <meshStandardMaterial color="#f1c27d" />
-            </mesh>
-            {/* Helmet / Archer Hood */}
-            <mesh position={[0, 0.1, 0]}>
-              <coneGeometry args={[0.15, 0.18, 8]} />
-              <meshStandardMaterial color={hatColor} metalness={isArcher ? 0.1 : 0.8} />
-            </mesh>
-          </group>
-
-          {/* Weapon Arm */}
-          <group ref={armRef} position={[0.22, 0.45, 0]}>
-            {!isArcher ? (
-              // Sword and Shield
-              <group ref={weaponRef}>
-                {/* Sword */}
-                <mesh position={[0, 0, 0.2]} rotation={[0.8, 0, 0]}>
-                  <boxGeometry args={[0.04, 0.04, 0.5]} />
-                  <meshStandardMaterial color="#f1f2f6" metalness={0.9} roughness={0.2} />
-                </mesh>
-                {/* Crossguard */}
-                <mesh position={[0, 0, 0.02]}>
-                  <boxGeometry args={[0.12, 0.04, 0.04]} />
-                  <meshStandardMaterial color="#ffd700" />
-                </mesh>
-              </group>
-            ) : (
-              // Wooden Recurve Bow
-              <group ref={weaponRef}>
-                <mesh position={[0, 0, 0.15]} rotation={[0, 0, 0.2]}>
-                  <torusGeometry args={[0.22, 0.02, 6, 12, Math.PI]} />
-                  <meshStandardMaterial color="#8b5a2b" />
-                </mesh>
-                <mesh position={[0, 0, 0.15]}>
-                  <cylinderGeometry args={[0.005, 0.005, 0.44]} />
-                  <meshBasicMaterial color="#ffffff" />
-                </mesh>
-              </group>
-            )}
-          </group>
-
-          {/* Shield for Infantry on other arm */}
-          {!isArcher && (
-            <mesh position={[-0.22, 0.4, 0.1]} rotation={[0, -0.4, 0]}>
-              <boxGeometry args={[0.04, 0.35, 0.25]} />
-              <meshStandardMaterial color="#2f3542" metalness={0.7} roughness={0.3} />
-            </mesh>
-          )}
-        </group>
-      );
-    }
-  }
+  return (
+    <StylizedTroop
+      type={type}
+      teamColor={teamColor}
+      isMoving={!isPracticing}
+      isPracticing={isPracticing}
+      practiceType={practiceType}
+      animOffset={animOffset}
+      scale={type === 'catapults' || type === 'cavalry' ? 0.95 : 0.9}
+    />
+  );
 };
 
 // ---------------------------------------------------------------------------

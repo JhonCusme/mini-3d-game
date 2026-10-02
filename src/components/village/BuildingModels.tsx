@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import type { Group } from 'three';
 import { BUILDINGS, type BuildingType } from '../../config/BuildingsConfig';
+import { ArcherModel, HeroKingModel } from '../common/StylizedCharacters';
 
 /** Low-poly model for each building type, centred on its footprint, base at y=0. */
 export const BuildingModel: React.FC<{ type: BuildingType; level: number; aimAngle?: number }> = ({ type, level, aimAngle }) => {
@@ -198,16 +199,15 @@ export const BuildingModel: React.FC<{ type: BuildingType; level: number; aimAng
             <coneGeometry args={[1.1, 0.9, 4]} />
             <meshStandardMaterial color={d.roofColor} />
           </mesh>
-          <mesh position={[0, 2.75 + lvlTint, 0]} rotation={[0, aimAngle ?? 0, 0]}>
-            <capsuleGeometry args={[0.12, 0.25, 4, 8]} />
-            <meshStandardMaterial color="#2f8f3a" />
-          </mesh>
+          <group position={[0, 2.55 + lvlTint, 0]} rotation={[0, aimAngle ?? 0, 0]}>
+            <ArcherModel teamColor="#2ed573" isAttacking={aimAngle !== undefined} scale={0.7} />
+          </group>
         </group>
       );
   }
 };
 
-const AltarModel: React.FC<{ level: number }> = () => {
+const AltarModel: React.FC<{ level: number }> = ({ level }) => {
   const crystal = useRef<Group>(null);
   useFrame((_, dt) => {
     if (crystal.current) crystal.current.rotation.y += dt * 0.8;
@@ -215,26 +215,29 @@ const AltarModel: React.FC<{ level: number }> = () => {
   return (
     <group>
       <mesh position={[0, 0.15, 0]} receiveShadow castShadow>
-        <cylinderGeometry args={[0.95, 1, 0.3, 12]} />
-        <meshStandardMaterial color="#8d887e" />
+        <cylinderGeometry args={[1.1, 1.2, 0.3, 14]} />
+        <meshStandardMaterial color="#636e72" roughness={0.9} />
       </mesh>
-      <mesh position={[0, 0.55, 0]} castShadow>
-        <boxGeometry args={[0.8, 0.5, 0.8]} />
-        <meshStandardMaterial color="#b9b4aa" />
-      </mesh>
-      {[-0.75, 0.75].map((x, i) => (
-        <mesh key={i} position={[x, 0.9, -0.4]} castShadow>
-          <cylinderGeometry args={[0.12, 0.14, 1.5, 8]} />
-          <meshStandardMaterial color="#d0ccc2" />
+      {/* Stone Pillars */}
+      {[-0.85, 0.85].map((x, i) => (
+        <mesh key={i} position={[x, 0.8, -0.5]} castShadow>
+          <cylinderGeometry args={[0.12, 0.15, 1.4, 8]} />
+          <meshStandardMaterial color="#8395a7" />
         </mesh>
       ))}
-      <group ref={crystal} position={[0, 1.45, 0]}>
+      {/* Floating Hero Power Crystal behind King */}
+      <group ref={crystal} position={[0, 1.6, -0.4]}>
         <mesh castShadow>
-          <octahedronGeometry args={[0.4, 0]} />
-          <meshStandardMaterial color="#b48cff" emissive="#7a4dff" emissiveIntensity={0.9} roughness={0.2} />
+          <octahedronGeometry args={[0.3, 0]} />
+          <meshStandardMaterial color="#ffd700" emissive="#f39c12" emissiveIntensity={0.8} roughness={0.2} />
         </mesh>
       </group>
-      <pointLight position={[0, 1.5, 0]} color="#9b6bff" intensity={2} distance={4} />
+      <pointLight position={[0, 1.6, -0.4]} color="#ffd700" intensity={2} distance={4} />
+
+      {/* The Grand Hero King standing prominently on the altar */}
+      <group position={[0, 0.3, 0.1]}>
+        <HeroKingModel level={level} scale={0.85} />
+      </group>
     </group>
   );
 };

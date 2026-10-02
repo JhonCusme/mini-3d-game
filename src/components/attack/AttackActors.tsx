@@ -5,6 +5,7 @@ import type { Group, Mesh, MeshBasicMaterial } from 'three';
 import type { SimBuilding, SimEffect, SimProjectile, SimUnit } from '../../core/pvp/AttackSim';
 import { UNIT_STATS } from '../../core/pvp/AttackSim';
 import { BuildingModel } from '../village/BuildingModels';
+import { StylizedTroop } from '../common/StylizedCharacters';
 
 const TEAM = { attacker: '#3a7bd5', defender: '#d63a3a' };
 
@@ -89,96 +90,10 @@ export const BuildingActor: React.FC<{ b: SimBuilding }> = ({ b }) => {
   );
 };
 
-const UnitBody: React.FC<{ type: SimUnit['type']; color: string }> = ({ type, color }) => {
-  switch (type) {
-    case 'cavalry':
-      return (
-        <group>
-          <mesh position={[0, 0.35, 0]} castShadow>
-            <boxGeometry args={[0.3, 0.3, 0.7]} />
-            <meshStandardMaterial color="#8b5a2b" />
-          </mesh>
-          <mesh position={[0, 0.5, 0.35]} castShadow>
-            <boxGeometry args={[0.18, 0.3, 0.2]} />
-            <meshStandardMaterial color="#8b5a2b" />
-          </mesh>
-          <mesh position={[0, 0.72, -0.05]} castShadow>
-            <capsuleGeometry args={[0.12, 0.25, 4, 8]} />
-            <meshStandardMaterial color={color} />
-          </mesh>
-        </group>
-      );
-    case 'catapults':
-      return (
-        <group>
-          <mesh position={[0, 0.25, 0]} castShadow>
-            <boxGeometry args={[0.6, 0.25, 0.8]} />
-            <meshStandardMaterial color="#8b5a2b" />
-          </mesh>
-          <mesh position={[0, 0.55, -0.1]} rotation={[0.6, 0, 0]} castShadow>
-            <boxGeometry args={[0.08, 0.08, 0.8]} />
-            <meshStandardMaterial color="#6b4423" />
-          </mesh>
-          <mesh position={[0.32, 0.15, 0]}>
-            <boxGeometry args={[0.05, 0.3, 0.8]} />
-            <meshStandardMaterial color={color} />
-          </mesh>
-        </group>
-      );
-    case 'mages':
-      return (
-        <group position={[0, 0.9, 0]}>
-          <mesh castShadow>
-            <coneGeometry args={[0.22, 0.6, 8]} />
-            <meshStandardMaterial color="#7b4dff" emissive="#4a2a9e" emissiveIntensity={0.4} />
-          </mesh>
-          <mesh position={[0, 0.38, 0]}>
-            <sphereGeometry args={[0.12, 8, 6]} />
-            <meshStandardMaterial color="#f1c27d" />
-          </mesh>
-          <mesh position={[0, -0.36, 0]}>
-            <sphereGeometry args={[0.1, 8, 6]} />
-            <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.8} />
-          </mesh>
-        </group>
-      );
-    default: {
-      const hat = type === 'archers' ? '#2f8f3a' : type === 'healers' ? '#ffffff' : '#b0b0b8';
-      return (
-        <group>
-          <mesh position={[0, 0.38, 0]} castShadow>
-            <capsuleGeometry args={[0.15, 0.3, 4, 8]} />
-            <meshStandardMaterial color={type === 'healers' ? '#f5f5f5' : color} />
-          </mesh>
-          <mesh position={[0, 0.72, 0]} castShadow>
-            <sphereGeometry args={[0.12, 8, 6]} />
-            <meshStandardMaterial color="#f1c27d" />
-          </mesh>
-          <mesh position={[0, 0.82, 0]}>
-            <coneGeometry args={[0.14, 0.18, 8]} />
-            <meshStandardMaterial color={hat} />
-          </mesh>
-          {type === 'infantry' && (
-            <mesh position={[0.2, 0.45, 0.12]} rotation={[0.8, 0, 0]}>
-              <boxGeometry args={[0.04, 0.04, 0.45]} />
-              <meshStandardMaterial color="#dfe6ee" metalness={0.7} roughness={0.3} />
-            </mesh>
-          )}
-          {type === 'healers' && (
-            <mesh position={[0, 0.42, 0.16]}>
-              <boxGeometry args={[0.16, 0.05, 0.02]} />
-              <meshBasicMaterial color="#2ed573" />
-            </mesh>
-          )}
-        </group>
-      );
-    }
-  }
-};
-
 export const UnitActor: React.FC<{ u: SimUnit }> = ({ u }) => {
   const ref = useRef<Group>(null);
   const body = useRef<Group>(null);
+
   useFrame(({ clock }) => {
     const g = ref.current;
     if (!g) return;
@@ -186,21 +101,37 @@ export const UnitActor: React.FC<{ u: SimUnit }> = ({ u }) => {
     g.position.set(u.x, 0, u.z);
     if (body.current) {
       body.current.rotation.y = u.heading;
-      // little walking bob
-      body.current.position.y = UNIT_STATS[u.type].flying ? Math.sin(clock.elapsedTime * 3 + u.id) * 0.1 : Math.abs(Math.sin(clock.elapsedTime * 10 + u.id)) * 0.05;
+      // Flying units (healers) hover above ground smoothly
+      if (UNIT_STATS[u.type].flying) {
+        body.current.position.y = 0.2 + Math.sin(clock.elapsedTime * 3 + u.id) * 0.12;
+      } else {
+        body.current.position.y = 0;
+      }
     }
   });
-  const scale = u.type === 'catapults' || u.type === 'cavalry' ? 1.5 : 1.4;
+
+  const isAttacking = u.targetKind !== null && u.cooldown > 0;
+  const isMoving = !u.dead && !isAttacking;
+  const scale = u.type === 'catapults' || u.type === 'cavalry' ? 1.35 : 1.25;
+
   return (
     <group ref={ref}>
-      <group ref={body} scale={scale}>
-        <UnitBody type={u.type} color={TEAM[u.side]} />
+      <group ref={body}>
+        <StylizedTroop
+          type={u.type}
+          teamColor={TEAM[u.side]}
+          isMoving={isMoving}
+          isAttacking={isAttacking}
+          animOffset={u.id}
+          scale={scale}
+        />
       </group>
+      {/* Selection / placement team ring */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-        <ringGeometry args={[0.3, 0.42, 16]} />
-        <meshBasicMaterial color={TEAM[u.side]} />
+        <ringGeometry args={[0.3, 0.44, 16]} />
+        <meshBasicMaterial color={TEAM[u.side]} transparent opacity={0.7} />
       </mesh>
-      <HpBar y={UNIT_STATS[u.type].flying ? 2.2 : 1.6} width={0.7} get={() => u.hp / u.maxHp} color={u.side === 'attacker' ? '#4fc3ff' : '#ff6b6b'} />
+      <HpBar y={UNIT_STATS[u.type].flying ? 2.2 : 1.65} width={0.75} get={() => u.hp / u.maxHp} color={u.side === 'attacker' ? '#4fc3ff' : '#ff6b6b'} />
     </group>
   );
 };
