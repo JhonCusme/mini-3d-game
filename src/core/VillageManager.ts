@@ -218,7 +218,7 @@ export class VillageManager {
         };
     }
 
-    // ---------- Gold mine ----------
+    // ---------- Gold mine & Miner Workers ----------
 
     static produce(state: GameState, seconds: number): GameState {
         if (seconds <= 0 || !state.village.some(b => b.type === 'goldmine')) return state;
@@ -229,9 +229,50 @@ export class VillageManager {
             village: state.village.map(b => {
                 if (b.type !== 'goldmine' || b.level <= 0) return b;
                 const cap = Math.round(mineCapacity(b.level) * capMult);
-                if (b.stored >= cap) return b;
-                return { ...b, stored: Math.min(cap, b.stored + mineRatePerSecond(b.level) * rateMult * seconds) };
+                const currentStamina = b.minerStamina !== undefined ? b.minerStamina : 100;
+
+                // When full capacity is reached, miners rest and recover stamina
+                if (b.stored >= cap) {
+                    const recoveredStamina = Math.min(100, currentStamina + (seconds / 8));
+                    return { ...b, minerStamina: Math.round(recoveredStamina * 10) / 10 };
+                }
+
+                // Active mining drains stamina: 1% roughly every 15s (~25 min of continuous mining)
+                const newStamina = Math.max(0, currentStamina - (seconds / 15));
+
+                // Fatigue efficiency:
+                // > 60%: 1.1x (high energy)
+                // 30% - 60%: 1.0x (steady normal pace)
+                // 10% - 30%: 0.45x (sweating and exhausted)
+                // < 10%: 0.15x (too tired, sleeping/sitting)
+                let workerEfficiency = 1.0;
+                if (newStamina > 60) workerEfficiency = 1.1;
+                else if (newStamina >= 30) workerEfficiency = 1.0;
+                else if (newStamina >= 10) workerEfficiency = 0.45;
+                else workerEfficiency = 0.15;
+
+                const goldProduced = mineRatePerSecond(b.level) * rateMult * workerEfficiency * seconds;
+                return {
+                    ...b,
+                    minerStamina: Math.round(newStamina * 10) / 10,
+                    stored: Math.min(cap, b.stored + goldProduced),
+                };
             }),
+        };
+    }
+
+    static feedMiners(state: GameState, uid: string): { state: GameState; success: boolean } {
+        const b = this.get(state, uid);
+        if (!b || b.type !== 'goldmine') return { state, success: false };
+        const foodCost = 50; // Coins cost for fresh kingdom rations
+        if (state.coins < foodCost) return { state, success: false };
+        return {
+            state: {
+                ...state,
+                coins: state.coins - foodCost,
+                village: state.village.map(o => (o.uid === uid ? { ...o, minerStamina: 100, lastFedTime: Date.now() } : o)),
+            },
+            success: true,
         };
     }
 

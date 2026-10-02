@@ -363,13 +363,163 @@ const TownhallModel: React.FC<{ level: number }> = ({ level }) => {
   );
 };
 
+// ---------------------------------------------------------------------------
+// 3D ANIMATED MINER WORKER (TRABAJADORES DE LA MINA)
+// ---------------------------------------------------------------------------
+export const MinerWorker: React.FC<{
+  position: [number, number, number];
+  rotation?: [number, number, number];
+  scale?: number;
+  stamina?: number; // 0 - 100
+  role?: 'digger' | 'hauler';
+}> = ({ position, rotation = [0, 0, 0], scale = 0.52, stamina = 100, role = 'digger' }) => {
+  const armRef = useRef<Group>(null);
+  const headRef = useRef<Group>(null);
+  const sweatRef = useRef<Group>(null);
+  const isFatigued = stamina < 30;
+
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime;
+    if (isFatigued) {
+      // Sitting down / wiping sweat from brow / breathing heavily
+      if (headRef.current) {
+        headRef.current.rotation.x = Math.sin(t * 2) * 0.12 + 0.25;
+        headRef.current.rotation.z = Math.sin(t * 1.5) * 0.08;
+      }
+      if (armRef.current) {
+        armRef.current.rotation.x = 0.35 + Math.sin(t * 2) * 0.1;
+        armRef.current.rotation.z = 0.3;
+      }
+      if (sweatRef.current) {
+        sweatRef.current.position.y = 0.8 + Math.sin(t * 3) * 0.04;
+      }
+    } else {
+      // Energetic active mining
+      if (armRef.current) {
+        if (role === 'digger') {
+          // Dynamic pickaxe swing
+          const swing = Math.sin(t * 4);
+          armRef.current.rotation.x = -0.7 + swing * 1.4;
+          armRef.current.rotation.z = -0.15;
+        } else {
+          // Hauler checking gold / lifting cart
+          armRef.current.rotation.x = -0.2 + Math.sin(t * 2) * 0.25;
+        }
+      }
+      if (headRef.current) {
+        headRef.current.rotation.x = Math.sin(t * 4) * 0.12;
+      }
+    }
+  });
+
+  return (
+    <group position={position} rotation={rotation} scale={scale}>
+      {/* If fatigued: wooden stool to sit on and sweat drop indicator */}
+      {isFatigued && (
+        <>
+          <mesh position={[0, 0.16, 0]} castShadow>
+            <cylinderGeometry args={[0.2, 0.22, 0.32, 6]} />
+            <meshStandardMaterial color="#5a422d" roughness={0.9} />
+          </mesh>
+          <group ref={sweatRef} position={[0.22, 0.8, 0]}>
+            <mesh>
+              <sphereGeometry args={[0.06, 6, 6]} />
+              <meshStandardMaterial color="#00d2d3" emissive="#54a0ff" emissiveIntensity={0.8} transparent opacity={0.85} />
+            </mesh>
+          </group>
+        </>
+      )}
+
+      {/* Miner Character Body */}
+      <group position={[0, isFatigued ? 0.24 : 0.38, 0]}>
+        {/* Legs / Boots */}
+        <mesh position={[-0.1, -0.2, isFatigued ? 0.12 : 0]} castShadow>
+          <boxGeometry args={[0.12, 0.26, 0.14]} />
+          <meshStandardMaterial color="#2d3436" roughness={0.8} />
+        </mesh>
+        <mesh position={[0.1, -0.2, isFatigued ? 0.12 : 0]} castShadow>
+          <boxGeometry args={[0.12, 0.26, 0.14]} />
+          <meshStandardMaterial color="#2d3436" roughness={0.8} />
+        </mesh>
+
+        {/* Torso & Miner Apron */}
+        <mesh position={[0, 0.08, 0]} castShadow>
+          <boxGeometry args={[0.3, 0.32, 0.22]} />
+          <meshStandardMaterial color="#34495e" roughness={0.7} />
+        </mesh>
+        <mesh position={[0, 0.07, 0.115]}>
+          <boxGeometry args={[0.22, 0.26, 0.02]} />
+          <meshStandardMaterial color="#795548" roughness={0.9} />
+        </mesh>
+
+        {/* Left Arm */}
+        <group position={[-0.2, 0.12, 0]}>
+          <mesh position={[0, -0.12, 0]} rotation={[0.2, 0, 0.2]} castShadow>
+            <boxGeometry args={[0.09, 0.26, 0.09]} />
+            <meshStandardMaterial color="#d35400" />
+          </mesh>
+          <mesh position={[0.02, -0.25, 0.04]}>
+            <sphereGeometry args={[0.06, 6, 6]} />
+            <meshStandardMaterial color="#f0c294" />
+          </mesh>
+        </group>
+
+        {/* Right Arm (Picks or tools) */}
+        <group ref={armRef} position={[0.2, 0.14, 0]}>
+          <mesh position={[0, -0.12, 0]} castShadow>
+            <boxGeometry args={[0.09, 0.26, 0.09]} />
+            <meshStandardMaterial color="#d35400" />
+          </mesh>
+          <mesh position={[0, -0.25, 0]}>
+            <sphereGeometry args={[0.06, 6, 6]} />
+            <meshStandardMaterial color="#f0c294" />
+          </mesh>
+
+          {/* Pickaxe Tool */}
+          <group position={[0, -0.25, 0.1]} rotation={[isFatigued ? 0.3 : 0.6, 0, 0]}>
+            <mesh position={[0, 0.05, 0]}>
+              <cylinderGeometry args={[0.02, 0.02, 0.55, 5]} />
+              <meshStandardMaterial color="#8d6e63" roughness={0.8} />
+            </mesh>
+            <mesh position={[0, 0.3, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+              <coneGeometry args={[0.06, 0.42, 5]} />
+              <meshStandardMaterial color="#7f8c8d" metalness={0.75} roughness={0.3} />
+            </mesh>
+          </group>
+        </group>
+
+        {/* Head & Miner Helmet with Lamp */}
+        <group ref={headRef} position={[0, 0.32, 0]}>
+          <mesh castShadow>
+            <boxGeometry args={[0.22, 0.22, 0.2]} />
+            <meshStandardMaterial color="#f0c294" roughness={0.6} />
+          </mesh>
+          <mesh position={[0, 0.12, 0]}>
+            <boxGeometry args={[0.26, 0.1, 0.24]} />
+            <meshStandardMaterial color="#e67e22" roughness={0.4} />
+          </mesh>
+          <mesh position={[0, 0.07, 0.08]} rotation={[0.2, 0, 0]}>
+            <boxGeometry args={[0.26, 0.03, 0.12]} />
+            <meshStandardMaterial color="#d35400" />
+          </mesh>
+          {/* Headlamp */}
+          <mesh position={[0, 0.14, 0.13]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.035, 0.03, 0.06, 6]} />
+            <meshStandardMaterial color="#f1c40f" emissive="#f39c12" emissiveIntensity={isFatigued ? 0.2 : 0.9} />
+          </mesh>
+        </group>
+      </group>
+    </group>
+  );
+};
+
 // ===========================================================================
-// 2. GOLD MINE (MINA DE ORO) - 4 Tiers of Industrial & Gold Riches
+// 2. GOLD MINE (MINA DE ORO) - 4 Tiers with Living Animated Miners
 // ===========================================================================
-const GoldmineModel: React.FC<{ level: number }> = ({ level }) => {
+const GoldmineModel: React.FC<{ level: number; stamina?: number }> = ({ level, stamina = 100 }) => {
   const tier = getBuildingTier(level);
 
-  // TIER 1 (Nv 1-2): Pozo de excavación artesanal con vigas y pepitas de oro
+  // TIER 1 (Nv 1-2): Pozo de excavación artesanal con vigas, pepitas y Minero
   if (tier === 1) {
     return (
       <group>
@@ -402,11 +552,13 @@ const GoldmineModel: React.FC<{ level: number }> = ({ level }) => {
             <meshStandardMaterial color="#ffd700" metalness={0.8} roughness={0.3} />
           </mesh>
         ))}
+        {/* Animated Miner Worker */}
+        <MinerWorker position={[0.42, 0, 0.65]} rotation={[0, -0.6, 0]} stamina={stamina} role="digger" />
       </group>
     );
   }
 
-  // TIER 2 (Nv 3-4): Mina con Galería de Vigas y Vagoneta de Madera con Oro
+  // TIER 2 (Nv 3-4): Mina con Galería de Vigas, Vagoneta de Oro y Cuadrilla de Mineros
   if (tier === 2) {
     return (
       <group>
@@ -448,11 +600,14 @@ const GoldmineModel: React.FC<{ level: number }> = ({ level }) => {
           </mesh>
         </group>
         <Torch position={[-0.55, 0.9, 0.7]} scale={0.9} />
+        {/* Miners at work */}
+        <MinerWorker position={[-0.45, 0, 0.7]} rotation={[0, 0.5, 0]} stamina={stamina} role="digger" />
+        <MinerWorker position={[0.2, 0, 0.82]} rotation={[0, -0.8, 0]} stamina={stamina} role="hauler" />
       </group>
     );
   }
 
-  // TIER 3 (Nv 5-7): Complejo de Extracción y Fundición con Grúa y Lingotes
+  // TIER 3 (Nv 5-7): Complejo de Extracción y Fundición con Grúa, Lingotes y Mineros
   if (tier === 3) {
     return (
       <group>
@@ -485,11 +640,14 @@ const GoldmineModel: React.FC<{ level: number }> = ({ level }) => {
             <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.2} emissive="#f39c12" emissiveIntensity={0.4} />
           </mesh>
         </group>
+        {/* Miners at work */}
+        <MinerWorker position={[-0.48, 0, 0.72]} rotation={[0, 0.45, 0]} stamina={stamina} role="digger" />
+        <MinerWorker position={[0.25, 0, 0.8]} rotation={[0, -0.7, 0]} stamina={stamina} role="hauler" />
       </group>
     );
   }
 
-  // TIER 4 (Nv 8-10): Gran Bóveda de Oro Imperial con Engranajes y Oro Macizo
+  // TIER 4 (Nv 8-10): Gran Bóveda de Oro Imperial con Mineros de Élite
   return (
     <group>
       {/* Obsidian & Marble Mine Mountain */}
@@ -517,6 +675,9 @@ const GoldmineModel: React.FC<{ level: number }> = ({ level }) => {
           </mesh>
         </group>
       ))}
+      {/* Imperial Miners */}
+      <MinerWorker position={[-0.45, 0, 0.8]} rotation={[0, 0.5, 0]} stamina={stamina} role="digger" />
+      <MinerWorker position={[0.45, 0, 0.8]} rotation={[0, -0.5, 0]} stamina={stamina} role="hauler" />
     </group>
   );
 };
@@ -1487,7 +1648,8 @@ export const BuildingModel: React.FC<{
   type: BuildingType;
   level: number;
   aimAngle?: number;
-}> = ({ type, level, aimAngle }) => {
+  stamina?: number;
+}> = ({ type, level, aimAngle, stamina }) => {
   const scale = BUILDING_MODEL_SCALES[type] || 0.75;
 
   const renderContent = () => {
@@ -1495,7 +1657,7 @@ export const BuildingModel: React.FC<{
       case 'townhall':
         return <TownhallModel level={level} />;
       case 'goldmine':
-        return <GoldmineModel level={level} />;
+        return <GoldmineModel level={level} stamina={stamina} />;
       case 'barracks':
         return <BarracksModel level={level} />;
       case 'blacksmith':

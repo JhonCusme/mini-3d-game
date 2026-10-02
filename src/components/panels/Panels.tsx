@@ -210,25 +210,41 @@ export const TrainTroopsPanel: React.FC = () => {
       <div className="card-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '8px' }}>
         {TROOP_IDS.map(id => {
           const troop = GameConfig.troops[id];
-          const canTrain = EconomyManager.canAfford(state, troop.cost, 'coins') && total < max;
+          const isUnlocked = UpgradeManager.isTroopUnlocked(state, id);
+          const reqText = UpgradeManager.getUnlockRequirementText(id);
+          const canTrain = isUnlocked && EconomyManager.canAfford(state, troop.cost, 'coins') && total < max;
           const lvl = state.troopLevels?.[id] || 1;
           const mult = 1 + (lvl - 1) * 0.22;
           const scaledPower = Math.round(troop.power * mult);
           const scaledHp = Math.round(troop.hp * mult);
           return (
-            <div key={id} className="troop-row">
+            <div key={id} className="troop-row" style={{ opacity: isUnlocked ? 1 : 0.65 }}>
               <div className="flex-row gap-2">
-                <span className="troop-icon">{TROOP_ICONS[id]}</span>
+                <span className="troop-icon" style={{ filter: isUnlocked ? 'none' : 'grayscale(1)' }}>{TROOP_ICONS[id]}</span>
                 <div className="flex-col">
                   <div className="flex-row gap-1" style={{ alignItems: 'baseline' }}>
                     <span style={{ fontWeight: 700, fontSize: '13px' }}>{troop.name}</span>
-                    <span style={{ fontSize: '10px', color: 'var(--accent-gold)', fontWeight: 800 }}>Nv.{lvl}</span>
+                    {isUnlocked ? (
+                      <span style={{ fontSize: '10px', color: 'var(--accent-gold)', fontWeight: 800 }}>Nv.{lvl}</span>
+                    ) : (
+                      <span style={{ fontSize: '10px', color: '#ff6b81', fontWeight: 700 }}>🔒 Bloqueado</span>
+                    )}
                   </div>
-                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>⚔️{scaledPower} ❤️{scaledHp} · ×{state.troops[id]}</span>
+                  {isUnlocked ? (
+                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>⚔️{scaledPower} ❤️{scaledHp} · ×{state.troops[id]}</span>
+                  ) : (
+                    <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{reqText}</span>
+                  )}
                 </div>
               </div>
-              <button className="btn-primary" disabled={!canTrain} onClick={() => trainTroop(id)} style={{ padding: '6px 10px', fontSize: '12px', minWidth: '70px' }}>
-                🪙 {troop.cost}
+              <button
+                className="btn-primary"
+                disabled={!canTrain}
+                onClick={() => trainTroop(id)}
+                style={{ padding: '6px 10px', fontSize: '12px', minWidth: '70px' }}
+                title={!isUnlocked ? reqText : undefined}
+              >
+                {isUnlocked ? `🪙 ${troop.cost}` : '🔒'}
               </button>
             </div>
           );

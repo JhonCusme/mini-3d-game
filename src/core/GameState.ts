@@ -15,6 +15,8 @@ export interface PlacedBuilding {
     z: number;
     upgradingUntil: number; // timestamp, 0 when idle
     stored: number;         // gold waiting to be collected (gold mine)
+    minerStamina?: number;  // 0 - 100, default 100
+    lastFedTime?: number;
 }
 
 export interface DefenseLogEntry {

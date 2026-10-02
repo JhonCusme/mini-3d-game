@@ -21,6 +21,10 @@ import { AnalyticsManager } from './AnalyticsManager';
 import { HeroManager } from './HeroManager';
 import { TroopUpgradeManager } from './TroopUpgradeManager';
 import { useAuth } from './AuthContext';
+import { CAMPAIGN_MISSIONS } from './campaign/CampaignVillages';
+import { EffectManager } from './EffectManager';
+
+const TROOP_IDS: TroopId[] = ['infantry', 'archers', 'cavalry', 'mages', 'catapults', 'healers'];
 
 interface GameContextType {
     state: GameState;
@@ -47,6 +51,7 @@ interface GameContextType {
     levelUpGod: (godId: GodId) => void;
     equipGod: (slot: 'attack' | 'defense', godId: GodId | null) => void;
     completeAttack: (opponent: VillageSnapshot, result: PvpBattleResult) => PvpOutcome;
+    completeCampaignAttack: (territoryIndex: number, result: PvpBattleResult) => { won: boolean; coins: number; exp: number; unlockedTroop?: string };
     payCoins: (amount: number) => boolean;
     markDefenseLogSeen: () => void;
     startBuildingUpgrade: (uid: string) => void;
@@ -54,6 +59,7 @@ interface GameContextType {
     moveBuilding: (uid: string, x: number, z: number) => void;
     buildBuilding: (type: BuildingType) => string | null;
     collectMine: (uid: string) => number;
+    feedMiners: (uid: string) => boolean;
     buyBuilder: () => void;
     resetGame: () => void;
 }
@@ -459,6 +465,75 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return outcome;
     };
 
+    /** Applies a finished 3D campaign battle on a predetermined territory village. */
+    const completeCampaignAttack = (territoryIndex: number, result: PvpBattleResult): { won: boolean; coins: number; exp: number; unlockedTroop?: string } => {
+        const mission = CAMPAIGN_MISSIONS[territoryIndex] || {
+            rewardCoins: 500 * (territoryIndex + 1),
+            rewardExp: 100 * (territoryIndex + 1),
+            name: `Territorio ${territoryIndex + 1}`,
+        };
+
+        const won = result.stars > 0;
+        AnalyticsManager.trackBattle(won ? 'win' : 'loss', `campaign_t_${territoryIndex}`, 0, 0);
+        if (won) {
+            AudioManager.playVictory();
+            EffectManager.fireVictoryConfetti();
+        } else {
+            AudioManager.playDefeat();
+        }
+
+        let unlockedTroop: string | undefined = undefined;
+
+        setState((prev) => {
+            const troops = { ...prev.troops };
+            for (const id of TROOP_IDS) {
+                troops[id] = Math.max(0, troops[id] - (result.attackerLosses[id] || 0));
+            }
+
+            let heroRecoveringUntil = prev.heroRecoveringUntil;
+            if (result.heroDied) {
+                heroRecoveringUntil = Date.now() + HeroManager.heroRecoveryDuration(prev.heroLevel) * 1000;
+            }
+
+            const wasUnlockedBefore = prev.territoryProgress;
+            const newTerritoryProgress = won ? Math.max(prev.territoryProgress, territoryIndex + 1) : prev.territoryProgress;
+
+            if (won && newTerritoryProgress > wasUnlockedBefore && mission.unlockedTroopId) {
+                unlockedTroop = GameConfig.troops[mission.unlockedTroopId]?.name;
+            }
+
+            const earnedCoins = won ? mission.rewardCoins : Math.round(mission.rewardCoins * 0.15 * result.destruction);
+            const earnedExp = won ? mission.rewardExp : Math.round(mission.rewardExp * 0.2 * result.destruction);
+
+            const prestigeMultiplier = 1 + (prev.prestigeLevel * 0.5);
+            const finalCoins = Math.floor(earnedCoins * prestigeMultiplier);
+            const finalExp = Math.floor(earnedExp * prestigeMultiplier);
+
+            const next: GameState = {
+                ...prev,
+                troops,
+                heroRecoveringUntil,
+                coins: prev.coins + finalCoins,
+                experience: prev.experience + finalExp,
+                energy: Math.max(0, prev.energy - GameConfig.pvp.energyCost),
+                territoryProgress: newTerritoryProgress,
+                battlesWon: prev.battlesWon + (won ? 1 : 0),
+            };
+
+            const checked = QuestManager.checkQuests(next);
+            stateRef.current = checked;
+            SaveManager.save(checked);
+            return checked;
+        });
+
+        return {
+            won,
+            coins: won ? mission.rewardCoins : Math.round(mission.rewardCoins * 0.15 * result.destruction),
+            exp: won ? mission.rewardExp : Math.round(mission.rewardExp * 0.2 * result.destruction),
+            unlockedTroop,
+        };
+    };
+
     const payCoins = (amount: number): boolean => {
         if (stateRef.current.coins < amount) return false;
         stateRef.current = { ...stateRef.current, coins: stateRef.current.coins - amount };
@@ -497,6 +572,16 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         stateRef.current = res.state;
         setState((prev) => VillageManager.collect(prev, uid).state);
         return res.amount;
+    };
+
+    const feedMiners = (uid: string): boolean => {
+        const res = VillageManager.feedMiners(stateRef.current, uid);
+        if (!res.success) return false;
+        AudioManager.playVictory();
+        stateRef.current = res.state;
+        SaveManager.save(res.state);
+        setState(res.state);
+        return true;
     };
 
     const buyBuilder = () => {
@@ -546,8 +631,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             completeSetup, purchaseUpgrade, trainTroop, upgradeTroop, finishTroopUpgradeWithGems, fightTerritory, 
             claimQuest, openChest, claimDailyReward, watchAdForReward, buyIAP,
             upgradeHero, healHeroWithGems, prestigeAscension, toggleMute, resetGame,
-            pvpMode: pvpService.mode, moveTroops, unlockGod, levelUpGod, equipGod, completeAttack, payCoins, markDefenseLogSeen,
-            startBuildingUpgrade, finishBuildingUpgrade, moveBuilding, buildBuilding, collectMine, buyBuilder 
+            pvpMode: pvpService.mode, moveTroops, unlockGod, levelUpGod, equipGod, completeAttack, completeCampaignAttack, payCoins, markDefenseLogSeen,
+            startBuildingUpgrade, finishBuildingUpgrade, moveBuilding, buildBuilding, collectMine, feedMiners, buyBuilder 
         }}>
             {children}
         </GameContext.Provider>

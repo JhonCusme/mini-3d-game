@@ -156,7 +156,7 @@ const BuildingNode: React.FC<{
       )}
 
       <group scale={b.level === 0 ? 0.6 : 1}>
-        <BuildingModel type={b.type} level={Math.max(1, b.level)} />
+        <BuildingModel type={b.type} level={Math.max(1, b.level)} stamina={b.minerStamina} />
       </group>
       {upgrading && <Scaffolding size={def.size} />}
 

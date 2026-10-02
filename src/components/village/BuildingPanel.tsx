@@ -27,7 +27,7 @@ function upgradeBonus(id: 'attackPower' | 'troopHealth' | 'critRate', level: num
 }
 
 export const BuildingPanel: React.FC<{ building: PlacedBuilding; onClose: () => void }> = ({ building: b, onClose }) => {
-  const { state, upgradeHero, healHeroWithGems } = useGame();
+  const { state, upgradeHero, healHeroWithGems, feedMiners } = useGame();
   const def = BUILDINGS[b.type];
   const lvl = Math.max(1, b.level);
 
@@ -41,14 +41,17 @@ export const BuildingPanel: React.FC<{ building: PlacedBuilding; onClose: () => 
             <Stat label="Torres de arqueros permitidas" value={BUILDINGS.archertower.maxCount(lvl)} />
           </>
         );
-      case 'goldmine':
+      case 'goldmine': {
+        const stamina = Math.round(b.minerStamina ?? 100);
         return (
           <>
-            <Stat label="Producción" value={`${Math.round(mineRatePerSecond(lvl) * 3600)}/h`} next={`${Math.round(mineRatePerSecond(lvl + 1) * 3600)}/h`} />
+            <Stat label="Producción base" value={`${Math.round(mineRatePerSecond(lvl) * 3600)}/h`} next={`${Math.round(mineRatePerSecond(lvl + 1) * 3600)}/h`} />
             <Stat label="Capacidad" value={mineCapacity(lvl)} next={mineCapacity(lvl + 1)} />
             <Stat label="Acumulado" value={`🪙 ${Math.floor(b.stored)}`} />
+            <Stat label="Energía de Mineros" value={`${stamina}%`} />
           </>
         );
+      }
       case 'barracks':
         return <Stat label="Capacidad de tropas" value={UpgradeManager.getTroopCapacity(state)} />;
       case 'blacksmith':
@@ -95,6 +98,58 @@ export const BuildingPanel: React.FC<{ building: PlacedBuilding; onClose: () => 
             <Stat label="Vida" value={buildingHp(b.type, lvl)} />
             {renderStats()}
           </div>
+
+          {b.type === 'goldmine' && (() => {
+            const stamina = Math.round(b.minerStamina ?? 100);
+            const isExhausted = stamina < 10;
+            const statusColor = stamina > 60 ? '#2ed573' : stamina >= 30 ? '#ffa502' : '#ff4757';
+            const statusText = stamina > 60 
+              ? '⚡ Activos a pleno rendimiento (+100%)' 
+              : stamina >= 30 
+                ? '😓 Cansados (ritmo estable)' 
+                : isExhausted 
+                  ? '😴 Agotados (descansando / -85%)' 
+                  : '😫 Fatigados (ritmo lento / -55%)';
+
+            return (
+              <div style={panel} className="flex-col gap-2">
+                <div className="flex-row justify-between" style={{ alignItems: 'center' }}>
+                  <b style={{ fontSize: '14px', color: 'var(--accent-gold)' }}>👷‍♂️ Cuadrilla de Mineros</b>
+                  <span style={{ fontSize: '12px', color: statusColor, fontWeight: 700 }}>{stamina}% Energía</span>
+                </div>
+                
+                {/* Stamina bar */}
+                <div style={{ width: '100%', height: '8px', background: 'rgba(0,0,0,0.5)', borderRadius: '4px', overflow: 'hidden' }}>
+                  <div style={{ width: `${stamina}%`, height: '100%', background: statusColor, transition: 'width 0.4s ease' }} />
+                </div>
+
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                  Estado: <span style={{ color: statusColor, fontWeight: 600 }}>{statusText}</span>
+                </div>
+
+                <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: '2px 0 4px 0', lineHeight: 1.4 }}>
+                  Los trabajadores pican y extraen oro sin descanso. Al fatigarse reducen su velocidad; aliméntalos con raciones del reino para restaurar su fuerza.
+                </p>
+
+                <button
+                  className="btn-primary"
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    background: stamina >= 95 ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, #ff9f43, #ee5253)',
+                    opacity: stamina >= 95 || state.coins < 50 ? 0.6 : 1,
+                    cursor: stamina >= 95 || state.coins < 50 ? 'default' : 'pointer'
+                  }}
+                  disabled={stamina >= 95 || state.coins < 50}
+                  onClick={() => feedMiners(b.uid)}
+                >
+                  {stamina >= 95 ? '✓ Mineros con energía al máximo' : '🍞 Dar Raciones a Mineros — 🪙 50'}
+                </button>
+              </div>
+            );
+          })()}
 
           {b.type === 'altar' && (() => {
             const hStats = HeroManager.heroStats(state.heroLevel);

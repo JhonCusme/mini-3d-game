@@ -14,6 +14,7 @@ import { createSystemVillage, hashString, isSameOrCloneVillage } from '../../cor
 import type { VillageSnapshot } from '../../core/pvp/PvpTypes';
 import { EffectManager } from '../../core/EffectManager';
 import { HeroManager } from '../../core/HeroManager';
+import { createCampaignVillage } from '../../core/campaign/CampaignVillages';
 import { RtsControls, SceneLights } from '../village/VillageScene';
 import { VillageTerrain, Walls } from '../village/VillageTerrain';
 import { BuildingActor, EffectActor, ProjectileActor, UnitActor, WallActor } from './AttackActors';
@@ -64,8 +65,11 @@ const NoDeployZone: React.FC<{ visible: boolean }> = ({ visible }) => (
   </mesh>
 );
 
-export const AttackScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  const { state, completeAttack, payCoins, healHeroWithGems } = useGame();
+export const AttackScreen: React.FC<{
+  onClose: () => void;
+  campaignTerritoryIndex?: number;
+}> = ({ onClose, campaignTerritoryIndex }) => {
+  const { state, completeAttack, completeCampaignAttack, payCoins, healHeroWithGems } = useGame();
   const { user } = useAuth();
   const [opponent, setOpponent] = useState<VillageSnapshot | null>(null);
   const [refresh, setRefresh] = useState(0);
@@ -75,6 +79,7 @@ export const AttackScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => 
   const [burst, setBurst] = useState(false);
   const [, setTick] = useState(0);
   const [outcome, setOutcome] = useState<PvpOutcome | null>(null);
+  const [campaignOutcome, setCampaignOutcome] = useState<{ won: boolean; coins: number; exp: number; unlockedTroop?: string } | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const seedRef = useRef(0);
   const finishedRef = useRef(false);
@@ -82,11 +87,24 @@ export const AttackScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => 
   const nextCost = 10 * Math.max(1, state.level) * 5;
   const hasEnergy = state.energy >= GameConfig.pvp.energyCost;
 
-  // Find an opponent (and search again with "Next")
+  // Load campaign village or find PvP opponent
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setSim(null);
+
+    if (campaignTerritoryIndex !== undefined) {
+      const opp = createCampaignVillage(campaignTerritoryIndex);
+      const seed = hashString(`campaign_${campaignTerritoryIndex}_${Date.now()}`);
+      seedRef.current = seed;
+      setOpponent(opp);
+      setSim(new AttackSim(PvpManager.buildArmy(state, state.troops), opp, seed));
+      const first = TROOP_IDS.find(id => state.troops[id] > 0);
+      setSelected(first ?? null);
+      setLoading(false);
+      return;
+    }
+
     const meSnapshot = PvpManager.buildSnapshot(state, user?.id);
 
     pvpService.findOpponents(meSnapshot, 1, refresh)
@@ -112,7 +130,7 @@ export const AttackScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => 
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refresh]);
+  }, [refresh, campaignTerritoryIndex]);
 
   useEffect(() => {
     if (!message) return;
@@ -126,12 +144,17 @@ export const AttackScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => 
       finishedRef.current = true;
       if (!sim.started) return;
       const result = sim.toResult(seedRef.current);
-      setOutcome(completeAttack(opponent, result));
-      if (result.stars > 0) {
-        EffectManager.fireVictoryConfetti();
-        AudioManager.playVictory();
+      if (campaignTerritoryIndex !== undefined) {
+        const cOut = completeCampaignAttack(campaignTerritoryIndex, result);
+        setCampaignOutcome(cOut);
       } else {
-        AudioManager.playDefeat();
+        setOutcome(completeAttack(opponent, result));
+        if (result.stars > 0) {
+          EffectManager.fireVictoryConfetti();
+          AudioManager.playVictory();
+        } else {
+          AudioManager.playDefeat();
+        }
       }
     }
   };
@@ -388,30 +411,63 @@ export const AttackScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => 
         </>
       )}
 
-      {sim && opponent && outcome && (
+      {sim && opponent && (outcome || campaignOutcome) && (
         <div className="attack-result-wrap"><div className="attack-result animate-pop">
           <h1 className="title-clash" style={{ color: sim.stars > 0 ? 'var(--accent-gold)' : 'var(--accent-danger)' }}>
-            {sim.stars > 0 ? '¡Victoria!' : 'Derrota'}
+            {sim.stars > 0 ? (campaignTerritoryIndex !== undefined ? '¡Territorio Conquistado!' : '¡Victoria!') : 'Derrota'}
           </h1>
           <div className="attack-stars big">
             {[0, 1, 2].map(i => <span key={i} className={i < sim.stars ? 'on' : ''}>★</span>)}
           </div>
           <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-            {sim.stars > 0 ? 'Has saqueado la aldea de' : 'Fuiste derrotado en la aldea de'}{' '}
-            <b style={{ color: 'var(--accent-gold)' }}>{opponent.name}</b>{' '}
-            <span style={{ fontSize: '11px', opacity: 0.8 }}>
-              {opponent.isSystemVillage ? '(Aldea del Sistema)' : '(Jugador Real)'}
-            </span>
+            {sim.stars > 0
+              ? (campaignTerritoryIndex !== undefined
+                  ? `Has asediado y conquistado la aldea de ${opponent.name}`
+                  : `Has saqueado la aldea de ${opponent.name}`)
+              : `Tus tropas fueron repelidas en la fortaleza de ${opponent.name}`}
           </p>
           <p>Destrucción total: <b>{Math.round(sim.destruction * 100)}%</b></p>
           <div className="attack-result-rows">
-            <div><span>Botín</span><b style={{ color: 'var(--accent-gold)' }}>+{outcome.coinsStolen} 🪙</b></div>
-            <div><span>Trofeos</span><b style={{ color: outcome.attackerTrophiesDelta >= 0 ? '#7bed9f' : '#ff6b6b' }}>{outcome.attackerTrophiesDelta >= 0 ? '+' : ''}{outcome.attackerTrophiesDelta} 🏆</b></div>
+            <div>
+              <span>{campaignTerritoryIndex !== undefined ? 'Recompensa' : 'Botín'}</span>
+              <b style={{ color: 'var(--accent-gold)' }}>
+                +{campaignOutcome ? campaignOutcome.coins : outcome?.coinsStolen} 🪙
+                {campaignOutcome ? ` · ${campaignOutcome.exp} EXP` : ''}
+              </b>
+            </div>
+            {outcome && (
+              <div>
+                <span>Trofeos</span>
+                <b style={{ color: outcome.attackerTrophiesDelta >= 0 ? '#7bed9f' : '#ff6b6b' }}>
+                  {outcome.attackerTrophiesDelta >= 0 ? '+' : ''}{outcome.attackerTrophiesDelta} 🏆
+                </b>
+              </div>
+            )}
             <div>
               <span>Tropas perdidas</span>
               <b>{TROOP_IDS.filter(id => sim.attackerLosses[id] > 0).map(id => `${TROOP_ICONS[id]}${sim.attackerLosses[id]}`).join(' ') || '—'}</b>
             </div>
           </div>
+
+          {campaignOutcome?.unlockedTroop && (
+            <div style={{
+              marginTop: '12px',
+              padding: '12px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.25), rgba(243, 156, 18, 0.35))',
+              border: '2px solid #ffd700',
+              textAlign: 'center',
+              boxShadow: '0 0 18px rgba(255, 215, 0, 0.45)',
+            }}>
+              <div style={{ fontSize: '14px', fontWeight: 900, color: '#ffd700', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+                🎉 ¡NUEVA TROPA DESBLOQUEADA!
+              </div>
+              <div style={{ fontSize: '13px', color: '#fff', marginTop: '4px', fontWeight: 600 }}>
+                Has desbloqueado: <span style={{ color: '#ffd700', textDecoration: 'underline' }}>{campaignOutcome.unlockedTroop}</span>. ¡Ya puedes entrenarla en tu Cuartel!
+              </div>
+            </div>
+          )}
+
           {sim.heroDeployed && (
             <div style={{
               marginTop: '10px',
@@ -439,7 +495,9 @@ export const AttackScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => 
               )}
             </div>
           )}
-          <button className="btn-upgrade" onClick={onClose} style={{ width: '100%', padding: '14px', fontSize: '16px', marginTop: '12px' }}>Volver a casa</button>
+          <button className="btn-upgrade" onClick={onClose} style={{ width: '100%', padding: '14px', fontSize: '16px', marginTop: '12px' }}>
+            {campaignTerritoryIndex !== undefined ? 'Continuar en el Mapa' : 'Volver a casa'}
+          </button>
         </div></div>
       )}
     </div>,

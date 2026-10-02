@@ -1,37 +1,32 @@
 import { useState } from 'react';
 import { useGame } from '../core/GameContext';
 import { GameConfig } from '../config/GameConfig';
-import { BattleManager, type BattleResult } from '../core/BattleManager';
-import { BattleScreen } from './BattleScreen';
+import { BattleManager } from '../core/BattleManager';
+import { AttackScreen } from './attack/AttackScreen';
+import { CAMPAIGN_MISSIONS } from '../core/campaign/CampaignVillages';
+import { HeroManager } from '../core/HeroManager';
+import { TROOP_ICONS } from './troopIcons';
 
 export const MapScreen: React.FC = () => {
-  const { state, fightTerritory, prestigeAscension } = useGame();
-  const [activeBattle, setActiveBattle] = useState<{ territoryIndex: number; result: BattleResult | null } | null>(null);
+  const { state, prestigeAscension } = useGame();
+  const [campaignBattleIndex, setCampaignBattleIndex] = useState<number | null>(null);
   const [selectedNode, setSelectedNode] = useState<number | null>(null);
 
   const playerPower = BattleManager.getPlayerPower(state);
+  const totalTroops = Object.values(state.troops).reduce((sum, count) => sum + count, 0);
+  const isHeroReady = !HeroManager.isHeroRecovering(state);
 
   const handleFight = (index: number) => {
     if (state.energy < GameConfig.territories[index].energyCost) return;
     setSelectedNode(null);
-    setActiveBattle({ territoryIndex: index, result: null });
-
-    setTimeout(() => {
-      const res = fightTerritory(index);
-      if (res) {
-        setActiveBattle({ territoryIndex: index, result: res });
-      } else {
-        setActiveBattle(null);
-      }
-    }, 1500);
+    setCampaignBattleIndex(index);
   };
 
-  if (activeBattle) {
+  if (campaignBattleIndex !== null) {
     return (
-      <BattleScreen
-        territory={GameConfig.territories[activeBattle.territoryIndex]}
-        result={activeBattle.result}
-        onClose={() => setActiveBattle(null)}
+      <AttackScreen
+        campaignTerritoryIndex={campaignBattleIndex}
+        onClose={() => setCampaignBattleIndex(null)}
       />
     );
   }
@@ -172,38 +167,95 @@ export const MapScreen: React.FC = () => {
                 </div>
 
                 {/* Expanded info for selected node */}
-                {selectedNode === index && isAvailable && (
-                  <div className="glass-panel animate-slide-up" style={{ margin: '8px 0 16px 0', padding: '16px', width: '90%', border: '2px solid var(--accent-gold)' }}>
-                    <div className="flex-col gap-3">
-                      <h3 style={{ fontSize: '18px', color: 'var(--accent-gold)', textAlign: 'center', borderBottom: '1px solid rgba(255,215,0,0.2)', paddingBottom: '8px' }}>
-                        {territory.name} {isBoss && '👑'}
-                      </h3>
-                      <div className="flex-row justify-between" style={{ fontSize: '14px', background: 'rgba(0,0,0,0.3)', padding: '8px', borderRadius: '8px' }}>
-                        <span style={{ color: 'var(--text-secondary)' }}>Poder Enemigo</span>
-                        <span style={{ color: 'var(--accent-danger)', fontWeight: 800 }}>⚔️ {Math.floor(territory.enemyPower)}</span>
-                      </div>
-                      <div className="flex-row justify-between" style={{ fontSize: '14px', background: 'rgba(0,0,0,0.3)', padding: '8px', borderRadius: '8px' }}>
-                        <span style={{ color: 'var(--text-secondary)' }}>Recompensa</span>
-                        <span style={{ color: 'var(--accent-gold)', fontWeight: 800 }}>🪙 {territory.rewardCoins} | Exp {territory.rewardExp}</span>
-                      </div>
-                      {territory.isBoss && territory.bossTrait && (
-                        <div className="pulse-glow" style={{ fontSize: '12px', color: 'white', fontWeight: 700, marginTop: '4px', background: 'linear-gradient(90deg, var(--accent-danger), #8b0000)', padding: '8px 12px', borderRadius: '8px', textAlign: 'center' }}>
-                          {territory.bossTrait === 'magic_shield' && '🛡️ Escudo Mágico: Requiere Magos'}
-                          {territory.bossTrait === 'thick_armor' && '🧱 Armadura Gruesa: Requiere Catapultas'}
-                          {territory.bossTrait === 'dragon_fire' && '🔥 Fuego de Dragón: Bajas Extremas'}
+                {selectedNode === index && isAvailable && (() => {
+                  const mission = CAMPAIGN_MISSIONS[index];
+                  const unlockTroop = mission?.unlockedTroopId ? GameConfig.troops[mission.unlockedTroopId] : null;
+
+                  return (
+                    <div className="glass-panel animate-slide-up" style={{ margin: '8px 0 16px 0', padding: '16px', width: '90%', border: '2px solid var(--accent-gold)' }}>
+                      <div className="flex-col gap-3">
+                        <div style={{ textAlign: 'center', borderBottom: '1px solid rgba(255,215,0,0.2)', paddingBottom: '8px' }}>
+                          <h3 style={{ fontSize: '18px', color: 'var(--accent-gold)', margin: 0 }}>
+                            {mission?.name || territory.name} {isBoss && '👑'}
+                          </h3>
+                          {mission?.subtitle && (
+                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px', fontWeight: 600 }}>
+                              {mission.subtitle}
+                            </div>
+                          )}
                         </div>
-                      )}
-                      <button
-                        className="btn-fight"
-                        disabled={!hasEnergy}
-                        onClick={() => handleFight(index)}
-                        style={{ width: '100%', marginTop: '8px', padding: '14px', fontSize: '16px', fontWeight: 800 }}
-                      >
-                        ⚔️ ¡ATACAR! — ⚡{territory.energyCost}
-                      </button>
+
+                        {mission?.description && (
+                          <p style={{ fontSize: '13px', color: 'var(--text-primary)', background: 'rgba(0,0,0,0.25)', padding: '10px', borderRadius: '8px', margin: 0, lineHeight: 1.4 }}>
+                            {mission.description}
+                          </p>
+                        )}
+
+                        {unlockTroop && (
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            background: 'linear-gradient(90deg, rgba(46, 213, 115, 0.2), rgba(26, 14, 46, 0.7))',
+                            border: '1px solid #2ed573',
+                            borderRadius: '8px',
+                            padding: '10px'
+                          }}>
+                            <span style={{ fontSize: '24px' }}>{mission.unlockedTroopId ? TROOP_ICONS[mission.unlockedTroopId] : '⚔️'}</span>
+                            <div>
+                              <div style={{ fontSize: '11px', color: '#2ed573', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                ¡Recompensa de Asedio!
+                              </div>
+                              <div style={{ fontSize: '13px', color: 'white', fontWeight: 700 }}>
+                                Desbloquea: {unlockTroop.name}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex-row justify-between" style={{ fontSize: '14px', background: 'rgba(0,0,0,0.3)', padding: '8px', borderRadius: '8px' }}>
+                          <span style={{ color: 'var(--text-secondary)' }}>Defensas de la Aldea</span>
+                          <span style={{ color: 'var(--accent-danger)', fontWeight: 800 }}>⚔️ Nv. {index + 1} Asedio Real</span>
+                        </div>
+                        <div className="flex-row justify-between" style={{ fontSize: '14px', background: 'rgba(0,0,0,0.3)', padding: '8px', borderRadius: '8px' }}>
+                          <span style={{ color: 'var(--text-secondary)' }}>Botín por Conquista</span>
+                          <span style={{ color: 'var(--accent-gold)', fontWeight: 800 }}>🪙 {territory.rewardCoins} | Exp {territory.rewardExp}</span>
+                        </div>
+
+                        {territory.isBoss && territory.bossTrait && (
+                          <div className="pulse-glow" style={{ fontSize: '12px', color: 'white', fontWeight: 700, marginTop: '2px', background: 'linear-gradient(90deg, var(--accent-danger), #8b0000)', padding: '8px 12px', borderRadius: '8px', textAlign: 'center' }}>
+                            {territory.bossTrait === 'magic_shield' && '🛡️ Escudo Mágico: Aldea protegida con barreras arcanas'}
+                            {territory.bossTrait === 'thick_armor' && '🧱 Armadura Gruesa: Murallas dobles de piedra maciza'}
+                            {territory.bossTrait === 'dragon_fire' && '🔥 Fuego de Dragón: Cañones dobles de alto calibre'}
+                          </div>
+                        )}
+
+                        {totalTroops === 0 && !isHeroReady && (
+                          <div style={{ fontSize: '11px', color: '#ff4757', background: 'rgba(255,71,87,0.15)', border: '1px solid #ff4757', padding: '8px', borderRadius: '8px', textAlign: 'center' }}>
+                            ⚠️ No tienes tropas en el campamento ni a tu héroe disponible. Entrena soldados en el Cuartel para poder ganar.
+                          </div>
+                        )}
+
+                        <button
+                          className="btn-fight"
+                          disabled={!hasEnergy}
+                          onClick={() => handleFight(index)}
+                          style={{
+                            width: '100%',
+                            marginTop: '4px',
+                            padding: '14px',
+                            fontSize: '16px',
+                            fontWeight: 800,
+                            letterSpacing: '0.5px',
+                            boxShadow: '0 4px 15px rgba(255, 71, 87, 0.4)'
+                          }}
+                        >
+                          ⚔️ ¡INICIAR ASEDIO 3D! — ⚡{territory.energyCost}
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             );
           })}
