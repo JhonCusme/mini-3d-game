@@ -22,13 +22,45 @@ export function wallSegments(): { x: number; z: number; horizontal: boolean }[] 
   return segs;
 }
 
-export const Walls: React.FC<{ level: number; broken?: Set<number>; kingdom?: KingdomType }> = ({
+export const Walls: React.FC<{
+  level: number;
+  broken?: Set<number>;
+  kingdom?: KingdomType;
+  onClick?: () => void;
+}> = ({
   level,
   broken,
   kingdom = 'emerald',
+  onClick,
 }) => {
   const segs = useMemo(wallSegments, []);
-  if (level <= 0) return null;
+
+  // When village has no walls yet, show subtle perimeter boundary survey stakes
+  if (level <= 0) {
+    return (
+      <group
+        onClick={e => {
+          e.stopPropagation();
+          onClick?.();
+        }}
+      >
+        {segs
+          .filter((_, i) => i % 2 === 0)
+          .map((s, i) => (
+            <group key={i} position={[s.x, 0, s.z]}>
+              <mesh position={[0, 0.15, 0]} castShadow>
+                <cylinderGeometry args={[0.04, 0.05, 0.3, 6]} />
+                <meshStandardMaterial color="#8d5b2d" roughness={0.9} />
+              </mesh>
+              <mesh position={[0, 0.32, 0]}>
+                <coneGeometry args={[0.06, 0.1, 5]} />
+                <meshStandardMaterial color="#e74c3c" roughness={0.5} />
+              </mesh>
+            </group>
+          ))}
+      </group>
+    );
+  }
 
   const colorPalette = WALL_COLORS[kingdom] || WALL_COLORS.emerald;
   const isWood = level <= 2;
@@ -44,7 +76,12 @@ export const Walls: React.FC<{ level: number; broken?: Set<number>; kingdom?: Ki
   const h = 0.55 + Math.min(level, 10) * 0.08;
 
   return (
-    <group>
+    <group
+      onClick={e => {
+        e.stopPropagation();
+        onClick?.();
+      }}
+    >
       {segs.map((s, i) =>
         broken?.has(i) ? (
           <mesh key={i} position={[s.x, 0.1, s.z]}>

@@ -36,32 +36,32 @@ export const VILLAGE_HALF = 12;
 
 export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     townhall: {
-        type: 'townhall', name: 'Ayuntamiento', size: 4, color: '#c9b79c', roofColor: '#d63a3a',
+        type: 'townhall', name: 'Ayuntamiento', size: 3, color: '#c9b79c', roofColor: '#d63a3a',
         description: 'El corazón de tu aldea. Subirlo permite mejorar más los demás edificios y construir más defensas.',
         baseHp: 1500, hpPerLevel: 500, maxCount: () => 1,
     },
     goldmine: {
-        type: 'goldmine', name: 'Mina de Oro', size: 3, color: '#8a7a66', roofColor: '#b8860b', upgradeId: 'economy',
+        type: 'goldmine', name: 'Mina de Oro', size: 2, color: '#8a7a66', roofColor: '#b8860b', upgradeId: 'economy',
         description: 'Produce oro con el tiempo. Tócala para recogerlo.',
         baseHp: 400, hpPerLevel: 80, maxCount: () => 1,
     },
     barracks: {
-        type: 'barracks', name: 'Cuartel', size: 3, color: '#b23b3b', roofColor: '#6b3f2a', upgradeId: 'troopCapacity',
+        type: 'barracks', name: 'Cuartel', size: 2, color: '#b23b3b', roofColor: '#6b3f2a', upgradeId: 'troopCapacity',
         description: 'Entrena tropas. Al mejorarlo aumenta la capacidad de tu ejército.',
         baseHp: 500, hpPerLevel: 100, maxCount: () => 1,
     },
     blacksmith: {
-        type: 'blacksmith', name: 'Herrería', size: 3, color: '#8f8a80', roofColor: '#4d4d57', upgradeId: 'attackPower',
+        type: 'blacksmith', name: 'Herrería', size: 2, color: '#8f8a80', roofColor: '#4d4d57', upgradeId: 'attackPower',
         description: 'Forja mejores armas: más ataque para todas tus tropas.',
         baseHp: 450, hpPerLevel: 90, maxCount: () => 1,
     },
     armory: {
-        type: 'armory', name: 'Armería', size: 3, color: '#6f9ac4', roofColor: '#2f4f75', upgradeId: 'troopHealth',
+        type: 'armory', name: 'Armería', size: 2, color: '#6f9ac4', roofColor: '#2f4f75', upgradeId: 'troopHealth',
         description: 'Mejores armaduras: menos bajas en combate.',
         baseHp: 450, hpPerLevel: 90, maxCount: () => 1,
     },
     arena: {
-        type: 'arena', name: 'Arena', size: 3, color: '#d8b97c', roofColor: '#7a5d2f', upgradeId: 'critRate',
+        type: 'arena', name: 'Arena', size: 2, color: '#d8b97c', roofColor: '#7a5d2f', upgradeId: 'critRate',
         description: 'Entrenamiento de élite: más probabilidad de golpe crítico.',
         baseHp: 450, hpPerLevel: 90, maxCount: () => 1,
     },
@@ -74,13 +74,13 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
         type: 'cannon', name: 'Cañón', size: 2, color: '#6b6b75', roofColor: '#3a3a44', isDefense: true,
         description: 'Dispara balas pesadas a las tropas de tierra cercanas.',
         baseHp: 420, hpPerLevel: 90, damage: 9, damagePerLevel: 3, range: 7, fireRate: 0.9,
-        buildCost: 250, maxCount: th => Math.min(5, 1 + Math.floor(th / 2)),
+        buildCost: 250, maxCount: th => Math.min(6, 1 + Math.floor(th / 1.5)),
     },
     archertower: {
         type: 'archertower', name: 'Torre de Arqueros', size: 2, color: '#a0785a', roofColor: '#2f8f3a', isDefense: true,
         description: 'Largo alcance: sus arqueros disparan rápido a cualquier tropa.',
         baseHp: 380, hpPerLevel: 80, damage: 5, damagePerLevel: 2, range: 9, fireRate: 0.5,
-        buildCost: 400, maxCount: th => (th < 2 ? 0 : Math.min(4, Math.floor(th / 2))),
+        buildCost: 400, maxCount: th => (th < 2 ? 0 : Math.min(5, Math.floor(th / 1.5))),
     },
 };
 

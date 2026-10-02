@@ -32,7 +32,12 @@ const GameApp: React.FC = () => {
 
   return (
     <div className="game-root">
-      <VillageScreen buildOpen={panel === 'build'} onCloseBuild={close} onFocusChange={setVillageFocused} />
+      <VillageScreen
+        buildOpen={panel === 'build'}
+        onCloseBuild={close}
+        onOpenBuild={() => setPanel('build')}
+        onFocusChange={setVillageFocused}
+      />
       <Hud onOpen={setPanel} compact={villageFocused} />
 
       {panel === 'attack' && (

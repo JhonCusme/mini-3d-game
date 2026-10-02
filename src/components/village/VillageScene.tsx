@@ -92,6 +92,7 @@ interface VillageSceneProps {
   onSelect: (uid: string | null) => void;
   onMoveTo: (x: number, z: number) => void;
   onCollect: (uid: string) => void;
+  onWallClick?: () => void;
 }
 
 /** Spinning gold coin above the mine: tap it to collect. */
@@ -173,7 +174,7 @@ const BuildingNode: React.FC<{
 };
 
 export const VillageScene: React.FC<VillageSceneProps> = ({
-  village, wallsLevel, now, selectedUid, moving, kingdom = 'emerald', garrison, troops, onSelect, onMoveTo, onCollect,
+  village, wallsLevel, now, selectedUid, moving, kingdom = 'emerald', garrison, troops, onSelect, onMoveTo, onCollect, onWallClick,
 }) => {
   const kingdomInfo = getKingdomConfig(kingdom);
   const theme = kingdomInfo.visual;
@@ -199,7 +200,7 @@ export const VillageScene: React.FC<VillageSceneProps> = ({
       >
         <VillageTerrain showGrid={!!moving} kingdom={kingdom} />
       </group>
-      <Walls level={wallsLevel} kingdom={kingdom} />
+      <Walls level={wallsLevel} kingdom={kingdom} onClick={onWallClick} />
 
       {village.map(b => (
         <BuildingNode

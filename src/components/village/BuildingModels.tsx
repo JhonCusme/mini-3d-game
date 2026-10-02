@@ -1329,6 +1329,18 @@ const ArenaModel: React.FC<{ level: number }> = ({ level }) => {
   );
 };
 
+const BUILDING_MODEL_SCALES: Record<BuildingType, number> = {
+  townhall: 0.74,
+  goldmine: 0.70,
+  barracks: 0.70,
+  blacksmith: 0.70,
+  armory: 0.70,
+  arena: 0.70,
+  altar: 0.78,
+  cannon: 0.80,
+  archertower: 0.75,
+};
+
 // MAIN BUILDING MODEL DISPATCHER
 // ===========================================================================
 export const BuildingModel: React.FC<{
@@ -1336,28 +1348,38 @@ export const BuildingModel: React.FC<{
   level: number;
   aimAngle?: number;
 }> = ({ type, level, aimAngle }) => {
-  switch (type) {
-    case 'townhall':
-      return <TownhallModel level={level} />;
-    case 'goldmine':
-      return <GoldmineModel level={level} />;
-    case 'barracks':
-      return <BarracksModel level={level} />;
-    case 'blacksmith':
-      return <BlacksmithModel level={level} />;
-    case 'cannon':
-      return <CannonModel level={level} aimAngle={aimAngle} />;
-    case 'archertower':
-      return <ArcherTowerModel level={level} aimAngle={aimAngle} />;
-    case 'altar':
-      return <AltarModel level={level} />;
-    case 'armory':
-      return <ArmoryModel level={level} />;
-    case 'arena':
-      return <ArenaModel level={level} />;
-    default:
-      return null;
-  }
+  const scale = BUILDING_MODEL_SCALES[type] || 0.75;
+
+  const renderContent = () => {
+    switch (type) {
+      case 'townhall':
+        return <TownhallModel level={level} />;
+      case 'goldmine':
+        return <GoldmineModel level={level} />;
+      case 'barracks':
+        return <BarracksModel level={level} />;
+      case 'blacksmith':
+        return <BlacksmithModel level={level} />;
+      case 'cannon':
+        return <CannonModel level={level} aimAngle={aimAngle} />;
+      case 'archertower':
+        return <ArcherTowerModel level={level} aimAngle={aimAngle} />;
+      case 'altar':
+        return <AltarModel level={level} />;
+      case 'armory':
+        return <ArmoryModel level={level} />;
+      case 'arena':
+        return <ArenaModel level={level} />;
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <group scale={scale}>
+      {renderContent()}
+    </group>
+  );
 };
 
 /** Wooden scaffolding shown while a building is being built or upgraded. */
