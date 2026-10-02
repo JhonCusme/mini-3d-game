@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { VILLAGE_HALF } from '../../config/BuildingsConfig';
 import type { KingdomType } from '../../core/GameState';
 import { getKingdomConfig } from '../../config/KingdomsConfig';
-import { KingdomDecor, BORDER_HALF } from './KingdomDecor';
+import { KingdomDecor } from './KingdomDecor';
 
 const WALL_COLORS: Record<KingdomType, string[]> = {
   frost: ['#8ba7bd', '#99b8d1', '#adc9e0', '#b9d5ec', '#cae3f7', '#d9ecfa', '#e5f3fc', '#82cbf5'],
@@ -100,21 +100,21 @@ export const VillageTerrain: React.FC<{
 
   return (
     <group>
-      {/* Outer terrain plane beyond the square boundary */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.04, 0]} receiveShadow>
-        <planeGeometry args={[160, 160]} />
-        <meshStandardMaterial color={tint || theme.groundColor} roughness={1} />
+      {/* Expansive continuous valley terrain extending into the mountains */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]} receiveShadow>
+        <planeGeometry args={[220, 220]} />
+        <meshStandardMaterial color={tint || theme.groundColor} roughness={0.95} />
       </mesh>
 
-      {/* Raised playable battlefield square area inside BORDER_HALF */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.012, 0]} receiveShadow>
-        <planeGeometry args={[BORDER_HALF * 2, BORDER_HALF * 2]} />
-        <meshStandardMaterial color={theme.groundColor} roughness={0.9} />
+      {/* Gentle natural village clearing plot */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.008, 0]} receiveShadow>
+        <planeGeometry args={[VILLAGE_HALF * 2 + 0.6, VILLAGE_HALF * 2 + 0.6]} />
+        <meshStandardMaterial color={theme.plotColor} roughness={1} />
       </mesh>
 
-      {/* Inner village construction plot */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.005, 0]} receiveShadow>
-        <planeGeometry args={[VILLAGE_HALF * 2 + 1.2, VILLAGE_HALF * 2 + 1.2]} />
+      {/* Natural dirt path trailing through the village into the mountains */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.005, 14]} receiveShadow>
+        <planeGeometry args={[3.2, 16]} />
         <meshStandardMaterial color={theme.plotColor} roughness={1} />
       </mesh>
 
