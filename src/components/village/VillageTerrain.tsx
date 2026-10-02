@@ -31,8 +31,17 @@ export const Walls: React.FC<{ level: number; broken?: Set<number>; kingdom?: Ki
   if (level <= 0) return null;
 
   const colorPalette = WALL_COLORS[kingdom] || WALL_COLORS.emerald;
-  const color = colorPalette[Math.min(level, colorPalette.length - 1)];
-  const h = 0.6 + Math.min(level, 10) * 0.07;
+  const isWood = level <= 2;
+  const isStone = level >= 3 && level <= 7;
+  const isImperial = level >= 8;
+
+  const color = isWood
+    ? '#6a3b1a'
+    : isImperial
+      ? '#1e272e'
+      : (colorPalette[Math.min(level, colorPalette.length - 1)] || '#718093');
+
+  const h = 0.55 + Math.min(level, 10) * 0.08;
 
   return (
     <group>
@@ -40,17 +49,39 @@ export const Walls: React.FC<{ level: number; broken?: Set<number>; kingdom?: Ki
         broken?.has(i) ? (
           <mesh key={i} position={[s.x, 0.1, s.z]}>
             <boxGeometry args={[0.5, 0.2, 0.5]} />
-            <meshStandardMaterial color={kingdom === 'frost' ? '#5a6d7c' : kingdom === 'golden' ? '#7a5a32' : '#5a5550'} />
+            <meshStandardMaterial color={isWood ? '#3d2110' : '#4a4b4d'} />
           </mesh>
         ) : (
-          <mesh key={i} position={[s.x, h / 2, s.z]} castShadow receiveShadow>
-            <boxGeometry args={s.horizontal ? [1.02, h, 0.45] : [0.45, h, 1.02]} />
-            <meshStandardMaterial
-              color={color}
-              roughness={kingdom === 'frost' ? 0.4 : 0.85}
-              metalness={kingdom === 'frost' ? 0.2 : 0}
-            />
-          </mesh>
+          <group key={i} position={[s.x, 0, s.z]}>
+            {/* Wall Main Segment */}
+            <mesh position={[0, h / 2, 0]} castShadow receiveShadow>
+              <boxGeometry args={s.horizontal ? [1.02, h, 0.44] : [0.44, h, 1.02]} />
+              <meshStandardMaterial
+                color={color}
+                roughness={isImperial ? 0.4 : 0.85}
+                metalness={isImperial ? 0.3 : 0}
+              />
+            </mesh>
+            {/* Wall Top Detail: Pointed stakes for wood, coping for stone, gold caps for imperial */}
+            {isWood && (
+              <mesh position={[0, h + 0.08, 0]} rotation={[s.horizontal ? 0 : Math.PI / 2, 0, 0]}>
+                <coneGeometry args={[0.18, 0.2, 4]} />
+                <meshStandardMaterial color="#4a2810" roughness={0.9} />
+              </mesh>
+            )}
+            {isStone && (
+              <mesh position={[0, h + 0.04, 0]}>
+                <boxGeometry args={s.horizontal ? [1.04, 0.08, 0.48] : [0.48, 0.08, 1.04]} />
+                <meshStandardMaterial color="#2f3542" />
+              </mesh>
+            )}
+            {isImperial && (
+              <mesh position={[0, h + 0.05, 0]}>
+                <boxGeometry args={s.horizontal ? [1.04, 0.1, 0.48] : [0.48, 0.1, 1.04]} />
+                <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.2} />
+              </mesh>
+            )}
+          </group>
         )
       )}
     </group>
