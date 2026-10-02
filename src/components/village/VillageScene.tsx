@@ -91,6 +91,7 @@ interface VillageSceneProps {
   onSelect: (uid: string | null) => void;
   onMoveTo: (x: number, z: number) => void;
   onCollect: (uid: string) => void;
+  heroRecoveringUntil?: number;
 }
 
 /** Spinning gold coin above the mine: tap it to collect. */
@@ -121,11 +122,13 @@ const CollectCoin: React.FC<{ onCollect: () => void }> = ({ onCollect }) => {
 
 const BuildingNode: React.FC<{
   b: PlacedBuilding; now: number; selected: boolean; ghost?: { x: number; z: number; valid: boolean };
+  heroRecoveringUntil?: number;
   onSelect: (uid: string) => void; onCollect: (uid: string) => void;
-}> = ({ b, now, selected, ghost, onSelect, onCollect }) => {
+}> = ({ b, now, selected, ghost, heroRecoveringUntil, onSelect, onCollect }) => {
   const def = BUILDINGS[b.type];
   const [cx, , cz] = buildingCenter(ghost ? { ...b, x: ghost.x, z: ghost.z } : b);
   const upgrading = b.upgradingUntil > now;
+  const isHeroRecovering = b.type === 'altar' && !!heroRecoveringUntil && heroRecoveringUntil > now;
   const cap = b.type === 'goldmine' ? mineCapacity(b.level) : 0;
   const showCollect = b.type === 'goldmine' && b.stored >= Math.min(10, cap * 0.05) && !ghost;
 
@@ -157,11 +160,16 @@ const BuildingNode: React.FC<{
       </group>
       {upgrading && <Scaffolding size={def.size} />}
 
-      {(selected || upgrading) && (
+      {(selected || upgrading || isHeroRecovering) && (
         <Html position={[0, def.size + 1.2, 0]} center zIndexRange={[20, 0]} style={{ pointerEvents: 'none' }}>
           <div className="scene-label">
             {selected && <div className="scene-label-title">{def.name} <span>Nv.{b.level}</span></div>}
             {upgrading && <div className="scene-label-timer">🔨 {formatDuration(b.upgradingUntil - now)}</div>}
+            {!upgrading && isHeroRecovering && (
+              <div className="scene-label-timer" style={{ color: '#ff9f43', border: '1.5px solid #ff9f43', background: 'rgba(20, 10, 5, 0.9)' }}>
+                💤 {formatDuration((heroRecoveringUntil || 0) - now)}
+              </div>
+            )}
           </div>
         </Html>
       )}
@@ -172,7 +180,7 @@ const BuildingNode: React.FC<{
 };
 
 export const VillageScene: React.FC<VillageSceneProps> = ({
-  village, now, selectedUid, moving, kingdom = 'emerald', garrison, troops, onSelect, onMoveTo, onCollect,
+  village, now, selectedUid, moving, kingdom = 'emerald', garrison, troops, heroRecoveringUntil, onSelect, onMoveTo, onCollect,
 }) => {
   const kingdomInfo = getKingdomConfig(kingdom);
   const theme = kingdomInfo.visual;
@@ -206,6 +214,7 @@ export const VillageScene: React.FC<VillageSceneProps> = ({
           now={now}
           selected={b.uid === selectedUid}
           ghost={moving?.uid === b.uid ? moving : undefined}
+          heroRecoveringUntil={heroRecoveringUntil}
           onSelect={uid => { if (!moving) onSelect(uid); }}
           onCollect={onCollect}
         />

@@ -5,7 +5,7 @@ import type { Group, Mesh, MeshBasicMaterial } from 'three';
 import type { SimBuilding, SimEffect, SimProjectile, SimUnit, SimWall } from '../../core/pvp/AttackSim';
 import { UNIT_STATS } from '../../core/pvp/AttackSim';
 import { BuildingModel, WallModel } from '../village/BuildingModels';
-import { StylizedTroop } from '../common/StylizedCharacters';
+import { HeroKingModel, StylizedTroop } from '../common/StylizedCharacters';
 
 const TEAM = { attacker: '#3a7bd5', defender: '#d63a3a' };
 
@@ -144,21 +144,32 @@ export const UnitActor: React.FC<{ u: SimUnit }> = ({ u }) => {
   return (
     <group ref={ref}>
       <group ref={body}>
-        <StylizedTroop
-          type={u.type}
-          teamColor={TEAM[u.side]}
-          isMoving={isMoving}
-          isAttacking={isAttacking}
-          animOffset={u.id}
-          scale={scale}
-        />
+        {u.isHero ? (
+          <group position={[0, 0, 0]}>
+            <HeroKingModel level={u.heroLevel || 1} scale={1.35} />
+          </group>
+        ) : (
+          <StylizedTroop
+            type={u.type}
+            teamColor={TEAM[u.side]}
+            isMoving={isMoving}
+            isAttacking={isAttacking}
+            animOffset={u.id}
+            scale={scale}
+          />
+        )}
       </group>
       {/* Selection / placement team ring */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-        <ringGeometry args={[0.3, 0.44, 16]} />
-        <meshBasicMaterial color={TEAM[u.side]} transparent opacity={0.7} />
+        <ringGeometry args={u.isHero ? [0.45, 0.65, 24] : [0.3, 0.44, 16]} />
+        <meshBasicMaterial color={u.isHero ? '#ffd700' : TEAM[u.side]} transparent opacity={u.isHero ? 0.85 : 0.7} />
       </mesh>
-      <HpBar y={UNIT_STATS[u.type].flying ? 2.2 : 1.65} width={0.75} get={() => u.hp / u.maxHp} color={u.side === 'attacker' ? '#4fc3ff' : '#ff6b6b'} />
+      <HpBar
+        y={u.isHero ? 2.3 : UNIT_STATS[u.type].flying ? 2.2 : 1.65}
+        width={u.isHero ? 1.2 : 0.75}
+        get={() => u.hp / u.maxHp}
+        color={u.isHero ? '#ffd700' : u.side === 'attacker' ? '#4fc3ff' : '#ff6b6b'}
+      />
     </group>
   );
 };

@@ -8,6 +8,7 @@ import { layoutOf } from './BotFactory';
 import { mulberry32 } from './PvpBattle';
 import type { AttackArmy, PvpBattleResult, VillageSnapshot } from './PvpTypes';
 import { AudioManager } from '../AudioManager';
+import { HeroManager } from '../HeroManager';
 
 /** Real-time combat stats per troop type (tiles, seconds). */
 export const UNIT_STATS: Record<TroopId, { hp: number; dps: number; speed: number; range: number; flying?: boolean; prefers?: 'defense'; healer?: boolean; siege?: boolean }> = {
@@ -44,6 +45,8 @@ export interface SimUnit {
     id: number;
     side: 'attacker' | 'defender';
     type: TroopId;
+    isHero?: boolean;
+    heroLevel?: number;
     x: number; z: number;
     hp: number; maxHp: number;
     dead: boolean;
@@ -84,6 +87,11 @@ export class AttackSim {
     readonly attackerLosses: TroopCounts = emptyTroops();
     readonly defenderLosses: TroopCounts = emptyTroops();
     godSpellUsed = false;
+    readonly heroAvailable: boolean;
+    heroDeployed = false;
+    heroDied = false;
+    heroHp = 0;
+    heroMaxHp = 0;
 
     private nextId = 1;
     private rng: () => number;
@@ -109,6 +117,7 @@ export class AttackSim {
         this.remaining = { ...army.troops };
         this.atkGod = GodManager.getEffects(army.god, army.godLevel);
         this.defGod = GodManager.getEffects(village.defenseGod, village.defenseGodLevel);
+        this.heroAvailable = army.heroAvailable ?? (army.heroLevel > 0);
 
         const up = (id: 'attackPower' | 'troopHealth', lvl: number) => {
             if (lvl <= 0) return 0;
@@ -118,6 +127,9 @@ export class AttackSim {
         const hero = (lvl: number) => 1 + (lvl - 1) * GameConfig.heroPowerMultiplierPerLevel;
         this.atkDmgMult = hero(army.heroLevel) * (1 + up('attackPower', army.attackLevel)) * (1 + this.atkGod.attackBonus);
         this.atkHpMult = (1 + this.atkGod.hpBonus) * (1 + up('troopHealth', army.armorLevel));
+        const heroStats = HeroManager.heroStats(army.heroLevel);
+        this.heroMaxHp = Math.round(heroStats.hp * this.atkHpMult);
+        this.heroHp = this.heroMaxHp;
         this.atkCrit = army.critLevel * GameConfig.upgrades.critRate.effectBase / 100 + this.atkGod.critChance;
         this.defDmgMult = (1 + this.defGod.attackBonus) * (1 + up('attackPower', village.attackLevel));
         this.defUnitDmgMult = hero(village.heroLevel) * this.defDmgMult;
@@ -204,6 +216,36 @@ export class AttackSim {
         this.deployed[type] += n;
         if (n > 0) this.started = true;
         return n;
+    }
+
+    /** Deploys the player's legendary Champion Hero onto the battlefield. */
+    deployHero(x: number, z: number): boolean {
+        if (this.finished || !AttackSim.isDeployable(x, z) || !this.heroAvailable || this.heroDeployed) return false;
+        const heroLvl = Math.max(1, this.army.heroLevel);
+        const stats = HeroManager.heroStats(heroLvl);
+        const hp = Math.round(stats.hp * this.atkHpMult);
+        this.heroMaxHp = hp;
+        this.heroHp = hp;
+        this.units.push({
+            id: this.nextId++,
+            side: 'attacker',
+            type: 'infantry',
+            isHero: true,
+            heroLevel: heroLvl,
+            x, z,
+            hp, maxHp: hp,
+            dead: false,
+            cooldown: 0.1,
+            targetKind: null,
+            targetId: 0,
+            heading: 0,
+            buffUntil: 0,
+        });
+        this.heroDeployed = true;
+        this.started = true;
+        this.addEffect('explosion', x, z, 1.2);
+        this.version++;
+        return true;
     }
 
     /** Active power of the attacking god, cast at a point. */
@@ -406,10 +448,18 @@ export class AttackSim {
     private damageUnit(u: SimUnit, dmg: number) {
         if (u.dead) return;
         u.hp -= dmg;
+        if (u.isHero) this.heroHp = Math.max(0, u.hp);
         if (u.hp <= 0) {
             u.dead = true;
-            if (u.side === 'attacker') this.attackerLosses[u.type]++;
-            else this.defenderLosses[u.type]++;
+            if (u.isHero) {
+                this.heroDied = true;
+                this.heroHp = 0;
+                this.addEffect('explosion', u.x, u.z, 1.2);
+            } else if (u.side === 'attacker') {
+                this.attackerLosses[u.type]++;
+            } else {
+                this.defenderLosses[u.type]++;
+            }
             this.version++;
         }
     }
@@ -476,7 +526,8 @@ export class AttackSim {
     }
 
     private updateUnit(u: SimUnit, dt: number) {
-        const stats = UNIT_STATS[u.type];
+        const heroStats = u.isHero ? HeroManager.heroStats(u.heroLevel || 1) : null;
+        const stats = heroStats ? { hp: heroStats.hp, dps: heroStats.dps, speed: heroStats.speed, range: heroStats.range, flying: false, prefers: undefined, healer: false, siege: false } : UNIT_STATS[u.type];
         u.cooldown -= dt;
 
         // Kingdom bonuses:
@@ -533,15 +584,32 @@ export class AttackSim {
         const mult = u.side === 'attacker' ? this.atkDmgMult : this.defUnitDmgMult;
         const crit = u.side === 'attacker' && (this.rng() < this.atkCrit || u.buffUntil > this.time) ? 2 : 1;
         const troopLevel = u.side === 'attacker' ? (this.army.troopLevels?.[u.type] || 1) : 1;
-        const levelDmgMult = 1 + (troopLevel - 1) * 0.22;
+        const levelDmgMult = u.isHero ? 1.0 : (1 + (troopLevel - 1) * 0.22);
         let dmg = stats.dps * mult * crit * levelDmgMult;
         if (stats.siege && u.targetKind === 'wall') dmg *= 3;
         const kind: SimProjectile['kind'] | null = u.type === 'archers' ? 'arrow' : u.type === 'mages' ? 'magic' : u.type === 'catapults' ? 'boulder' : null;
 
         const apply = () => {
-            if (u.targetKind === 'building') this.damageBuilding(t as SimBuilding, dmg);
-            else if (u.targetKind === 'wall') this.damageWall(t as SimWall, dmg);
-            else if (u.targetKind === 'unit') this.damageUnit(t as SimUnit, dmg);
+            if (u.targetKind === 'building') {
+                this.damageBuilding(t as SimBuilding, dmg);
+                if (u.isHero) {
+                    this.buildings.filter(b => !b.destroyed && b.id !== (t as SimBuilding).id && Math.hypot(b.x - t.x, b.z - t.z) <= 1.4).forEach(b => this.damageBuilding(b, dmg * 0.4));
+                    this.walls.filter(w => !w.destroyed && Math.hypot(w.x - t.x, w.z - t.z) <= 1.4).forEach(w => this.damageWall(w, dmg * 0.4));
+                    this.addEffect('explosion', t.x, t.z, 0.4);
+                }
+            } else if (u.targetKind === 'wall') {
+                this.damageWall(t as SimWall, dmg);
+                if (u.isHero) {
+                    this.walls.filter(w => !w.destroyed && w.id !== (t as SimWall).id && Math.hypot(w.x - t.x, w.z - t.z) <= 1.4).forEach(w => this.damageWall(w, dmg * 0.4));
+                    this.addEffect('explosion', t.x, t.z, 0.4);
+                }
+            } else if (u.targetKind === 'unit') {
+                this.damageUnit(t as SimUnit, dmg);
+                if (u.isHero) {
+                    this.units.filter(other => !other.dead && other.side !== u.side && other.id !== (t as SimUnit).id && Math.hypot(other.x - t.x, other.z - t.z) <= 1.4).forEach(other => this.damageUnit(other, dmg * 0.4));
+                    this.addEffect('explosion', t.x, t.z, 0.4);
+                }
+            }
         };
         const kindAtFire = u.targetKind;
         if (kind) {
@@ -599,6 +667,8 @@ export class AttackSim {
             defenderMaxHp: 0,
             attackerLosses: { ...this.attackerLosses },
             defenderLosses: { ...this.defenderLosses },
+            heroDied: this.heroDeployed && this.heroDied,
+            heroDeployed: this.heroDeployed,
             seed,
         };
     }

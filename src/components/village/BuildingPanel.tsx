@@ -27,7 +27,7 @@ function upgradeBonus(id: 'attackPower' | 'troopHealth' | 'critRate', level: num
 }
 
 export const BuildingPanel: React.FC<{ building: PlacedBuilding; onClose: () => void }> = ({ building: b, onClose }) => {
-  const { state, upgradeHero } = useGame();
+  const { state, upgradeHero, healHeroWithGems } = useGame();
   const def = BUILDINGS[b.type];
   const lvl = Math.max(1, b.level);
 
@@ -96,18 +96,41 @@ export const BuildingPanel: React.FC<{ building: PlacedBuilding; onClose: () => 
             {renderStats()}
           </div>
 
-          {b.type === 'altar' && (
-            <div style={panel} className="flex-col gap-2">
-              <b>🦸 Héroe Nv.{state.heroLevel}</b>
-              <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                +{Math.round((state.heroLevel - 1) * GameConfig.heroPowerMultiplierPerLevel * 100)}% de poder para todas tus tropas.
-              </p>
-              <button className="btn-gem" disabled={state.gems < heroCost} style={{ padding: '10px' }}
-                onClick={() => { upgradeHero(); EffectManager.fireHeroUpgrade(); }}>
-                Subir héroe — 💎 {heroCost}
-              </button>
-            </div>
-          )}
+          {b.type === 'altar' && (() => {
+            const hStats = HeroManager.heroStats(state.heroLevel);
+            const isRec = HeroManager.isHeroRecovering(state);
+            const recMs = HeroManager.heroRecoveryTimeLeft(state);
+            const healCost = HeroManager.healCostGems(state);
+
+            return (
+              <div style={panel} className="flex-col gap-2">
+                <b>👑 {hStats.name}</b>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                  ⚔️ Vida: <b>{hStats.hp}</b> · Daño: <b>{hStats.dps} DPS</b> (Hendidura)
+                </div>
+                {isRec ? (
+                  <div style={{ padding: '8px', borderRadius: '8px', background: 'rgba(255, 159, 67, 0.15)', border: '1px solid #ff9f43' }}>
+                    <div style={{ fontSize: '12px', color: '#ff9f43', fontWeight: 600 }}>
+                      💤 Recuperándose: {Math.ceil(recMs / 1000)}s
+                    </div>
+                    <button className="btn-gem" style={{ width: '100%', marginTop: '6px', padding: '6px 10px', fontSize: '12px' }}
+                      disabled={state.gems < healCost}
+                      onClick={() => healHeroWithGems()}>
+                      Despertar al instante — 💎 {healCost}
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '11px', color: '#2ed573' }}>
+                    ✓ Listo para el combate. Úsalo sin límite mientras sobreviva.
+                  </div>
+                )}
+                <button className="btn-gem" disabled={state.gems < heroCost} style={{ padding: '8px 10px', marginTop: '4px' }}
+                  onClick={() => { upgradeHero(); EffectManager.fireHeroUpgrade(); }}>
+                  Mejorar Héroe — 💎 {heroCost}
+                </button>
+              </div>
+            );
+          })()}
         </div>
 
         {b.type === 'blacksmith' && (

@@ -46,6 +46,7 @@ export interface AttackArmy {
     critLevel: number;
     kingdom?: KingdomType;
     troopLevels?: Record<TroopId, number>;
+    heroAvailable?: boolean;
 }
 
 export interface BattleRound {
@@ -70,6 +71,8 @@ export interface PvpBattleResult {
     defenderMaxHp: number;
     attackerLosses: TroopCounts;
     defenderLosses: TroopCounts;
+    heroDied?: boolean;
+    heroDeployed?: boolean;
     seed: number;
 }
 

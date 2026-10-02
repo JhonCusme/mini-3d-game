@@ -13,6 +13,7 @@ import { computeOutcome, leagueFor, type PvpOutcome } from '../../core/pvp/PvpRu
 import { createSystemVillage, hashString, isSameOrCloneVillage } from '../../core/pvp/BotFactory';
 import type { VillageSnapshot } from '../../core/pvp/PvpTypes';
 import { EffectManager } from '../../core/EffectManager';
+import { HeroManager } from '../../core/HeroManager';
 import { RtsControls, SceneLights } from '../village/VillageScene';
 import { VillageTerrain, Walls } from '../village/VillageTerrain';
 import { BuildingActor, EffectActor, ProjectileActor, UnitActor, WallActor } from './AttackActors';
@@ -64,13 +65,13 @@ const NoDeployZone: React.FC<{ visible: boolean }> = ({ visible }) => (
 );
 
 export const AttackScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  const { state, completeAttack, payCoins } = useGame();
+  const { state, completeAttack, payCoins, healHeroWithGems } = useGame();
   const { user } = useAuth();
   const [opponent, setOpponent] = useState<VillageSnapshot | null>(null);
   const [refresh, setRefresh] = useState(0);
   const [loading, setLoading] = useState(true);
   const [sim, setSim] = useState<AttackSim | null>(null);
-  const [selected, setSelected] = useState<TroopId | 'spell' | null>(null);
+  const [selected, setSelected] = useState<TroopId | 'spell' | 'hero' | null>(null);
   const [burst, setBurst] = useState(false);
   const [, setTick] = useState(0);
   const [outcome, setOutcome] = useState<PvpOutcome | null>(null);
@@ -141,6 +142,15 @@ export const AttackScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => 
     if (selected === 'spell') {
       if (sim.castGodSpell(x, z)) {
         AudioManager.playMagic();
+        setSelected(TROOP_IDS.find(id => sim.remaining[id] > 0) ?? null);
+      }
+      return;
+    }
+    if (selected === 'hero') {
+      if (!hasEnergy && !sim.started) { setMessage('⚡ Necesitas energía para atacar'); return; }
+      if (!AttackSim.isDeployable(x, z)) { setMessage('Despliega a tu Héroe fuera de la zona roja'); return; }
+      if (sim.deployHero(x, z)) {
+        AudioManager.playVictory();
         setSelected(TROOP_IDS.find(id => sim.remaining[id] > 0) ?? null);
       }
       return;
@@ -303,6 +313,56 @@ export const AttackScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => 
                 <span className="troop-card-name">{GameConfig.troops[id].name}</span>
               </button>
             ))}
+            {/* 👑 Champion Hero Card */}
+            {(() => {
+              const isRecovering = HeroManager.isHeroRecovering(state);
+              const recMs = HeroManager.heroRecoveryTimeLeft(state);
+              const healCost = HeroManager.healCostGems(state);
+
+              if (isRecovering) {
+                return (
+                  <button
+                    className="troop-card hero recovering"
+                    style={{ borderColor: '#ff9f43', background: 'rgba(255, 159, 67, 0.18)' }}
+                    onClick={() => {
+                      if (window.confirm(`¿Curar y despertar a tu Héroe al instante por 💎 ${healCost}?`)) {
+                        if (!healHeroWithGems()) setMessage('Gemas insuficientes para despertar al Héroe');
+                      }
+                    }}
+                    title={`Héroe descansando. Toca para despertar con 💎 ${healCost}`}
+                  >
+                    <span className="troop-card-count" style={{ color: '#ff9f43' }}>💎{healCost}</span>
+                    <span className="troop-card-icon">💤</span>
+                    <span className="troop-card-name">Héroe ({Math.ceil(recMs / 1000)}s)</span>
+                  </button>
+                );
+              }
+
+              if (sim.heroDeployed) {
+                const pct = sim.heroMaxHp > 0 ? Math.round((sim.heroHp / sim.heroMaxHp) * 100) : 0;
+                return (
+                  <button className="troop-card hero deployed" disabled style={{ borderColor: '#ffd700', opacity: 0.85 }}>
+                    <span className="troop-card-count" style={{ color: sim.heroDied ? '#ff4757' : '#2ed573' }}>
+                      {sim.heroDied ? '💀' : `${pct}%`}
+                    </span>
+                    <span className="troop-card-icon">👑</span>
+                    <span className="troop-card-name">{sim.heroDied ? 'Caído' : 'Luchando'}</span>
+                  </button>
+                );
+              }
+
+              return (
+                <button
+                  className={`troop-card hero ${selected === 'hero' ? 'selected' : ''}`}
+                  onClick={() => setSelected('hero')}
+                  style={{ borderColor: '#ffd700', boxShadow: selected === 'hero' ? '0 0 12px #ffd700' : '0 0 6px rgba(255, 215, 0, 0.35)' }}
+                >
+                  <span className="troop-card-count" style={{ color: '#ffd700' }}>Nv.{state.heroLevel}</span>
+                  <span className="troop-card-icon">👑</span>
+                  <span className="troop-card-name">Héroe</span>
+                </button>
+              );
+            })()}
             {god && (
               <button className={`troop-card spell ${selected === 'spell' ? 'selected' : ''}`}
                 disabled={sim.godSpellUsed}
@@ -317,12 +377,13 @@ export const AttackScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => 
               <span className="troop-card-icon" style={{ fontSize: '18px' }}>{burst ? '×5' : '×1'}</span>
               <span className="troop-card-name">Por toque</span>
             </button>
-            {TROOP_IDS.every(id => state.troops[id] === 0) && (
+            {TROOP_IDS.every(id => state.troops[id] === 0) && !sim.heroAvailable && (
               <div className="attack-empty">No tienes tropas: entrénalas en el Cuartel</div>
             )}
           </div>
 
           {selected === 'spell' && god && <div className="attack-hint">Toca el mapa para lanzar el poder de {god.name}</div>}
+          {selected === 'hero' && <div className="attack-hint" style={{ color: '#ffd700' }}>Toca fuera de la zona roja para desplegar a tu Gran Rey</div>}
           {message && <div className="attack-hint warn">{message}</div>}
         </>
       )}
@@ -351,7 +412,34 @@ export const AttackScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => 
               <b>{TROOP_IDS.filter(id => sim.attackerLosses[id] > 0).map(id => `${TROOP_ICONS[id]}${sim.attackerLosses[id]}`).join(' ') || '—'}</b>
             </div>
           </div>
-          <button className="btn-upgrade" onClick={onClose} style={{ width: '100%', padding: '14px', fontSize: '16px' }}>Volver a casa</button>
+          {sim.heroDeployed && (
+            <div style={{
+              marginTop: '10px',
+              padding: '10px 14px',
+              borderRadius: '10px',
+              background: sim.heroDied ? 'rgba(255, 71, 87, 0.15)' : 'rgba(46, 213, 115, 0.15)',
+              border: `1.5px solid ${sim.heroDied ? '#ff4757' : '#2ed573'}`,
+              fontSize: '12px',
+              textAlign: 'left',
+            }}>
+              {sim.heroDied ? (
+                <div>
+                  <b style={{ color: '#ff6b81' }}>💤 Héroe caído en combate</b>
+                  <p style={{ margin: '4px 0 0 0', opacity: 0.9 }}>
+                    Está descansando en su Altar ({HeroManager.heroRecoveryDuration(state.heroLevel)}s de recuperación).
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <b style={{ color: '#7bed9f' }}>👑 ¡Héroe victorioso!</b>
+                  <p style={{ margin: '4px 0 0 0', opacity: 0.9 }}>
+                    Sobrevivió a la batalla y está listo para luchar de nuevo sin esperar.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+          <button className="btn-upgrade" onClick={onClose} style={{ width: '100%', padding: '14px', fontSize: '16px', marginTop: '12px' }}>Volver a casa</button>
         </div></div>
       )}
     </div>,

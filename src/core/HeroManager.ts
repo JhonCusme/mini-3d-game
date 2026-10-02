@@ -23,4 +23,54 @@ export class HeroManager {
 
         return newState;
     }
+
+    static heroStats(level: number) {
+        const lvl = Math.max(1, level);
+        return {
+            hp: 850 + (lvl - 1) * 280,
+            dps: 110 + (lvl - 1) * 36,
+            speed: 1.85,
+            range: 1.15,
+            cleaveRadius: 1.4,
+            name: `Gran Rey Nv.${lvl}`,
+        };
+    }
+
+    /** Seconds required for the Hero to recover from defeat in battle (scales with level). */
+    static heroRecoveryDuration(level: number): number {
+        const lvl = Math.max(1, level);
+        return Math.min(900, 60 + lvl * 30); // Nv 1: 90s, Nv 2: 120s, Nv 3: 150s, Nv 5: 210s
+    }
+
+    static isHeroRecovering(state: GameState, now = Date.now()): boolean {
+        return (state.heroRecoveringUntil || 0) > now;
+    }
+
+    static heroRecoveryTimeLeft(state: GameState, now = Date.now()): number {
+        return Math.max(0, (state.heroRecoveringUntil || 0) - now);
+    }
+
+    static healCostGems(state: GameState, now = Date.now()): number {
+        const ms = this.heroRecoveryTimeLeft(state, now);
+        if (ms <= 0) return 0;
+        return Math.max(1, Math.ceil(ms / 60000) * 2);
+    }
+
+    static healHeroWithGems(state: GameState): GameState {
+        const cost = this.healCostGems(state);
+        if (cost <= 0 || state.gems < cost) return state;
+        return {
+            ...state,
+            gems: state.gems - cost,
+            heroRecoveringUntil: 0,
+        };
+    }
+
+    static setHeroFallen(state: GameState): GameState {
+        const durationSec = this.heroRecoveryDuration(state.heroLevel);
+        return {
+            ...state,
+            heroRecoveringUntil: Date.now() + durationSec * 1000,
+        };
+    }
 }

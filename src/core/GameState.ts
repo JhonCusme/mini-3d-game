@@ -53,6 +53,7 @@ export interface GameState {
     lastDailyReward: number; // Timestamp
     quests: { [id: string]: { progress: number; completed: boolean } };
     heroLevel: number;
+    heroRecoveringUntil?: number;
     prestigeLevel: number;
     chestsOpened: number;
     battlesWon: number;
@@ -100,6 +101,7 @@ export const getInitialState = (): GameState => ({
     lastDailyReward: 0,
     quests: {},
     heroLevel: 1,
+    heroRecoveringUntil: 0,
     prestigeLevel: 0,
     chestsOpened: 0,
     battlesWon: 0,

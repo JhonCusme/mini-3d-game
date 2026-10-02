@@ -38,6 +38,7 @@ interface GameContextType {
     watchAdForReward: (type: 'coins' | 'gems' | 'energy') => Promise<boolean>;
     buyIAP: (packageId: string) => Promise<boolean>;
     upgradeHero: () => void;
+    healHeroWithGems: () => boolean;
     prestigeAscension: () => void;
     toggleMute: () => boolean;
     pvpMode: 'local' | 'online';
@@ -373,6 +374,20 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
     };
 
+    const healHeroWithGems = (): boolean => {
+        const prev = stateRef.current;
+        if (!HeroManager.isHeroRecovering(prev)) return false;
+        const cost = HeroManager.healCostGems(prev);
+        if (prev.gems < cost) return false;
+        AudioManager.playVictory();
+        setState((s) => {
+            const next = HeroManager.healHeroWithGems(s);
+            SaveManager.save(next);
+            return next;
+        });
+        return true;
+    };
+
     const upgradeTroop = (troopId: TroopId): boolean => {
         const prev = stateRef.current;
         if (!TroopUpgradeManager.canUpgrade(prev, troopId)) return false;
@@ -530,7 +545,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             state, offlineEarnings, dismissOfflineEarnings: () => setOfflineEarnings(0),
             completeSetup, purchaseUpgrade, trainTroop, upgradeTroop, finishTroopUpgradeWithGems, fightTerritory, 
             claimQuest, openChest, claimDailyReward, watchAdForReward, buyIAP,
-            upgradeHero, prestigeAscension, toggleMute, resetGame,
+            upgradeHero, healHeroWithGems, prestigeAscension, toggleMute, resetGame,
             pvpMode: pvpService.mode, moveTroops, unlockGod, levelUpGod, equipGod, completeAttack, payCoins, markDefenseLogSeen,
             startBuildingUpgrade, finishBuildingUpgrade, moveBuilding, buildBuilding, collectMine, buyBuilder 
         }}>

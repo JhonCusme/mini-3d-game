@@ -1,6 +1,7 @@
 import { GameConfig } from '../../config/GameConfig';
 import { emptyTroops, type DefenseLogEntry, type GameState, type TroopCounts, type TroopId } from '../GameState';
 import { GodManager } from '../GodManager';
+import { HeroManager } from '../HeroManager';
 import type { AttackArmy, AttackRecord, PvpBattleResult, VillageSnapshot } from './PvpTypes';
 import type { PvpOutcome } from './PvpRules';
 import { lootableCoins } from './PvpRules';
@@ -51,11 +52,13 @@ export class PvpManager {
     static buildArmy(state: GameState, selection: TroopCounts): AttackArmy {
         const troops = emptyTroops();
         for (const id of TROOP_IDS) troops[id] = Math.max(0, Math.min(selection[id] || 0, state.troops[id] || 0));
+        const heroReady = (state.heroRecoveringUntil || 0) <= Date.now();
         return {
             troops,
             god: state.attackGod,
             godLevel: state.attackGod ? GodManager.getLevel(state, state.attackGod) : 0,
             heroLevel: state.heroLevel,
+            heroAvailable: heroReady,
             attackLevel: state.upgrades.attackPower || 0,
             armorLevel: state.upgrades.troopHealth || 0,
             critLevel: state.upgrades.critRate || 0,
@@ -65,15 +68,20 @@ export class PvpManager {
     }
 
     static canAttack(state: GameState, selection: TroopCounts): boolean {
-        return state.energy >= GameConfig.pvp.energyCost && sum(this.buildArmy(state, selection).troops) > 0;
+        return state.energy >= GameConfig.pvp.energyCost && (sum(this.buildArmy(state, selection).troops) > 0 || (state.heroRecoveringUntil || 0) <= Date.now());
     }
 
     static applyAttack(state: GameState, result: PvpBattleResult, outcome: PvpOutcome): GameState {
         const troops = { ...state.troops };
         for (const id of TROOP_IDS) troops[id] = Math.max(0, troops[id] - result.attackerLosses[id]);
+        let heroRecoveringUntil = state.heroRecoveringUntil;
+        if (result.heroDied) {
+            heroRecoveringUntil = Date.now() + HeroManager.heroRecoveryDuration(state.heroLevel) * 1000;
+        }
         return {
             ...state,
             troops,
+            heroRecoveringUntil,
             energy: state.energy - GameConfig.pvp.energyCost,
             coins: state.coins + outcome.coinsStolen,
             trophies: Math.max(0, state.trophies + outcome.attackerTrophiesDelta),
