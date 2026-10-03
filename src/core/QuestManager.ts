@@ -1,5 +1,6 @@
 import type { GameState } from './GameState';
 import { GameConfig } from '../config/GameConfig';
+import { VillageManager } from './VillageManager';
 
 export class QuestManager {
     static checkQuests(state: GameState): GameState {
@@ -64,7 +65,8 @@ export class QuestManager {
         const questDef = GameConfig.quests.find(q => q.id === questId)!;
         
         let newState = { ...state };
-        newState.coins += questDef.rewardCoins;
+        const maxGold = VillageManager.maxGoldCapacity(newState);
+        newState.coins = Math.min(maxGold, newState.coins + questDef.rewardCoins);
         newState.gems += questDef.rewardGems;
         
         newState.quests = {

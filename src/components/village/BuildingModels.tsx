@@ -1984,10 +1984,496 @@ export const WallModel: React.FC<{ level: number }> = ({ level }) => {
   );
 };
 
+// ===========================================================================
+// 12. GOLD STORAGE (ALMACÉN DE ORO / CÁMARA ACORAZADA) - 4 TIERS
+// ===========================================================================
+const GoldStorageModel: React.FC<{ level: number }> = ({ level }) => {
+  // TIER 1 (Nv 1-2): Heavy Timber Chest Repository with Piles of Coins and Bullion
+  if (level <= 2) {
+    return (
+      <group>
+        {/* Foundation Timber Deck */}
+        <mesh position={[0, 0.08, 0]} castShadow receiveShadow>
+          <boxGeometry args={[1.75, 0.16, 1.75]} />
+          <meshStandardMaterial color="#4a2e12" roughness={0.8} />
+        </mesh>
+        {/* Corner Iron Brackets */}
+        {[[-0.8, -0.8], [0.8, -0.8], [-0.8, 0.8], [0.8, 0.8]].map(([x, z], i) => (
+          <mesh key={i} position={[x, 0.1, z]}>
+            <boxGeometry args={[0.18, 0.2, 0.18]} />
+            <meshStandardMaterial color="#2d3436" metalness={0.7} roughness={0.3} />
+          </mesh>
+        ))}
+
+        {/* Sturdy Wood Strongroom Walls */}
+        <mesh position={[0, 0.55, -0.2]} castShadow receiveShadow>
+          <boxGeometry args={[1.4, 0.8, 1.0]} />
+          <meshStandardMaterial color="#795548" roughness={0.7} />
+        </mesh>
+        {/* Heavy Iron Roof Bars / Cap */}
+        <mesh position={[0, 1.0, -0.2]} castShadow>
+          <boxGeometry args={[1.5, 0.14, 1.1]} />
+          <meshStandardMaterial color="#374151" metalness={0.6} roughness={0.3} />
+        </mesh>
+
+        {/* Large Central Treasure Chest (Open Lid) */}
+        <group position={[0, 0.35, 0.28]}>
+          {/* Chest Body */}
+          <mesh position={[0, 0, 0]} castShadow>
+            <boxGeometry args={[0.75, 0.45, 0.5]} />
+            <meshStandardMaterial color="#5c3813" roughness={0.6} />
+          </mesh>
+          {/* Iron Strapping */}
+          {[-0.26, 0, 0.26].map((x, i) => (
+            <mesh key={i} position={[x, 0, 0]}>
+              <boxGeometry args={[0.06, 0.47, 0.52]} />
+              <meshStandardMaterial color="#ffd700" metalness={0.8} roughness={0.3} />
+            </mesh>
+          ))}
+          {/* Open Lid tilted back */}
+          <mesh position={[0, 0.35, -0.22]} rotation={[-Math.PI / 3.5, 0, 0]}>
+            <boxGeometry args={[0.78, 0.12, 0.52]} />
+            <meshStandardMaterial color="#5c3813" roughness={0.6} />
+          </mesh>
+          {/* Sparkling Gold Heap inside chest */}
+          <mesh position={[0, 0.2, 0]}>
+            <boxGeometry args={[0.66, 0.16, 0.42]} />
+            <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.15} emissive="#b8860b" emissiveIntensity={0.5} />
+          </mesh>
+        </group>
+
+        {/* Stacked Gold Bullion Bars on floor */}
+        <group position={[-0.55, 0.2, 0.45]}>
+          {[
+            [0, 0, 0], [0.18, 0, 0], [-0.18, 0, 0],
+            [0.09, 0.08, 0], [-0.09, 0.08, 0],
+            [0, 0.16, 0]
+          ].map(([x, y, z], i) => (
+            <mesh key={i} position={[x, y, z]} castShadow>
+              <boxGeometry args={[0.15, 0.07, 0.32]} />
+              <meshStandardMaterial color="#ffc107" metalness={0.95} roughness={0.18} emissive="#b8860b" emissiveIntensity={0.3} />
+            </mesh>
+          ))}
+        </group>
+
+        {/* Scattered Gold Coins Pile */}
+        <mesh position={[0.5, 0.18, 0.45]}>
+          <cylinderGeometry args={[0.3, 0.38, 0.14, 16]} />
+          <meshStandardMaterial color="#ffd700" metalness={0.95} roughness={0.2} emissive="#d97706" emissiveIntensity={0.4} />
+        </mesh>
+      </group>
+    );
+  }
+
+  // TIER 2 (Nv 3-4): Fortified Ashlar Stone Vault with Heavy Vault Door
+  if (level <= 4) {
+    return (
+      <group>
+        {/* Ashlar Stone Foundation */}
+        <mesh position={[0, 0.14, 0]} castShadow receiveShadow>
+          <boxGeometry args={[1.85, 0.28, 1.85]} />
+          <meshStandardMaterial color="#4b5563" roughness={0.8} />
+        </mesh>
+        {/* Thick Stone Vault Body */}
+        <mesh position={[0, 0.75, 0]} castShadow receiveShadow>
+          <boxGeometry args={[1.55, 0.95, 1.55]} />
+          <meshStandardMaterial color="#6b7280" roughness={0.7} />
+        </mesh>
+        {/* Curved Vault Roof */}
+        <mesh position={[0, 1.35, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+          <cylinderGeometry args={[0.8, 0.8, 1.58, 20]} />
+          <meshStandardMaterial color="#374151" roughness={0.6} />
+        </mesh>
+
+        {/* Round Bank Vault Door on Front */}
+        <group position={[0, 0.72, 0.79]}>
+          <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
+            <cylinderGeometry args={[0.48, 0.48, 0.14, 24]} />
+            <meshStandardMaterial color="#1f2937" metalness={0.8} roughness={0.25} />
+          </mesh>
+          {/* Golden Locking Wheel */}
+          <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.08]}>
+            <torusGeometry args={[0.22, 0.04, 12, 24]} />
+            <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.2} />
+          </mesh>
+          <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.08]}>
+            <cylinderGeometry args={[0.07, 0.07, 0.08, 12]} />
+            <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.2} />
+          </mesh>
+        </group>
+
+        {/* Security Grates with Gold Glimmer inside sides */}
+        {[-0.8, 0.8].map((x, i) => (
+          <group key={i} position={[x, 0.75, 0]}>
+            <mesh rotation={[0, Math.PI / 2, 0]}>
+              <boxGeometry args={[0.6, 0.5, 0.08]} />
+              <meshStandardMaterial color="#ffd700" metalness={0.95} roughness={0.2} emissive="#b8860b" emissiveIntensity={0.6} />
+            </mesh>
+            {/* Iron Bars */}
+            {[-0.2, 0, 0.2].map((z, j) => (
+              <mesh key={j} position={[0, 0, z]}>
+                <cylinderGeometry args={[0.03, 0.03, 0.55, 8]} />
+                <meshStandardMaterial color="#111827" metalness={0.9} roughness={0.2} />
+              </mesh>
+            ))}
+          </group>
+        ))}
+
+        {/* Corner Golden Finials */}
+        {[[-0.75, -0.75], [0.75, -0.75], [-0.75, 0.75], [0.75, 0.75]].map(([x, z], i) => (
+          <mesh key={i} position={[x, 1.3, z]}>
+            <sphereGeometry args={[0.12, 12, 8]} />
+            <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.2} />
+          </mesh>
+        ))}
+      </group>
+    );
+  }
+
+  // TIER 3 (Nv 5-7): Citadel Treasury with Octagonal Vault & Overflowing Gold Bars
+  if (level <= 7) {
+    return (
+      <group>
+        {/* Massive Granite Foundation */}
+        <mesh position={[0, 0.16, 0]} castShadow receiveShadow>
+          <boxGeometry args={[1.9, 0.32, 1.9]} />
+          <meshStandardMaterial color="#374151" roughness={0.6} />
+        </mesh>
+        {/* Octagonal Heavy Bastion Body */}
+        <mesh position={[0, 0.85, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[0.95, 1.05, 1.1, 8]} />
+          <meshStandardMaterial color="#4b5563" roughness={0.5} />
+        </mesh>
+        {/* Gilded Corbel Cornice */}
+        <mesh position={[0, 1.45, 0]} castShadow>
+          <cylinderGeometry args={[1.05, 0.95, 0.16, 8]} />
+          <meshStandardMaterial color="#d97706" metalness={0.8} roughness={0.25} />
+        </mesh>
+        {/* Crown Dome with Gold Filigree */}
+        <mesh position={[0, 1.7, 0]} castShadow>
+          <sphereGeometry args={[0.65, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.5]} />
+          <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.2} emissive="#b8860b" emissiveIntensity={0.3} />
+        </mesh>
+
+        {/* Heavy Double Vault Doors */}
+        <group position={[0, 0.75, 0.98]}>
+          <mesh position={[-0.28, 0, 0]} castShadow>
+            <boxGeometry args={[0.38, 0.72, 0.1]} />
+            <meshStandardMaterial color="#1f2937" metalness={0.8} roughness={0.3} />
+          </mesh>
+          <mesh position={[0.28, 0, 0]} castShadow>
+            <boxGeometry args={[0.38, 0.72, 0.1]} />
+            <meshStandardMaterial color="#1f2937" metalness={0.8} roughness={0.3} />
+          </mesh>
+          {/* Gold Bars visible through open security hatch */}
+          <mesh position={[0, 0.1, -0.05]}>
+            <boxGeometry args={[0.3, 0.25, 0.05]} />
+            <meshStandardMaterial color="#ffd700" metalness={0.95} roughness={0.15} emissive="#d97706" emissiveIntensity={0.6} />
+          </mesh>
+        </group>
+
+        {/* 4 Corner Watch Torches with Golden Fire */}
+        {[[-0.85, -0.85], [0.85, -0.85], [-0.85, 0.85], [0.85, 0.85]].map(([x, z], i) => (
+          <group key={i} position={[x, 0.4, z]}>
+            <mesh position={[0, 0.4, 0]}>
+              <cylinderGeometry args={[0.07, 0.09, 0.8, 8]} />
+              <meshStandardMaterial color="#1f2937" metalness={0.7} roughness={0.3} />
+            </mesh>
+            <mesh position={[0, 0.85, 0]}>
+              <sphereGeometry args={[0.13, 10, 8]} />
+              <meshStandardMaterial color="#ff9f43" emissive="#ff5e57" emissiveIntensity={1.2} />
+            </mesh>
+          </group>
+        ))}
+      </group>
+    );
+  }
+
+  // TIER 4 (Nv 8+): Imperial Grand Treasury of Obsidian, Solid Gold Columns & Glowing Arcane Vault
+  return (
+    <group>
+      {/* Imperial Dark Basalt Step Platform */}
+      <mesh position={[0, 0.12, 0]} castShadow receiveShadow>
+        <boxGeometry args={[1.98, 0.24, 1.98]} />
+        <meshStandardMaterial color="#111827" roughness={0.3} metalness={0.4} />
+      </mesh>
+      {/* Polished Obsidian Vault Body */}
+      <mesh position={[0, 0.82, 0]} castShadow receiveShadow>
+        <boxGeometry args={[1.4, 1.15, 1.4]} />
+        <meshStandardMaterial color="#0f172a" roughness={0.2} metalness={0.6} />
+      </mesh>
+
+      {/* 4 Massive Pure Gold Pillars */}
+      {[[-0.75, -0.75], [0.75, -0.75], [-0.75, 0.75], [0.75, 0.75]].map(([x, z], i) => (
+        <group key={i} position={[x, 0, z]}>
+          <mesh position={[0, 0.8, 0]} castShadow>
+            <cylinderGeometry args={[0.13, 0.15, 1.35, 16]} />
+            <meshStandardMaterial color="#ffd700" metalness={0.98} roughness={0.12} emissive="#b8860b" emissiveIntensity={0.3} />
+          </mesh>
+          <mesh position={[0, 1.5, 0]}>
+            <boxGeometry args={[0.34, 0.14, 0.34]} />
+            <meshStandardMaterial color="#ffd700" metalness={0.98} roughness={0.12} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Golden Roof Architrave */}
+      <mesh position={[0, 1.55, 0]} castShadow>
+        <boxGeometry args={[1.85, 0.18, 1.85]} />
+        <meshStandardMaterial color="#ffd700" metalness={0.95} roughness={0.15} emissive="#b8860b" emissiveIntensity={0.35} />
+      </mesh>
+      {/* Imperial Tiered Golden Pyramid Roof */}
+      <mesh position={[0, 1.82, 0]} castShadow>
+        <boxGeometry args={[1.45, 0.2, 1.45]} />
+        <meshStandardMaterial color="#ffd700" metalness={0.95} roughness={0.15} />
+      </mesh>
+      <mesh position={[0, 2.05, 0]} rotation={[0, Math.PI / 4, 0]} castShadow>
+        <coneGeometry args={[0.7, 0.45, 4]} />
+        <meshStandardMaterial color="#ffd700" metalness={0.98} roughness={0.1} emissive="#d97706" emissiveIntensity={0.5} />
+      </mesh>
+
+      {/* Radiant Floating Arcane Core Orb in the Portal */}
+      <mesh position={[0, 0.85, 0.76]}>
+        <sphereGeometry args={[0.26, 20, 16]} />
+        <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.1} emissive="#ffea00" emissiveIntensity={1.5} />
+      </mesh>
+      {/* Rotating Concentric Golden Ring around orb */}
+      <mesh position={[0, 0.85, 0.76]} rotation={[0, 0, Math.PI / 4]}>
+        <torusGeometry args={[0.38, 0.035, 12, 24]} />
+        <meshStandardMaterial color="#ffd700" metalness={0.98} roughness={0.1} />
+      </mesh>
+    </group>
+  );
+};
+
+// ===========================================================================
+// 13. FOOD STORAGE (GRANERO REAL / SILO DE ALIMENTOS) - 4 TIERS
+// ===========================================================================
+const FoodStorageModel: React.FC<{ level: number }> = ({ level }) => {
+  // TIER 1 (Nv 1-2): Elevated Wooden Crib on Stilts with Thatch Roof, Grain Sacks & Barrels
+  if (level <= 2) {
+    return (
+      <group>
+        {/* Dirt and Stone Base */}
+        <mesh position={[0, 0.05, 0]} receiveShadow>
+          <boxGeometry args={[1.75, 0.1, 1.75]} />
+          <meshStandardMaterial color="#5d4037" roughness={0.9} />
+        </mesh>
+
+        {/* 4 Wooden Stilts elevating the granary */}
+        {[[-0.6, -0.6], [0.6, -0.6], [-0.6, 0.6], [0.6, 0.6]].map(([x, z], i) => (
+          <mesh key={i} position={[x, 0.4, z]} castShadow>
+            <cylinderGeometry args={[0.07, 0.08, 0.7, 8]} />
+            <meshStandardMaterial color="#795548" roughness={0.8} />
+          </mesh>
+        ))}
+
+        {/* Elevated Timber Platform */}
+        <mesh position={[0, 0.75, 0]} castShadow receiveShadow>
+          <boxGeometry args={[1.5, 0.12, 1.5]} />
+          <meshStandardMaterial color="#8d6e63" roughness={0.7} />
+        </mesh>
+
+        {/* Vented Slat Granary Crib */}
+        <mesh position={[0, 1.25, 0]} castShadow receiveShadow>
+          <boxGeometry args={[1.25, 0.88, 1.25]} />
+          <meshStandardMaterial color="#bcaaa4" roughness={0.65} />
+        </mesh>
+        {/* Thatch Straw Roof */}
+        <mesh position={[0, 1.85, 0]} rotation={[0, Math.PI / 4, 0]} castShadow>
+          <coneGeometry args={[1.05, 0.65, 4]} />
+          <meshStandardMaterial color="#d4a359" roughness={0.85} />
+        </mesh>
+
+        {/* Sacks of Wheat Grain on Ground and Platform */}
+        {[
+          [-0.45, 0.22, 0.55], [-0.25, 0.22, 0.6], [0.45, 0.22, 0.5],
+          [-0.35, 0.92, 0.4], [0.35, 0.92, 0.4]
+        ].map(([x, y, z], i) => (
+          <mesh key={i} position={[x, y, z]} rotation={[0, (i * 0.7), 0]} castShadow>
+            <sphereGeometry args={[0.18, 10, 8]} />
+            <meshStandardMaterial color="#d7ccc8" roughness={0.9} />
+          </mesh>
+        ))}
+
+        {/* Grain Barrel with golden wheat spilling out */}
+        <group position={[0.55, 0.25, -0.45]}>
+          <mesh castShadow>
+            <cylinderGeometry args={[0.2, 0.18, 0.42, 12]} />
+            <meshStandardMaterial color="#5d4037" roughness={0.7} />
+          </mesh>
+          <mesh position={[0, 0.22, 0]}>
+            <cylinderGeometry args={[0.18, 0.18, 0.05, 12]} />
+            <meshStandardMaterial color="#e5a65d" roughness={0.7} />
+          </mesh>
+        </group>
+      </group>
+    );
+  }
+
+  // TIER 2 (Nv 3-4): Timber Barn Granary with Hopper Chute, Bread Baskets and Grain Hoist
+  if (level <= 4) {
+    return (
+      <group>
+        {/* Stone Footing */}
+        <mesh position={[0, 0.12, 0]} castShadow receiveShadow>
+          <boxGeometry args={[1.8, 0.24, 1.8]} />
+          <meshStandardMaterial color="#57606f" roughness={0.8} />
+        </mesh>
+        {/* Main Granary Barn Body */}
+        <mesh position={[0, 0.78, 0]} castShadow receiveShadow>
+          <boxGeometry args={[1.5, 1.05, 1.4]} />
+          <meshStandardMaterial color="#a0522d" roughness={0.7} />
+        </mesh>
+        {/* Pitched Terracotta Roof */}
+        <mesh position={[0, 1.48, 0]} rotation={[0, Math.PI / 4, 0]} castShadow>
+          <coneGeometry args={[1.2, 0.6, 4]} />
+          <meshStandardMaterial color="#b33927" roughness={0.65} />
+        </mesh>
+
+        {/* Grain Chute / Hopper on Front */}
+        <mesh position={[0, 0.55, 0.78]} rotation={[Math.PI / 5, 0, 0]} castShadow>
+          <boxGeometry args={[0.45, 0.5, 0.18]} />
+          <meshStandardMaterial color="#6d4c41" roughness={0.6} />
+        </mesh>
+        {/* Golden wheat spilling in chute */}
+        <mesh position={[0, 0.42, 0.85]}>
+          <boxGeometry args={[0.36, 0.15, 0.25]} />
+          <meshStandardMaterial color="#f59e0b" roughness={0.6} emissive="#b45309" emissiveIntensity={0.3} />
+        </mesh>
+
+        {/* Stack of Grain Sacks */}
+        {[-0.6, -0.4, -0.5].map((x, i) => (
+          <mesh key={i} position={[x, 0.25 + (i === 2 ? 0.2 : 0), 0.7]} rotation={[0, i * 0.5, 0]} castShadow>
+            <sphereGeometry args={[0.18, 10, 8]} />
+            <meshStandardMaterial color="#e0d6c3" roughness={0.85} />
+          </mesh>
+        ))}
+
+        {/* Basket of Baked Bread Loaves */}
+        <group position={[0.55, 0.26, 0.7]}>
+          <mesh castShadow>
+            <cylinderGeometry args={[0.2, 0.15, 0.2, 10]} />
+            <meshStandardMaterial color="#8d6e63" roughness={0.8} />
+          </mesh>
+          <mesh position={[0, 0.12, 0]} scale={[1, 0.6, 0.8]}>
+            <sphereGeometry args={[0.16, 10, 8]} />
+            <meshStandardMaterial color="#d49244" roughness={0.7} />
+          </mesh>
+        </group>
+      </group>
+    );
+  }
+
+  // TIER 3 (Nv 5-7): High-Capacity Fortified Stone Silo with Conical Roof & Grain Warehouse
+  if (level <= 7) {
+    return (
+      <group>
+        {/* Foundation Base */}
+        <mesh position={[0, 0.14, 0]} castShadow receiveShadow>
+          <boxGeometry args={[1.9, 0.28, 1.9]} />
+          <meshStandardMaterial color="#374151" roughness={0.7} />
+        </mesh>
+        {/* Large Cylindrical Stone Silo */}
+        <mesh position={[-0.32, 0.98, -0.1]} castShadow receiveShadow>
+          <cylinderGeometry args={[0.58, 0.62, 1.5, 20]} />
+          <meshStandardMaterial color="#64748b" roughness={0.65} />
+        </mesh>
+        {/* Silo Conical Slate Roof */}
+        <mesh position={[-0.32, 1.98, -0.1]} castShadow>
+          <coneGeometry args={[0.72, 0.65, 20]} />
+          <meshStandardMaterial color="#1e293b" roughness={0.5} />
+        </mesh>
+        {/* Weather Vane */}
+        <mesh position={[-0.32, 2.38, -0.1]}>
+          <cylinderGeometry args={[0.02, 0.02, 0.25, 8]} />
+          <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.2} />
+        </mesh>
+
+        {/* Attached Processing Warehouse */}
+        <mesh position={[0.42, 0.75, 0.15]} castShadow receiveShadow>
+          <boxGeometry args={[0.85, 0.95, 1.15]} />
+          <meshStandardMaterial color="#854d0e" roughness={0.7} />
+        </mesh>
+        <mesh position={[0.42, 1.35, 0.15]} rotation={[0, Math.PI / 4, 0]} castShadow>
+          <coneGeometry args={[0.72, 0.45, 4]} />
+          <meshStandardMaterial color="#991b1b" roughness={0.6} />
+        </mesh>
+
+        {/* Sacks and Crates of Flour */}
+        {[
+          [0.35, 0.28, 0.78], [0.65, 0.28, 0.72], [0.5, 0.45, 0.75]
+        ].map(([x, y, z], i) => (
+          <mesh key={i} position={[x, y, z]} castShadow>
+            <sphereGeometry args={[0.16, 10, 8]} />
+            <meshStandardMaterial color="#f1f5f9" roughness={0.9} />
+          </mesh>
+        ))}
+      </group>
+    );
+  }
+
+  // TIER 4 (Nv 8+): Imperial Grand Granary & Provision Vault - Twin Polished Silos & Gold Spires
+  return (
+    <group>
+      {/* Imperial Basalt Foundation */}
+      <mesh position={[0, 0.14, 0]} castShadow receiveShadow>
+        <boxGeometry args={[1.98, 0.28, 1.98]} />
+        <meshStandardMaterial color="#1e293b" roughness={0.4} metalness={0.3} />
+      </mesh>
+
+      {/* Twin Polished Marble Silos */}
+      {[-0.45, 0.45].map((x, i) => (
+        <group key={i} position={[x, 0, 0]}>
+          <mesh position={[0, 1.05, 0]} castShadow receiveShadow>
+            <cylinderGeometry args={[0.44, 0.48, 1.6, 20]} />
+            <meshStandardMaterial color="#f8fafc" roughness={0.3} />
+          </mesh>
+          {/* Gold Filigree Rings around silos */}
+          {[0.6, 1.2, 1.7].map((y, j) => (
+            <mesh key={j} position={[0, y, 0]}>
+              <torusGeometry args={[0.46, 0.03, 10, 24]} />
+              <meshStandardMaterial color="#ffd700" metalness={0.95} roughness={0.15} />
+            </mesh>
+          ))}
+          {/* Conical Royal Spire Roof */}
+          <mesh position={[0, 2.1, 0]} castShadow>
+            <coneGeometry args={[0.56, 0.65, 20]} />
+            <meshStandardMaterial color="#d97706" metalness={0.8} roughness={0.2} emissive="#b45309" emissiveIntensity={0.3} />
+          </mesh>
+          {/* Golden Wheat Crest Finial */}
+          <mesh position={[0, 2.5, 0]}>
+            <sphereGeometry args={[0.09, 10, 8]} />
+            <meshStandardMaterial color="#ffd700" metalness={0.98} roughness={0.1} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Enclosed Skybridge Connecting the Silos */}
+      <mesh position={[0, 1.35, 0]} castShadow>
+        <boxGeometry args={[0.6, 0.4, 0.65]} />
+        <meshStandardMaterial color="#334155" roughness={0.5} />
+      </mesh>
+
+      {/* Imperial Provision Crates & Golden Sacks */}
+      {[
+        [-0.3, 0.28, 0.75], [0.3, 0.28, 0.75], [0, 0.28, 0.8]
+      ].map(([x, y, z], i) => (
+        <mesh key={i} position={[x, y, z]} castShadow>
+          <sphereGeometry args={[0.18, 10, 8]} />
+          <meshStandardMaterial color="#fef08a" roughness={0.7} emissive="#ca8a04" emissiveIntensity={0.2} />
+        </mesh>
+      ))}
+    </group>
+  );
+};
+
 const BUILDING_MODEL_SCALES: Record<BuildingType, number> = {
   townhall: 0.74,
   goldmine: 0.70,
   farm: 0.72,
+  goldstorage: 0.72,
+  foodstorage: 0.72,
   barracks: 0.70,
   blacksmith: 0.70,
   armory: 0.70,
@@ -2016,6 +2502,10 @@ export const BuildingModel: React.FC<{
         return <GoldmineModel level={level} stamina={stamina} />;
       case 'farm':
         return <FarmModel level={level} />;
+      case 'goldstorage':
+        return <GoldStorageModel level={level} />;
+      case 'foodstorage':
+        return <FoodStorageModel level={level} />;
       case 'barracks':
         return <BarracksModel level={level} />;
       case 'blacksmith':

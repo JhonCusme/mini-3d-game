@@ -2,6 +2,7 @@ import { GameConfig } from '../../config/GameConfig';
 import { emptyTroops, type DefenseLogEntry, type GameState, type TroopCounts, type TroopId } from '../GameState';
 import { GodManager } from '../GodManager';
 import { HeroManager } from '../HeroManager';
+import { VillageManager } from '../VillageManager';
 import type { AttackArmy, AttackRecord, PvpBattleResult, VillageSnapshot } from './PvpTypes';
 import type { PvpOutcome } from './PvpRules';
 import { lootableCoins } from './PvpRules';
@@ -83,7 +84,7 @@ export class PvpManager {
             troops,
             heroRecoveringUntil,
             energy: state.energy - GameConfig.pvp.energyCost,
-            coins: state.coins + outcome.coinsStolen,
+            coins: Math.min(VillageManager.maxGoldCapacity(state), state.coins + outcome.coinsStolen),
             trophies: Math.max(0, state.trophies + outcome.attackerTrophiesDelta),
             pvpWins: state.pvpWins + (result.won ? 1 : 0),
             pvpLosses: state.pvpLosses + (result.won ? 0 : 1),

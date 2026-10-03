@@ -1,5 +1,6 @@
 import type { GameState } from './GameState';
 import { GameConfig } from '../config/GameConfig';
+import { VillageManager } from './VillageManager';
 
 export interface BattleResult {
     won: boolean;
@@ -117,7 +118,8 @@ export class BattleManager {
         if (won) {
             const prestigeMultiplier = 1 + (state.prestigeLevel * 0.5); // +50% per prestige level
             newState.battlesWon = (newState.battlesWon || 0) + 1;
-            newState.coins += Math.floor(coinsEarned * prestigeMultiplier);
+            const maxGold = VillageManager.maxGoldCapacity(newState);
+            newState.coins = Math.min(maxGold, newState.coins + Math.floor(coinsEarned * prestigeMultiplier));
             newState.experience += Math.floor(expEarned * prestigeMultiplier);
             
             // Advance progress if fighting the max unlocked territory

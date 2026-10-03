@@ -23,6 +23,12 @@ export const Hud: React.FC<{ onOpen: (p: PanelType) => void; compact?: boolean }
   const unseenLog = state.defenseLog.filter(e => !e.seen).length;
   const upgradeableCount = (Object.keys(GameConfig.troops) as TroopId[]).filter(id => TroopUpgradeManager.canUpgrade(state, id)).length;
 
+  const maxGold = VillageManager.maxGoldCapacity(state);
+  const maxFood = VillageManager.maxFoodCapacity(state);
+  const goldPct = Math.min(100, (state.coins / Math.max(1, maxGold)) * 100);
+  const foodPct = Math.min(100, ((state.food || 0) / Math.max(1, maxFood)) * 100);
+  const formatCap = (n: number) => n >= 10000 ? `${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}k` : n.toLocaleString();
+
   return (
     <div className={`hud ${compact ? 'hud-compact' : ''}`}>
       <div className="hud-top-left">
@@ -46,8 +52,32 @@ export const Hud: React.FC<{ onOpen: (p: PanelType) => void; compact?: boolean }
       </button>
 
       <div className="hud-top-right">
-        <div className="hud-res gold"><span>🪙</span><b>{Math.floor(state.coins).toLocaleString()}</b></div>
-        <div className="hud-res food" title="Comida del reino producida por tus granjas"><span>🍞</span><b>{Math.floor(state.food || 0).toLocaleString()}</b></div>
+        <div className={`hud-res gold ${goldPct >= 99 ? 'is-full' : ''}`} title={`Oro: ${Math.floor(state.coins).toLocaleString()} / ${maxGold.toLocaleString()} (Capacidad de Almacenes)`}>
+          <span>🪙</span>
+          <div className="hud-res-content">
+            <div className="hud-res-numbers">
+              <b>{Math.floor(state.coins).toLocaleString()}</b>
+              <span className="hud-res-cap">/{formatCap(maxGold)}</span>
+            </div>
+            <div className="hud-res-bar">
+              <div className="hud-res-bar-fill gold" style={{ width: `${goldPct}%` }} />
+            </div>
+          </div>
+        </div>
+
+        <div className={`hud-res food ${foodPct >= 99 ? 'is-full' : ''}`} title={`Comida: ${Math.floor(state.food || 0).toLocaleString()} / ${maxFood.toLocaleString()} (Capacidad de Graneros)`}>
+          <span>🍞</span>
+          <div className="hud-res-content">
+            <div className="hud-res-numbers">
+              <b>{Math.floor(state.food || 0).toLocaleString()}</b>
+              <span className="hud-res-cap">/{formatCap(maxFood)}</span>
+            </div>
+            <div className="hud-res-bar">
+              <div className="hud-res-bar-fill food" style={{ width: `${foodPct}%` }} />
+            </div>
+          </div>
+        </div>
+
         <div className="hud-res gem" onClick={() => onOpen('store')}><span>💎</span><b>{state.gems}</b><span className="hud-plus">+</span></div>
         <div className="hud-res energy"><span>⚡</span><b>{state.energy}/{GameConfig.maxEnergy}</b></div>
       </div>

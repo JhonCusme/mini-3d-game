@@ -2,8 +2,10 @@ import { useGame } from '../../core/GameContext';
 import { GameConfig } from '../../config/GameConfig';
 import {
   BUILDINGS, buildingHp, defenseDamage, mineCapacity, mineRatePerSecond, farmCapacity, farmRatePerSecond,
+  townhallGoldCapacity, townhallFoodCapacity, goldStorageCapacity, foodStorageCapacity,
 } from '../../config/BuildingsConfig';
 import type { PlacedBuilding } from '../../core/GameState';
+import { VillageManager } from '../../core/VillageManager';
 import { HeroManager } from '../../core/HeroManager';
 import { EffectManager } from '../../core/EffectManager';
 import { UpgradeManager } from '../../core/UpgradeManager';
@@ -36,9 +38,29 @@ export const BuildingPanel: React.FC<{ building: PlacedBuilding; onClose: () => 
       case 'townhall':
         return (
           <>
-            <Stat label="Nivel máximo del resto de edificios" value={lvl + 1} />
+            <Stat label="Nivel máx. del resto de edificios" value={lvl + 1} />
+            <Stat label="Capacidad Oro del Reino" value={`🪙 ${VillageManager.maxGoldCapacity(state).toLocaleString()}`} />
+            <Stat label="Capacidad Comida del Reino" value={`🍞 ${VillageManager.maxFoodCapacity(state).toLocaleString()}`} />
+            <Stat label="Almacén de Oro base" value={`🪙 ${townhallGoldCapacity(lvl).toLocaleString()}`} next={`🪙 ${townhallGoldCapacity(lvl + 1).toLocaleString()}`} />
+            <Stat label="Granero de Comida base" value={`🍞 ${townhallFoodCapacity(lvl).toLocaleString()}`} next={`🍞 ${townhallFoodCapacity(lvl + 1).toLocaleString()}`} />
             <Stat label="Cañones permitidos" value={BUILDINGS.cannon.maxCount(lvl)} />
             <Stat label="Torres de arqueros permitidas" value={BUILDINGS.archertower.maxCount(lvl)} />
+          </>
+        );
+      case 'goldstorage':
+        return (
+          <>
+            <Stat label="Capacidad de este Almacén" value={`🪙 ${goldStorageCapacity(lvl).toLocaleString()}`} next={`🪙 ${goldStorageCapacity(lvl + 1).toLocaleString()}`} />
+            <Stat label="Capacidad Total del Reino" value={`🪙 ${VillageManager.maxGoldCapacity(state).toLocaleString()}`} />
+            <Stat label="Oro en Reserva" value={`🪙 ${Math.floor(state.coins).toLocaleString()}`} />
+          </>
+        );
+      case 'foodstorage':
+        return (
+          <>
+            <Stat label="Capacidad de este Granero" value={`🍞 ${foodStorageCapacity(lvl).toLocaleString()}`} next={`🍞 ${foodStorageCapacity(lvl + 1).toLocaleString()}`} />
+            <Stat label="Capacidad Total del Reino" value={`🍞 ${VillageManager.maxFoodCapacity(state).toLocaleString()}`} />
+            <Stat label="Comida en Reserva" value={`🍞 ${Math.floor(state.food || 0).toLocaleString()}`} />
           </>
         );
       case 'goldmine': {
@@ -179,6 +201,44 @@ export const BuildingPanel: React.FC<{ building: PlacedBuilding; onClose: () => 
               <div className="flex-row justify-between" style={{ background: 'rgba(0,0,0,0.3)', padding: '8px', borderRadius: '8px', fontSize: '12px' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Cosecha en granero:</span>
                 <span style={{ color: '#f1c40f', fontWeight: 800 }}>🍞 {Math.floor(b.stored)}</span>
+              </div>
+            </div>
+          )}
+
+          {b.type === 'goldstorage' && (
+            <div style={panel} className="flex-col gap-2">
+              <div className="flex-row justify-between" style={{ alignItems: 'center' }}>
+                <b style={{ fontSize: '14px', color: 'var(--accent-gold)' }}>🏦 Bóveda del Tesoro Real</b>
+                <span style={{ fontSize: '11px', color: '#ffd700', fontWeight: 700 }}>Nv.{lvl}</span>
+              </div>
+              <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: '2px 0 6px 0', lineHeight: 1.4 }}>
+                Tus minas de oro y victorias en combate llenan este almacén acorazado. Subirlo de nivel y construir más almacenes amplía el cupo de oro de todo tu reino.
+              </p>
+              <div style={{ width: '100%', height: '8px', background: 'rgba(0,0,0,0.5)', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ width: `${Math.min(100, (state.coins / Math.max(1, VillageManager.maxGoldCapacity(state))) * 100)}%`, height: '100%', background: '#ffd700' }} />
+              </div>
+              <div className="flex-row justify-between" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                <span>Ocupación del Reino:</span>
+                <b style={{ color: '#ffd700' }}>{Math.floor(state.coins).toLocaleString()} / {VillageManager.maxGoldCapacity(state).toLocaleString()}</b>
+              </div>
+            </div>
+          )}
+
+          {b.type === 'foodstorage' && (
+            <div style={panel} className="flex-col gap-2">
+              <div className="flex-row justify-between" style={{ alignItems: 'center' }}>
+                <b style={{ fontSize: '14px', color: '#f59e0b' }}>🏺 Granero de Provisiones</b>
+                <span style={{ fontSize: '11px', color: '#f59e0b', fontWeight: 700 }}>Nv.{lvl}</span>
+              </div>
+              <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: '2px 0 6px 0', lineHeight: 1.4 }}>
+                Conserva el trigo y raciones cosechadas en tus granjas. Con mayor capacidad podrás almacenar alimento suficiente para mantener siempre activos a tus mineros.
+              </p>
+              <div style={{ width: '100%', height: '8px', background: 'rgba(0,0,0,0.5)', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ width: `${Math.min(100, ((state.food || 0) / Math.max(1, VillageManager.maxFoodCapacity(state))) * 100)}%`, height: '100%', background: '#f59e0b' }} />
+              </div>
+              <div className="flex-row justify-between" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                <span>Ocupación del Reino:</span>
+                <b style={{ color: '#f59e0b' }}>{Math.floor(state.food || 0).toLocaleString()} / {VillageManager.maxFoodCapacity(state).toLocaleString()}</b>
               </div>
             </div>
           )}

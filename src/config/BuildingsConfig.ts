@@ -1,7 +1,7 @@
 import type { GameConfig } from './GameConfig';
 
 export type BuildingType =
-    | 'townhall' | 'goldmine' | 'farm' | 'barracks' | 'blacksmith' | 'armory' | 'arena' | 'altar'
+    | 'townhall' | 'goldmine' | 'farm' | 'goldstorage' | 'foodstorage' | 'barracks' | 'blacksmith' | 'armory' | 'arena' | 'altar'
     | 'cannon' | 'archertower' | 'wall';
 
 type UpgradeId = keyof typeof GameConfig.upgrades;
@@ -37,7 +37,7 @@ export const VILLAGE_HALF = 12;
 export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     townhall: {
         type: 'townhall', name: 'Ayuntamiento', size: 3, color: '#c9b79c', roofColor: '#d63a3a',
-        description: 'El corazón de tu aldea. Subirlo permite mejorar más los demás edificios y construir más defensas.',
+        description: 'El corazón de tu aldea. Subirlo permite mejorar más los demás edificios, aumentar tus almacenes base y construir más defensas.',
         baseHp: 1500, hpPerLevel: 500, maxCount: () => 1,
     },
     goldmine: {
@@ -50,6 +50,18 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
         description: 'Cultiva trigo y hornea pan para alimentar a tus mineros y tropas gratis.',
         baseHp: 380, hpPerLevel: 75, buildCost: 150,
         maxCount: th => Math.min(3, 1 + Math.floor(th / 3)),
+    },
+    goldstorage: {
+        type: 'goldstorage', name: 'Almacén de Oro', size: 2, color: '#b8860b', roofColor: '#d4af37',
+        description: 'Cámara acorazada para guardar el oro de tu reino. Mejóralo para aumentar la capacidad máxima de monedas.',
+        baseHp: 480, hpPerLevel: 95, buildCost: 200,
+        maxCount: th => Math.min(4, 1 + Math.floor(th / 2)),
+    },
+    foodstorage: {
+        type: 'foodstorage', name: 'Granero Real', size: 2, color: '#c29a5b', roofColor: '#8c5028',
+        description: 'Almacén y silo para conservar las reservas de comida. Mejóralo para guardar más alimento para tus mineros y tropas.',
+        baseHp: 440, hpPerLevel: 85, buildCost: 180,
+        maxCount: th => Math.min(4, 1 + Math.floor(th / 2)),
     },
     barracks: {
         type: 'barracks', name: 'Cuartel', size: 2, color: '#b23b3b', roofColor: '#6b3f2a', upgradeId: 'troopCapacity',
@@ -159,4 +171,21 @@ export function farmRatePerSecond(level: number): number {
 
 export function farmCapacity(level: number): number {
     return 40 + level * 35;
+}
+
+// Kingdom-wide storage capacities
+export function townhallGoldCapacity(thLevel: number): number {
+    return 1500 * Math.max(1, thLevel);
+}
+
+export function townhallFoodCapacity(thLevel: number): number {
+    return 250 * Math.max(1, thLevel);
+}
+
+export function goldStorageCapacity(level: number): number {
+    return level <= 1 ? 2500 : Math.floor(2500 * Math.pow(1.85, level - 1));
+}
+
+export function foodStorageCapacity(level: number): number {
+    return level <= 1 ? 400 : Math.floor(400 * Math.pow(1.85, level - 1));
 }

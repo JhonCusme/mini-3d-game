@@ -116,7 +116,7 @@ export function createBotLayout(seed: number, th: number): LayoutBuilding[] {
     const wanted: BuildingType[] = [];
     for (let i = 0; i < numCannons; i++) wanted.push('cannon');
     for (let i = 0; i < numTowers; i++) wanted.push('archertower');
-    wanted.push('goldmine', 'goldmine', 'barracks', 'blacksmith', 'armory', 'arena', 'altar');
+    wanted.push('goldmine', 'goldstorage', 'foodstorage', 'farm', 'barracks', 'blacksmith', 'armory', 'arena', 'altar');
 
     for (const type of wanted) {
         const size = BUILDINGS[type].size;

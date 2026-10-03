@@ -1,5 +1,6 @@
 import type { GameState } from './GameState';
 import { GameConfig } from '../config/GameConfig';
+import { VillageManager } from './VillageManager';
 
 export class RewardManager {
     static openChest(state: GameState): GameState {
@@ -25,7 +26,8 @@ export class RewardManager {
             energyToAdd = Math.floor(Math.random() * 5) + 1;
         }
 
-        newState.coins += coinsToAdd;
+        const maxGold = VillageManager.maxGoldCapacity(newState);
+        newState.coins = Math.min(maxGold, newState.coins + coinsToAdd);
         newState.gems += gemsToAdd;
         newState.energy = Math.min(GameConfig.maxEnergy, newState.energy + energyToAdd);
 
@@ -43,7 +45,8 @@ export class RewardManager {
 
         let newState = { ...state };
         newState.lastDailyReward = Date.now();
-        newState.coins += 500;
+        const maxGold = VillageManager.maxGoldCapacity(newState);
+        newState.coins = Math.min(maxGold, newState.coins + 500);
         newState.gems += 10;
         newState.energy = GameConfig.maxEnergy; // Full energy refill
 

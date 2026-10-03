@@ -1,6 +1,8 @@
 import {
     BUILDINGS, BUILDER_COSTS, MAX_BUILDERS, VILLAGE_HALF, buildTimeSeconds, defenseUpgradeCost, gemsToFinish,
-    maxLevelFor, mineCapacity, mineRatePerSecond, farmCapacity, farmRatePerSecond, townhallUpgradeCost, type BuildingType,
+    maxLevelFor, mineCapacity, mineRatePerSecond, farmCapacity, farmRatePerSecond,
+    townhallGoldCapacity, townhallFoodCapacity, goldStorageCapacity, foodStorageCapacity,
+    townhallUpgradeCost, type BuildingType,
 } from '../config/BuildingsConfig';
 import type { GameState, PlacedBuilding } from './GameState';
 import { UpgradeManager } from './UpgradeManager';
@@ -22,6 +24,8 @@ export function defaultVillage(state: Pick<GameState, 'level' | 'upgrades' | 'he
         b('arena', -1, 6, (up.critRate || 0) + 1),
         b('altar', -1, -7, Math.max(1, state.heroLevel)),
         b('farm', 8, 4, 1),
+        b('goldstorage', -6, -7, 1),
+        b('foodstorage', 6, -7, 1),
         b('cannon', 3, -8, 1),
     ];
     // Starter defensive wall ring enclosing the townhall core
@@ -48,6 +52,26 @@ export class VillageManager {
 
     static countOf(state: GameState, type: BuildingType): number {
         return state.village.filter(b => b.type === type).length;
+    }
+
+    // ---------- Resource Storage Limits ----------
+
+    static maxGoldCapacity(state: GameState): number {
+        const th = this.townhallLevel(state);
+        const base = townhallGoldCapacity(th);
+        const storages = state.village
+            .filter(b => b.type === 'goldstorage' && b.level > 0)
+            .reduce((sum, b) => sum + goldStorageCapacity(b.level), 0);
+        return base + storages;
+    }
+
+    static maxFoodCapacity(state: GameState): number {
+        const th = this.townhallLevel(state);
+        const base = townhallFoodCapacity(th);
+        const storages = state.village
+            .filter(b => b.type === 'foodstorage' && b.level > 0)
+            .reduce((sum, b) => sum + foodStorageCapacity(b.level), 0);
+        return base + storages;
     }
 
     // ---------- Placement ----------
@@ -303,13 +327,19 @@ export class VillageManager {
         };
     }
 
-    static collect(state: GameState, uid: string): { state: GameState; amount: number; type?: 'coins' | 'food' } {
+    static collect(state: GameState, uid: string): { state: GameState; amount: number; type?: 'coins' | 'food'; isFull?: boolean } {
         const b = this.get(state, uid);
         if (!b || (b.type !== 'goldmine' && b.type !== 'farm')) return { state, amount: 0 };
-        const amount = Math.floor(b.stored);
-        if (amount <= 0) return { state, amount: 0 };
+        const stored = Math.floor(b.stored);
+        if (stored <= 0) return { state, amount: 0 };
 
         if (b.type === 'farm') {
+            const maxFood = this.maxFoodCapacity(state);
+            const space = Math.max(0, maxFood - (state.food || 0));
+            if (space <= 0) {
+                return { state, amount: 0, type: 'food', isFull: true };
+            }
+            const amount = Math.min(stored, space);
             return {
                 state: {
                     ...state,
@@ -317,10 +347,17 @@ export class VillageManager {
                     village: state.village.map(o => (o.uid === uid ? { ...o, stored: o.stored - amount } : o)),
                 },
                 amount,
-                type: 'food'
+                type: 'food',
+                isFull: space <= stored,
             };
         }
 
+        const maxGold = this.maxGoldCapacity(state);
+        const space = Math.max(0, maxGold - state.coins);
+        if (space <= 0) {
+            return { state, amount: 0, type: 'coins', isFull: true };
+        }
+        const amount = Math.min(stored, space);
         return {
             state: {
                 ...state,
@@ -328,11 +365,12 @@ export class VillageManager {
                 village: state.village.map(o => (o.uid === uid ? { ...o, stored: o.stored - amount } : o)),
             },
             amount,
-            type: 'coins'
+            type: 'coins',
+            isFull: space <= stored,
         };
     }
 
-    /** Fixes up saves from before individual walls or farm existed. */
+    /** Fixes up saves from before individual walls, farm or storages existed. */
     static ensureVillage(state: GameState): GameState {
         let village = state.village;
         if (!Array.isArray(village) || village.length === 0) {
@@ -348,6 +386,24 @@ export class VillageManager {
                     fx = -8; fz = -7;
                 }
                 village = [...village, b('farm', fx, fz, 1)];
+            }
+
+            // Ensure starter goldstorage exists for existing players
+            if (!village.some(o => o.type === 'goldstorage')) {
+                let sx = -6, sz = -7;
+                if (village.some(o => Math.abs(o.x - sx) < 2 && Math.abs(o.z - sz) < 2)) {
+                    sx = -8; sz = -5;
+                }
+                village = [...village, b('goldstorage', sx, sz, 1)];
+            }
+
+            // Ensure starter foodstorage exists for existing players
+            if (!village.some(o => o.type === 'foodstorage')) {
+                let sx = 6, sz = -7;
+                if (village.some(o => Math.abs(o.x - sx) < 2 && Math.abs(o.z - sz) < 2)) {
+                    sx = 8; sz = -5;
+                }
+                village = [...village, b('foodstorage', sx, sz, 1)];
             }
 
             if (!village.some(o => o.type === 'wall')) {

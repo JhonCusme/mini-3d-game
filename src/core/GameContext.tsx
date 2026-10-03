@@ -58,7 +58,7 @@ interface GameContextType {
     finishBuildingUpgrade: (uid: string) => void;
     moveBuilding: (uid: string, x: number, z: number) => void;
     buildBuilding: (type: BuildingType) => string | null;
-    collectMine: (uid: string) => number;
+    collectMine: (uid: string) => { amount: number; isFull?: boolean; type?: 'coins' | 'food' };
     feedMiners: (uid: string) => boolean;
     buyBuilder: () => void;
     resetGame: () => void;
@@ -565,13 +565,13 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return res.uid;
     };
 
-    const collectMine = (uid: string): number => {
+    const collectMine = (uid: string): { amount: number; isFull?: boolean; type?: 'coins' | 'food' } => {
         const res = VillageManager.collect(stateRef.current, uid);
-        if (res.amount <= 0) return 0;
+        if (res.amount <= 0) return { amount: 0, isFull: res.isFull, type: res.type };
         AudioManager.playClick();
         stateRef.current = res.state;
         setState((prev) => VillageManager.collect(prev, uid).state);
-        return res.amount;
+        return { amount: res.amount, isFull: res.isFull, type: res.type };
     };
 
     const feedMiners = (uid: string): boolean => {
