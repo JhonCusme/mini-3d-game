@@ -4,6 +4,7 @@ import { Html } from '@react-three/drei';
 import type { Group } from 'three';
 import type { PlacedBuilding, TroopCounts, TroopId } from '../../core/GameState';
 import { GameConfig } from '../../config/GameConfig';
+import { BUILDINGS } from '../../config/BuildingsConfig';
 import { StylizedTroop, HeroKingModel } from '../common/StylizedCharacters';
 import { AudioManager } from '../../core/AudioManager';
 
@@ -27,6 +28,64 @@ const EMPTY_COUNTS: TroopCounts = {
 };
 
 // ---------------------------------------------------------------------------
+// Spatial Collision Detection & Pathfinding Helpers
+// ---------------------------------------------------------------------------
+
+export function isPositionBlocked(x: number, z: number, village: PlacedBuilding[], margin = 0.38): boolean {
+  // Village outer boundary bounds
+  if (x < -8.7 || x > 8.7 || z < -8.7 || z > 8.7) return true;
+
+  for (const b of village) {
+    const size = BUILDINGS[b.type]?.size ?? 2;
+    const minX = b.x - margin;
+    const maxX = b.x + size + margin;
+    const minZ = b.z - margin;
+    const maxZ = b.z + size + margin;
+
+    if (x >= minX && x <= maxX && z >= minZ && z <= maxZ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export function getNearestClearPoint(x: number, z: number, village: PlacedBuilding[]): { x: number; z: number } {
+  if (!isPositionBlocked(x, z, village, 0.35)) return { x, z };
+  for (let r = 0.5; r <= 4.0; r += 0.5) {
+    for (let a = 0; a < 8; a++) {
+      const angle = (a / 8) * Math.PI * 2;
+      const testX = Math.max(-8.5, Math.min(8.5, x + Math.cos(angle) * r));
+      const testZ = Math.max(-8.5, Math.min(8.5, z + Math.sin(angle) * r));
+      if (!isPositionBlocked(testX, testZ, village, 0.35)) {
+        return { x: testX, z: testZ };
+      }
+    }
+  }
+  return { x, z };
+}
+
+export function findClearPatrolPoint(
+  startX: number,
+  startZ: number,
+  village: PlacedBuilding[],
+  minDist = 2.0,
+  maxDist = 5.5,
+  maxAttempts = 16
+): { x: number; z: number } {
+  for (let i = 0; i < maxAttempts; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const dist = minDist + Math.random() * (maxDist - minDist);
+    const candX = Math.max(-8.5, Math.min(8.5, startX + Math.cos(angle) * dist));
+    const candZ = Math.max(-8.5, Math.min(8.5, startZ + Math.sin(angle) * dist));
+
+    if (!isPositionBlocked(candX, candZ, village, 0.45)) {
+      return { x: candX, z: candZ };
+    }
+  }
+  return { x: startX, z: startZ };
+}
+
+// ---------------------------------------------------------------------------
 // 3D Unit Mesh (Stylized Characters with training/marching animations)
 // ---------------------------------------------------------------------------
 
@@ -34,6 +93,7 @@ interface UnitMeshProps {
   type: TroopId;
   teamColor?: string;
   isPracticing?: boolean;
+  isMoving?: boolean;
   practiceType?: 'sword' | 'bow' | 'horse' | 'magic' | 'siege' | 'heal';
   animOffset?: number;
 }
@@ -42,6 +102,7 @@ const VillageUnitMesh: React.FC<UnitMeshProps> = ({
   type,
   teamColor = '#3a7bd5',
   isPracticing = false,
+  isMoving = false,
   practiceType = 'sword',
   animOffset = 0,
 }) => {
@@ -49,7 +110,7 @@ const VillageUnitMesh: React.FC<UnitMeshProps> = ({
     <StylizedTroop
       type={type}
       teamColor={teamColor}
-      isMoving={!isPracticing}
+      isMoving={isPracticing ? false : isMoving}
       isPracticing={isPracticing}
       practiceType={practiceType}
       animOffset={animOffset}
@@ -68,6 +129,7 @@ interface PatrollingGuardProps {
   initialX: number;
   initialZ: number;
   teamColor: string;
+  village: PlacedBuilding[];
   onClick: (name: string, phrase: string, pos: [number, number, number]) => void;
 }
 
@@ -115,10 +177,12 @@ const PatrollingGuard: React.FC<PatrollingGuardProps> = ({
   initialX,
   initialZ,
   teamColor,
+  village,
   onClick,
 }) => {
   const rootRef = useRef<Group>(null);
   const bodyRef = useRef<Group>(null);
+  const [isMoving, setIsMoving] = useState(false);
 
   const patrolState = useRef({
     x: initialX,
@@ -126,25 +190,24 @@ const PatrollingGuard: React.FC<PatrollingGuardProps> = ({
     targetX: initialX,
     targetZ: initialZ,
     isIdle: true,
-    idleTimer: 2.0 + Math.random() * 3,
+    idleTimer: 1.5 + Math.random() * 2.5,
     heading: Math.random() * Math.PI * 2,
     speed: 0.85 + Math.random() * 0.35,
     jumpTimer: 0,
   });
 
   const pickNewTarget = () => {
-    // Keep patrol inside the main secure village perimeter
-    const angle = Math.random() * Math.PI * 2;
-    const dist = 3.5 + Math.random() * 5.0;
-    const nx = Math.max(-8.5, Math.min(8.5, patrolState.current.x + Math.cos(angle) * dist));
-    const nz = Math.max(-8.5, Math.min(8.5, patrolState.current.z + Math.sin(angle) * dist));
-    patrolState.current.targetX = nx;
-    patrolState.current.targetZ = nz;
+    // Pick an unobstructed waypoint within village pathways
+    const pt = findClearPatrolPoint(patrolState.current.x, patrolState.current.z, village, 2.5, 6.0);
+    patrolState.current.targetX = pt.x;
+    patrolState.current.targetZ = pt.z;
     patrolState.current.isIdle = false;
 
-    const dx = nx - patrolState.current.x;
-    const dz = nz - patrolState.current.z;
-    patrolState.current.heading = Math.atan2(dx, dz);
+    const dx = pt.x - patrolState.current.x;
+    const dz = pt.z - patrolState.current.z;
+    if (Math.abs(dx) > 0.01 || Math.abs(dz) > 0.01) {
+      patrolState.current.heading = Math.atan2(dx, dz);
+    }
   };
 
   useFrame(({ clock }, dt) => {
@@ -163,6 +226,7 @@ const PatrollingGuard: React.FC<PatrollingGuardProps> = ({
     if (s.isIdle) {
       s.idleTimer -= dt;
       body.position.y = Math.sin(clock.elapsedTime * 2 + initialX) * 0.03;
+      if (isMoving) setIsMoving(false);
       if (s.idleTimer <= 0) {
         pickNewTarget();
       }
@@ -173,19 +237,44 @@ const PatrollingGuard: React.FC<PatrollingGuardProps> = ({
 
       if (dist < 0.25) {
         s.isIdle = true;
-        s.idleTimer = 3.0 + Math.random() * 4.0;
+        s.idleTimer = 3.0 + Math.random() * 3.5;
         body.position.y = 0;
+        if (isMoving) setIsMoving(false);
       } else {
         const step = Math.min(dist, s.speed * dt);
-        s.x += (dx / dist) * step;
-        s.z += (dz / dist) * step;
+        const moveX = (dx / dist) * step;
+        const moveZ = (dz / dist) * step;
 
-        const isFlying = type === 'mages' || type === 'healers';
-        body.position.y = isFlying
-          ? Math.sin(clock.elapsedTime * 3) * 0.08
-          : Math.abs(Math.sin(clock.elapsedTime * 9)) * 0.07;
+        let moved = false;
+        // 1. Try moving directly towards target
+        if (!isPositionBlocked(s.x + moveX, s.z + moveZ, village, 0.35)) {
+          s.x += moveX;
+          s.z += moveZ;
+          moved = true;
+        } else if (!isPositionBlocked(s.x + moveX, s.z, village, 0.35)) {
+          // 2. Wall slide along X
+          s.x += moveX;
+          moved = true;
+        } else if (!isPositionBlocked(s.x, s.z + moveZ, village, 0.35)) {
+          // 3. Wall slide along Z
+          s.z += moveZ;
+          moved = true;
+        }
 
-        body.rotation.y = Math.atan2(dx, dz);
+        if (moved) {
+          if (!isMoving) setIsMoving(true);
+          const isFlying = type === 'mages' || type === 'healers';
+          body.position.y = isFlying
+            ? Math.sin(clock.elapsedTime * 3) * 0.08
+            : Math.abs(Math.sin(clock.elapsedTime * 9)) * 0.07;
+          body.rotation.y = Math.atan2(dx, dz);
+        } else {
+          // Path obstructed completely by walls/structures, stop walking
+          s.isIdle = true;
+          s.idleTimer = 1.0 + Math.random() * 2.0;
+          body.position.y = 0;
+          if (isMoving) setIsMoving(false);
+        }
       }
     }
 
@@ -205,7 +294,7 @@ const PatrollingGuard: React.FC<PatrollingGuardProps> = ({
   return (
     <group ref={rootRef} position={[initialX, 0, initialZ]} onPointerDown={handlePointerDown}>
       <group ref={bodyRef}>
-        <VillageUnitMesh type={type} teamColor={teamColor} isPracticing={false} />
+        <VillageUnitMesh type={type} teamColor={teamColor} isPracticing={false} isMoving={isMoving} />
       </group>
     </group>
   );
@@ -238,18 +327,20 @@ const HeroKingPatrol: React.FC<HeroKingPatrolProps> = ({
 }) => {
   const rootRef = useRef<Group>(null);
   const bodyRef = useRef<Group>(null);
+  const [isMoving, setIsMoving] = useState(false);
 
   const th = village.find((b) => b.type === 'townhall') || { x: 0, z: 0 };
   const altar = village.find((b) => b.type === 'altar');
 
-  const startX = altar ? altar.x + 1.2 : th.x + 1.8;
-  const startZ = altar ? altar.z + 1.2 : th.z + 2.2;
+  const rawStartX = altar ? altar.x + 2.4 : th.x + 3.4;
+  const rawStartZ = altar ? altar.z + 1.0 : th.z + 1.5;
+  const safeStart = useMemo(() => getNearestClearPoint(rawStartX, rawStartZ, village), [rawStartX, rawStartZ, village]);
 
   const state = useRef({
-    x: startX,
-    z: startZ,
-    targetX: startX,
-    targetZ: startZ,
+    x: safeStart.x,
+    z: safeStart.z,
+    targetX: safeStart.x,
+    targetZ: safeStart.z,
     isIdle: true,
     idleTimer: 2.0,
     heading: 0,
@@ -258,16 +349,15 @@ const HeroKingPatrol: React.FC<HeroKingPatrolProps> = ({
   });
 
   const pickTarget = () => {
-    const angle = Math.random() * Math.PI * 2;
-    const dist = 2.5 + Math.random() * 4.5;
-    const nx = Math.max(-7.5, Math.min(7.5, th.x + Math.cos(angle) * dist));
-    const nz = Math.max(-7.5, Math.min(7.5, th.z + Math.sin(angle) * dist));
-    state.current.targetX = nx;
-    state.current.targetZ = nz;
+    const pt = findClearPatrolPoint(state.current.x, state.current.z, village, 2.5, 5.5);
+    state.current.targetX = pt.x;
+    state.current.targetZ = pt.z;
     state.current.isIdle = false;
-    const dx = nx - state.current.x;
-    const dz = nz - state.current.z;
-    state.current.heading = Math.atan2(dx, dz);
+    const dx = pt.x - state.current.x;
+    const dz = pt.z - state.current.z;
+    if (Math.abs(dx) > 0.01 || Math.abs(dz) > 0.01) {
+      state.current.heading = Math.atan2(dx, dz);
+    }
   };
 
   useFrame(({ clock }, dt) => {
@@ -285,12 +375,14 @@ const HeroKingPatrol: React.FC<HeroKingPatrolProps> = ({
 
     if (isRecovering) {
       body.position.y = 0;
+      if (isMoving) setIsMoving(false);
       return;
     }
 
     if (s.isIdle) {
       s.idleTimer -= dt;
       body.position.y = Math.sin(clock.elapsedTime * 2) * 0.025;
+      if (isMoving) setIsMoving(false);
       if (s.idleTimer <= 0) {
         pickTarget();
       }
@@ -298,16 +390,40 @@ const HeroKingPatrol: React.FC<HeroKingPatrolProps> = ({
       const dx = s.targetX - s.x;
       const dz = s.targetZ - s.z;
       const dist = Math.sqrt(dx * dx + dz * dz);
+
       if (dist < 0.25) {
         s.isIdle = true;
-        s.idleTimer = 4.0 + Math.random() * 4.0;
+        s.idleTimer = 4.0 + Math.random() * 3.5;
         body.position.y = 0;
+        if (isMoving) setIsMoving(false);
       } else {
         const step = Math.min(dist, s.speed * dt);
-        s.x += (dx / dist) * step;
-        s.z += (dz / dist) * step;
-        body.position.y = Math.abs(Math.sin(clock.elapsedTime * 7)) * 0.08;
-        body.rotation.y = Math.atan2(dx, dz);
+        const moveX = (dx / dist) * step;
+        const moveZ = (dz / dist) * step;
+
+        let moved = false;
+        if (!isPositionBlocked(s.x + moveX, s.z + moveZ, village, 0.4)) {
+          s.x += moveX;
+          s.z += moveZ;
+          moved = true;
+        } else if (!isPositionBlocked(s.x + moveX, s.z, village, 0.4)) {
+          s.x += moveX;
+          moved = true;
+        } else if (!isPositionBlocked(s.x, s.z + moveZ, village, 0.4)) {
+          s.z += moveZ;
+          moved = true;
+        }
+
+        if (moved) {
+          if (!isMoving) setIsMoving(true);
+          body.position.y = Math.abs(Math.sin(clock.elapsedTime * 7)) * 0.08;
+          body.rotation.y = Math.atan2(dx, dz);
+        } else {
+          s.isIdle = true;
+          s.idleTimer = 1.0 + Math.random() * 2.0;
+          body.position.y = 0;
+          if (isMoving) setIsMoving(false);
+        }
       }
     }
 
@@ -328,9 +444,9 @@ const HeroKingPatrol: React.FC<HeroKingPatrolProps> = ({
   };
 
   return (
-    <group ref={rootRef} position={[startX, 0, startZ]} onPointerDown={handlePointerDown}>
+    <group ref={rootRef} position={[safeStart.x, 0, safeStart.z]} onPointerDown={handlePointerDown}>
       <group ref={bodyRef}>
-        <HeroKingModel level={heroLevel} scale={0.95} />
+        <HeroKingModel level={heroLevel} scale={0.95} isMoving={isMoving} />
       </group>
     </group>
   );
@@ -356,115 +472,88 @@ const TrainingCampScenery: React.FC<{ x: number; z: number; teamColor?: string }
 
   return (
     <group position={[x, 0, z]}>
-      {/* Sandy training ground floor pad */}
+      {/* Compact sandy training ground floor pad (radius 1.35) */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, 0]} receiveShadow>
-        <circleGeometry args={[3.3, 24]} />
+        <circleGeometry args={[1.35, 20]} />
         <meshStandardMaterial color="#c29b68" roughness={0.9} />
       </mesh>
 
-      {/* Decorative training ring border stakes with torch brackets */}
-      {Array.from({ length: 8 }).map((_, i) => {
-        const angle = (i / 8) * Math.PI * 2;
-        const px = Math.cos(angle) * 3.1;
-        const pz = Math.sin(angle) * 3.1;
+      {/* 4 corner torch brackets on perimeter */}
+      {[0, 1, 2, 3].map((i) => {
+        const angle = (i / 4) * Math.PI * 2 + Math.PI / 4;
+        const px = Math.cos(angle) * 1.22;
+        const pz = Math.sin(angle) * 1.22;
         return (
           <group key={i} position={[px, 0, pz]}>
-            <mesh position={[0, 0.25, 0]} castShadow>
-              <cylinderGeometry args={[0.06, 0.08, 0.5, 6]} />
+            <mesh position={[0, 0.2, 0]} castShadow>
+              <cylinderGeometry args={[0.04, 0.05, 0.4, 5]} />
               <meshStandardMaterial color="#593b22" />
             </mesh>
-            {i % 2 === 0 && (
-              <mesh position={[0, 0.52, 0]}>
-                <sphereGeometry args={[0.06, 6, 6]} />
-                <meshStandardMaterial color="#f1c40f" emissive="#e67e22" emissiveIntensity={0.8} />
-              </mesh>
-            )}
+            <mesh position={[0, 0.42, 0]}>
+              <sphereGeometry args={[0.045, 6, 6]} />
+              <meshStandardMaterial color="#f1c40f" emissive="#e67e22" emissiveIntensity={0.8} />
+            </mesh>
           </group>
         );
       })}
 
-      {/* Military Command Tent with Team Color Canvas */}
-      <group position={[-1.2, 0, -2.1]} rotation={[0, 0.35, 0]}>
-        {/* Tent A-Frame Support Posts */}
-        {[-0.6, 0.6].map((postX, i) => (
-          <group key={i} position={[postX, 0, 0]}>
-            <mesh position={[0, 0.6, -0.4]} rotation={[0.45, 0, 0]} castShadow>
-              <cylinderGeometry args={[0.03, 0.03, 1.4, 5]} />
-              <meshStandardMaterial color="#4a2e12" />
-            </mesh>
-            <mesh position={[0, 0.6, 0.4]} rotation={[-0.45, 0, 0]} castShadow>
-              <cylinderGeometry args={[0.03, 0.03, 1.4, 5]} />
-              <meshStandardMaterial color="#4a2e12" />
-            </mesh>
-          </group>
-        ))}
-        {/* Ridgepole */}
-        <mesh position={[0, 1.15, 0]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[0.03, 0.03, 1.3, 5]} />
+      {/* Mini Command Pavilion / Banner at North edge */}
+      <group position={[0, 0, -0.9]} rotation={[0, 0, 0]}>
+        <mesh position={[0, 0.5, 0]} castShadow>
+          <cylinderGeometry args={[0.025, 0.03, 1.0, 5]} />
           <meshStandardMaterial color="#4a2e12" />
         </mesh>
-        {/* Fabric Canvas Roof */}
-        <mesh position={[0, 0.65, 0]} castShadow>
-          <coneGeometry args={[1.0, 1.1, 4]} />
+        <mesh position={[0, 0.9, 0]} castShadow>
+          <boxGeometry args={[0.3, 0.18, 0.02]} />
           <meshStandardMaterial color={teamColor} roughness={0.7} />
         </mesh>
-        {/* Golden Pennant Flag */}
-        <mesh position={[0, 1.35, 0]}>
-          <boxGeometry args={[0.32, 0.15, 0.02]} />
+        <mesh position={[0, 1.02, 0]}>
+          <coneGeometry args={[0.04, 0.08, 4]} />
           <meshStandardMaterial color="#ffd700" metalness={0.85} roughness={0.2} />
         </mesh>
-        {/* Supply Wooden Crate */}
-        <mesh position={[0.7, 0.18, 0.2]} castShadow>
-          <boxGeometry args={[0.36, 0.36, 0.36]} />
+        {/* Small supply crate */}
+        <mesh position={[0.26, 0.1, 0.05]} castShadow>
+          <boxGeometry args={[0.2, 0.2, 0.2]} />
           <meshStandardMaterial color="#6a4521" roughness={0.8} />
-        </mesh>
-        {/* Hay bale for horses */}
-        <mesh position={[-0.8, 0.16, 0.4]} castShadow>
-          <boxGeometry args={[0.5, 0.32, 0.32]} />
-          <meshStandardMaterial color="#d4a373" roughness={1} />
         </mesh>
       </group>
 
-      {/* Central Warming Campfire */}
+      {/* Central Warming Campfire (Compact) */}
       <group position={[0, 0, 0]}>
         {/* Stone ring */}
-        {Array.from({ length: 7 }).map((_, i) => {
-          const a = (i / 7) * Math.PI * 2;
+        {Array.from({ length: 6 }).map((_, i) => {
+          const a = (i / 6) * Math.PI * 2;
           return (
-            <mesh key={i} position={[Math.cos(a) * 0.45, 0.08, Math.sin(a) * 0.45]}>
-              <dodecahedronGeometry args={[0.1, 0]} />
+            <mesh key={i} position={[Math.cos(a) * 0.26, 0.05, Math.sin(a) * 0.26]}>
+              <dodecahedronGeometry args={[0.06, 0]} />
               <meshStandardMaterial color="#57606f" />
             </mesh>
           );
         })}
         {/* Wood logs */}
-        <mesh position={[0, 0.12, 0]} rotation={[0.4, 0.8, 0]}>
-          <cylinderGeometry args={[0.05, 0.05, 0.5]} />
+        <mesh position={[0, 0.07, 0]} rotation={[0.4, 0.8, 0]}>
+          <cylinderGeometry args={[0.03, 0.03, 0.3]} />
           <meshStandardMaterial color="#2f1a08" />
         </mesh>
-        <mesh position={[0, 0.12, 0]} rotation={[-0.4, -0.6, 0]}>
-          <cylinderGeometry args={[0.05, 0.05, 0.5]} />
+        <mesh position={[0, 0.07, 0]} rotation={[-0.4, -0.6, 0]}>
+          <cylinderGeometry args={[0.03, 0.03, 0.3]} />
           <meshStandardMaterial color="#2f1a08" />
         </mesh>
         {/* Animated campfire flame */}
-        <group ref={fireRef} position={[0, 0.28, 0]}>
+        <group ref={fireRef} position={[0, 0.16, 0]}>
           <mesh>
-            <coneGeometry args={[0.22, 0.45, 6]} />
+            <coneGeometry args={[0.13, 0.28, 5]} />
             <meshBasicMaterial color="#ff4757" />
           </mesh>
-          <mesh position={[0, 0.05, 0]}>
-            <coneGeometry args={[0.15, 0.35, 6]} />
+          <mesh position={[0, 0.03, 0]}>
+            <coneGeometry args={[0.09, 0.2, 5]} />
             <meshBasicMaterial color="#ffa502" />
-          </mesh>
-          <mesh position={[0, 0.1, 0]}>
-            <coneGeometry args={[0.08, 0.22, 6]} />
-            <meshBasicMaterial color="#ffeaa7" />
           </mesh>
         </group>
       </group>
 
-      {/* Target Dummy 1 (Wooden sparring doll) */}
-      <group position={[-1.6, 0, 1.2]} rotation={[0, 0.8, 0]}>
+      {/* Target Dummy (Wooden sparring doll, compact) */}
+      <group position={[-0.8, 0, 0.55]} rotation={[0, 0.8, 0]} scale={0.72}>
         <mesh position={[0, 0.55, 0]} castShadow>
           <cylinderGeometry args={[0.06, 0.08, 1.1]} />
           <meshStandardMaterial color="#8b5a2b" />
@@ -483,55 +572,47 @@ const TrainingCampScenery: React.FC<{ x: number; z: number; teamColor?: string }
         </mesh>
       </group>
 
-      {/* Archery Target Board */}
-      <group position={[1.8, 0, -1.2]} rotation={[0, -2.2, 0]}>
-        <mesh position={[-0.2, 0.5, -0.1]} rotation={[0.2, 0, 0]}>
-          <cylinderGeometry args={[0.03, 0.03, 1.1]} />
+      {/* Archery Target Board (Compact) */}
+      <group position={[0.85, 0, -0.55]} rotation={[0, -2.2, 0]} scale={0.72}>
+        <mesh position={[-0.15, 0.45, -0.1]} rotation={[0.2, 0, 0]}>
+          <cylinderGeometry args={[0.025, 0.025, 0.9]} />
           <meshStandardMaterial color="#573a1d" />
         </mesh>
-        <mesh position={[0.2, 0.5, -0.1]} rotation={[0.2, 0, 0]}>
-          <cylinderGeometry args={[0.03, 0.03, 1.1]} />
+        <mesh position={[0.15, 0.45, -0.1]} rotation={[0.2, 0, 0]}>
+          <cylinderGeometry args={[0.025, 0.025, 0.9]} />
           <meshStandardMaterial color="#573a1d" />
         </mesh>
-        <mesh position={[0, 0.8, 0]}>
-          <cylinderGeometry args={[0.38, 0.38, 0.08, 18]} />
+        <mesh position={[0, 0.72, 0]}>
+          <cylinderGeometry args={[0.3, 0.3, 0.06, 16]} />
           <meshStandardMaterial color="#ffffff" />
         </mesh>
-        <mesh position={[0, 0.8, 0.045]}>
-          <circleGeometry args={[0.26, 16]} />
+        <mesh position={[0, 0.72, 0.035]}>
+          <circleGeometry args={[0.2, 14]} />
           <meshBasicMaterial color="#ff4757" />
         </mesh>
-        <mesh position={[0, 0.8, 0.046]}>
-          <circleGeometry args={[0.12, 16]} />
+        <mesh position={[0, 0.72, 0.036]}>
+          <circleGeometry args={[0.09, 14]} />
           <meshBasicMaterial color="#ffd700" />
-        </mesh>
-        <mesh position={[0.04, 0.82, 0.22]} rotation={[1.5, 0.2, 0]}>
-          <cylinderGeometry args={[0.015, 0.015, 0.4]} />
-          <meshStandardMaterial color="#dfe4ea" />
-        </mesh>
-        <mesh position={[-0.06, 0.76, 0.24]} rotation={[1.6, -0.15, 0]}>
-          <cylinderGeometry args={[0.015, 0.015, 0.45]} />
-          <meshStandardMaterial color="#dfe4ea" />
         </mesh>
       </group>
 
-      {/* Weapon Rack */}
-      <group position={[-1.7, 0, -0.9]} rotation={[0, 0.6, 0]}>
-        <mesh position={[0, 0.4, 0]}>
-          <boxGeometry args={[0.8, 0.06, 0.1]} />
+      {/* Weapon Rack (Compact) */}
+      <group position={[-0.8, 0, -0.5]} rotation={[0, 0.6, 0]} scale={0.65}>
+        <mesh position={[0, 0.35, 0]}>
+          <boxGeometry args={[0.6, 0.05, 0.08]} />
           <meshStandardMaterial color="#593b22" />
         </mesh>
-        <mesh position={[-0.35, 0.2, 0]}>
-          <cylinderGeometry args={[0.03, 0.03, 0.4]} />
+        <mesh position={[-0.25, 0.18, 0]}>
+          <cylinderGeometry args={[0.025, 0.025, 0.36]} />
           <meshStandardMaterial color="#593b22" />
         </mesh>
-        <mesh position={[0.35, 0.2, 0]}>
-          <cylinderGeometry args={[0.03, 0.03, 0.4]} />
+        <mesh position={[0.25, 0.18, 0]}>
+          <cylinderGeometry args={[0.025, 0.025, 0.36]} />
           <meshStandardMaterial color="#593b22" />
         </mesh>
-        {[-0.2, 0, 0.2].map((xOffset, i) => (
-          <mesh key={i} position={[xOffset, 0.4, 0.08]} rotation={[0.4, 0, 0]}>
-            <cylinderGeometry args={[0.015, 0.015, 0.55]} />
+        {[-0.15, 0.15].map((xOffset, i) => (
+          <mesh key={i} position={[xOffset, 0.35, 0.06]} rotation={[0.4, 0, 0]}>
+            <cylinderGeometry args={[0.012, 0.012, 0.45]} />
             <meshStandardMaterial color="#a4b0be" metalness={0.8} />
           </mesh>
         ))}
@@ -660,12 +741,27 @@ export const VillageTroops: React.FC<VillageTroopsProps> = ({
   const barracks = village.find((b) => b.type === 'barracks');
   const campPos = useMemo<[number, number]>(() => {
     if (barracks) {
-      const cx = barracks.x + 3.8;
-      const cz = barracks.z + 1.2;
-      return [Math.max(-8, Math.min(8, cx)), Math.max(-8, Math.min(8, cz))];
+      const candidates: [number, number][] = [
+        [barracks.x + 2.5, barracks.z + 1.0], // East
+        [barracks.x + 1.0, barracks.z + 2.5], // South
+        [barracks.x - 1.5, barracks.z + 1.0], // West
+        [barracks.x + 1.0, barracks.z - 1.5], // North
+      ];
+      const otherBuildings = village.filter((b) => b.uid !== barracks.uid);
+      for (const [candX, candZ] of candidates) {
+        const cx = Math.max(-7.5, Math.min(7.5, candX));
+        const cz = Math.max(-7.5, Math.min(7.5, candZ));
+        if (!isPositionBlocked(cx, cz, otherBuildings, 0.7)) {
+          return [cx, cz];
+        }
+      }
+      return [
+        Math.max(-7.5, Math.min(7.5, barracks.x + 2.4)),
+        Math.max(-7.5, Math.min(7.5, barracks.z + 1.0)),
+      ];
     }
-    return [6.5, -0.5];
-  }, [barracks?.x, barracks?.z]);
+    return [5.5, -0.5];
+  }, [barracks, village]);
 
   const teamColor = useMemo(() => {
     switch (kingdom) {
@@ -678,7 +774,11 @@ export const VillageTroops: React.FC<VillageTroopsProps> = ({
     }
   }, [kingdom]);
 
-  // Generate patrolling guards from BOTH active troops and garrison!
+  const villageLayoutKey = useMemo(() => {
+    return village.map((b) => `${b.uid}:${b.x},${b.z}`).join(';');
+  }, [village]);
+
+  // Generate patrolling guards from BOTH active troops and garrison with unobstructed spawn coordinates
   const patrollingGuards = useMemo(() => {
     const list: { id: string; type: TroopId; x: number; z: number }[] = [];
     const types = Object.keys(GameConfig.troops) as TroopId[];
@@ -690,21 +790,24 @@ export const VillageTroops: React.FC<VillageTroopsProps> = ({
         const numActors = Math.min(3, Math.max(1, Math.ceil(count / 5)));
         for (let i = 0; i < numActors; i++) {
           const angle = Math.random() * Math.PI * 2;
-          const r = 2.0 + Math.random() * 6.5;
+          const r = 2.0 + Math.random() * 6.0;
+          const rawX = Math.max(-8, Math.min(8, Math.cos(angle) * r));
+          const rawZ = Math.max(-8, Math.min(8, Math.sin(angle) * r));
+          const clearPt = getNearestClearPoint(rawX, rawZ, village);
           list.push({
             id: `patrol_${type}_${i}`,
             type,
-            x: Math.max(-8, Math.min(8, Math.cos(angle) * r)),
-            z: Math.max(-8, Math.min(8, Math.sin(angle) * r)),
+            x: clearPt.x,
+            z: clearPt.z,
           });
         }
       }
     });
 
     return list.slice(0, 16); // High performance cap
-  }, [troops, garrison]);
+  }, [troops, garrison, villageLayoutKey]);
 
-  // Generate practicing troops positioned around the training camp
+  // Generate practicing troops positioned compactly within the training camp pad
   const practicingTroops = useMemo(() => {
     const list: {
       id: string;
@@ -722,8 +825,8 @@ export const VillageTroops: React.FC<VillageTroopsProps> = ({
       list.push({
         id: 'train_infantry_1',
         type: 'infantry',
-        x: cx - 1.0,
-        z: cz + 0.9,
+        x: cx - 0.52,
+        z: cz + 0.42,
         rot: 2.2,
         practiceType: 'sword',
       });
@@ -731,8 +834,8 @@ export const VillageTroops: React.FC<VillageTroopsProps> = ({
         list.push({
           id: 'train_infantry_2',
           type: 'infantry',
-          x: cx - 1.3,
-          z: cz + 0.3,
+          x: cx - 0.72,
+          z: cz + 0.18,
           rot: 1.8,
           practiceType: 'sword',
         });
@@ -744,18 +847,18 @@ export const VillageTroops: React.FC<VillageTroopsProps> = ({
       list.push({
         id: 'train_archers_1',
         type: 'archers',
-        x: cx + 0.8,
-        z: cz - 0.7,
-        rot: 0.9,
+        x: cx + 0.55,
+        z: cz - 0.32,
+        rot: -0.6,
         practiceType: 'bow',
       });
       if (troops.archers > 6) {
         list.push({
           id: 'train_archers_2',
           type: 'archers',
-          x: cx + 1.2,
-          z: cz - 0.3,
-          rot: 0.9,
+          x: cx + 0.72,
+          z: cz - 0.12,
+          rot: -0.6,
           practiceType: 'bow',
         });
       }
@@ -766,8 +869,8 @@ export const VillageTroops: React.FC<VillageTroopsProps> = ({
       list.push({
         id: 'train_cavalry',
         type: 'cavalry',
-        x: cx - 0.2,
-        z: cz - 1.6,
+        x: cx - 0.1,
+        z: cz - 0.65,
         rot: Math.PI / 2,
         practiceType: 'horse',
       });
@@ -778,8 +881,8 @@ export const VillageTroops: React.FC<VillageTroopsProps> = ({
       list.push({
         id: 'train_mages',
         type: 'mages',
-        x: cx - 1.5,
-        z: cz - 0.2,
+        x: cx - 0.55,
+        z: cz - 0.15,
         rot: -0.4,
         practiceType: 'magic',
       });
@@ -790,8 +893,8 @@ export const VillageTroops: React.FC<VillageTroopsProps> = ({
       list.push({
         id: 'train_healers',
         type: 'healers',
-        x: cx + 0.3,
-        z: cz + 1.6,
+        x: cx + 0.15,
+        z: cz + 0.65,
         rot: -2.0,
         practiceType: 'heal',
       });
@@ -802,8 +905,8 @@ export const VillageTroops: React.FC<VillageTroopsProps> = ({
       list.push({
         id: 'train_catapult',
         type: 'catapults',
-        x: cx + 1.8,
-        z: cz + 1.4,
+        x: cx + 0.65,
+        z: cz + 0.45,
         rot: -1.2,
         practiceType: 'siege',
       });
@@ -852,6 +955,7 @@ export const VillageTroops: React.FC<VillageTroopsProps> = ({
           initialX={g.x}
           initialZ={g.z}
           teamColor={teamColor}
+          village={village}
           onClick={handleTroopClick}
         />
       ))}

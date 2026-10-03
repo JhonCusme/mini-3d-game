@@ -1195,10 +1195,12 @@ export const StylizedTroop: React.FC<{
 // ===========================================================================
 // 7. HERO KING / GRAN REY (Héroe Legendario del Altar con Corona y Capa Real)
 // ===========================================================================
-export const HeroKingModel: React.FC<{ level?: number; scale?: number }> = ({ level = 1, scale = 1 }) => {
+export const HeroKingModel: React.FC<{ level?: number; scale?: number; isMoving?: boolean }> = ({ level = 1, scale = 1, isMoving = false }) => {
   const capeRef = useRef<Group>(null);
   const swordRef = useRef<Group>(null);
   const auraRef = useRef<Mesh>(null);
+  const leftLegRef = useRef<Group>(null);
+  const rightLegRef = useRef<Group>(null);
 
   useFrame(({ clock }) => {
     const t = clock.elapsedTime * 3;
@@ -1216,6 +1218,15 @@ export const HeroKingModel: React.FC<{ level?: number; scale?: number }> = ({ le
       const s = 1 + Math.sin(t * 2) * 0.08;
       auraRef.current.scale.set(s, s, 1);
     }
+    // Walking leg animation
+    if (isMoving) {
+      const legSwing = Math.sin(clock.elapsedTime * 7) * 0.45;
+      if (leftLegRef.current) leftLegRef.current.rotation.x = legSwing;
+      if (rightLegRef.current) rightLegRef.current.rotation.x = -legSwing;
+    } else {
+      if (leftLegRef.current) leftLegRef.current.rotation.x = 0;
+      if (rightLegRef.current) rightLegRef.current.rotation.x = 0;
+    }
   });
 
   const shinyTint = Math.min(1, level / 10);
@@ -1230,7 +1241,7 @@ export const HeroKingModel: React.FC<{ level?: number; scale?: number }> = ({ le
 
       {/* --- LEGS & ARMORED GREAVES --- */}
       {[-0.1, 0.1].map((x, i) => (
-        <group key={i} position={[x, 0.25, 0]}>
+        <group key={i} ref={i === 0 ? leftLegRef : rightLegRef} position={[x, 0.25, 0]}>
           <mesh castShadow>
             <cylinderGeometry args={[0.06, 0.055, 0.35, 8]} />
             <meshStandardMaterial color="#2d3436" metalness={0.8} roughness={0.3} />
