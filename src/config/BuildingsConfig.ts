@@ -1,7 +1,7 @@
 import type { GameConfig } from './GameConfig';
 
 export type BuildingType =
-    | 'townhall' | 'goldmine' | 'barracks' | 'blacksmith' | 'armory' | 'arena' | 'altar'
+    | 'townhall' | 'goldmine' | 'farm' | 'barracks' | 'blacksmith' | 'armory' | 'arena' | 'altar'
     | 'cannon' | 'archertower' | 'wall';
 
 type UpgradeId = keyof typeof GameConfig.upgrades;
@@ -44,6 +44,12 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
         type: 'goldmine', name: 'Mina de Oro', size: 2, color: '#8a7a66', roofColor: '#b8860b', upgradeId: 'economy',
         description: 'Produce oro con el tiempo. Tócala para recogerlo.',
         baseHp: 400, hpPerLevel: 80, maxCount: () => 1,
+    },
+    farm: {
+        type: 'farm', name: 'Granja y Molino', size: 2, color: '#e5c07b', roofColor: '#8a5d3b',
+        description: 'Cultiva trigo y hornea pan para alimentar a tus mineros y tropas gratis.',
+        baseHp: 380, hpPerLevel: 75, buildCost: 150,
+        maxCount: th => Math.min(3, 1 + Math.floor(th / 3)),
     },
     barracks: {
         type: 'barracks', name: 'Cuartel', size: 2, color: '#b23b3b', roofColor: '#6b3f2a', upgradeId: 'troopCapacity',
@@ -144,4 +150,13 @@ export function mineRatePerSecond(level: number): number {
 
 export function mineCapacity(level: number): number {
     return 300 + level * 400;
+}
+
+// Farm food production and storage
+export function farmRatePerSecond(level: number): number {
+    return 0.35 + level * 0.3;
+}
+
+export function farmCapacity(level: number): number {
+    return 40 + level * 35;
 }

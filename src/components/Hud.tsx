@@ -47,6 +47,7 @@ export const Hud: React.FC<{ onOpen: (p: PanelType) => void; compact?: boolean }
 
       <div className="hud-top-right">
         <div className="hud-res gold"><span>🪙</span><b>{Math.floor(state.coins).toLocaleString()}</b></div>
+        <div className="hud-res food" title="Comida del reino producida por tus granjas"><span>🍞</span><b>{Math.floor(state.food || 0).toLocaleString()}</b></div>
         <div className="hud-res gem" onClick={() => onOpen('store')}><span>💎</span><b>{state.gems}</b><span className="hud-plus">+</span></div>
         <div className="hud-res energy"><span>⚡</span><b>{state.energy}/{GameConfig.maxEnergy}</b></div>
       </div>

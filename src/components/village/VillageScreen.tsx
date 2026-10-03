@@ -9,10 +9,10 @@ import { AudioManager } from '../../core/AudioManager';
 
 type Moving = { uid: string; x: number; z: number; valid: boolean; origX: number; origZ: number };
 
-/** Shop for new buildings (defenses and walls) — the hammer button. */
+/** Shop for new buildings (defenses, farm and walls) — the hammer button. */
 export const BuildShop: React.FC<{ onClose: () => void; onBuilt: (uid: string) => void }> = ({ onClose, onBuilt }) => {
   const { state, buildBuilding } = useGame();
-  const types: BuildingType[] = ['cannon', 'archertower', 'wall'];
+  const types: BuildingType[] = ['farm', 'cannon', 'archertower', 'wall'];
   const th = VillageManager.townhallLevel(state);
 
   return (
@@ -21,7 +21,7 @@ export const BuildShop: React.FC<{ onClose: () => void; onBuilt: (uid: string) =
         {types.map(t => {
           const d = BUILDINGS[t];
           const blocker = VillageManager.buildBlocker(state, t);
-          const icon = t === 'cannon' ? '💣' : t === 'archertower' ? '🏹' : '🧱';
+          const icon = t === 'farm' ? '🌾' : t === 'cannon' ? '💣' : t === 'archertower' ? '🏹' : '🧱';
           return (
             <div key={t} className="store-card flex-col gap-2">
               <div className="flex-row justify-between">
@@ -40,7 +40,7 @@ export const BuildShop: React.FC<{ onClose: () => void; onBuilt: (uid: string) =
         })}
       </div>
       <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '12px' }}>
-        Sube el Ayuntamiento para desbloquear más muros y defensas. Coloca los muros para diseñar tus propios compartimentos defensivos.
+        Sube el Ayuntamiento para desbloquear más granjas, defensas y muros. Construye granjas para cosechar trigo y alimentar a tus mineros gratis.
       </p>
     </Sheet>
   );
@@ -114,10 +114,16 @@ export const VillageScreen: React.FC<{
   };
 
   const collect = (uid: string) => {
+    const b = VillageManager.get(state, uid);
     const amount = collectMine(uid);
     if (amount > 0) {
-      AudioManager.playCoins();
-      setToast(`+${amount} 🪙`);
+      if (b?.type === 'farm') {
+        AudioManager.playClick();
+        setToast(`+${amount} 🍞`);
+      } else {
+        AudioManager.playCoins();
+        setToast(`+${amount} 🪙`);
+      }
     }
   };
 
@@ -146,6 +152,9 @@ export const VillageScreen: React.FC<{
         {selected.type === 'goldmine' && selected.stored >= 1 && (
           <button className="action-btn gold" onClick={() => collect(selected.uid)}>🪙<span>{Math.floor(selected.stored)}</span></button>
         )}
+        {selected.type === 'farm' && selected.stored >= 1 && (
+          <button className="action-btn" style={{ borderColor: 'rgba(245, 158, 11, 0.7)', color: '#fbbf24' }} onClick={() => collect(selected.uid)}>🌾<span>{Math.floor(selected.stored)} 🍞</span></button>
+        )}
         {upgrading ? (
           <>
             <button className="action-btn" disabled>🔨<span>{formatDuration(selected.upgradingUntil - now)}</span></button>
@@ -172,6 +181,7 @@ export const VillageScreen: React.FC<{
             🧱<span>+ Muro</span>
           </button>
         )}
+        {selected.type === 'farm' && <button className="action-btn" onClick={() => setInfoOpen(true)}>🌾<span>Molino</span></button>}
         {selected.type === 'barracks' && <button className="action-btn" onClick={() => setInfoOpen(true)}>⚔️<span>Entrenar</span></button>}
         {selected.type === 'blacksmith' && <button className="action-btn upgrade" onClick={() => setInfoOpen(true)}>⚒️<span>Mejorar</span></button>}
         {selected.type === 'altar' && <button className="action-btn gem" onClick={() => setInfoOpen(true)}>🔱<span>Héroe</span></button>}

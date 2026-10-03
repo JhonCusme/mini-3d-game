@@ -683,6 +683,361 @@ const GoldmineModel: React.FC<{ level: number; stamina?: number }> = ({ level, s
 };
 
 // ===========================================================================
+// 2B. FARM & WINDMILL (GRANJA Y MOLINO) - 4 Tiers of Agriculture & Food Production
+// ===========================================================================
+
+export const FarmerWorker: React.FC<{
+  position: [number, number, number];
+  rotation?: [number, number, number];
+  scale?: number;
+  role?: 'hoe' | 'basket';
+}> = ({ position, rotation = [0, 0, 0], scale = 0.52, role = 'hoe' }) => {
+  const armRef = useRef<Group>(null);
+  const headRef = useRef<Group>(null);
+
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime;
+    if (role === 'hoe') {
+      const swing = Math.sin(t * 3.5);
+      if (armRef.current) {
+        armRef.current.rotation.x = -0.5 + swing * 0.9;
+      }
+      if (headRef.current) {
+        headRef.current.rotation.x = 0.2 + Math.sin(t * 3.5) * 0.12;
+      }
+    } else {
+      if (armRef.current) {
+        armRef.current.rotation.x = -0.4 + Math.sin(t * 2) * 0.1;
+      }
+      if (headRef.current) {
+        headRef.current.rotation.y = Math.sin(t * 1.5) * 0.2;
+      }
+    }
+  });
+
+  return (
+    <group position={position} rotation={rotation} scale={scale}>
+      <group position={[0, 0.38, 0]}>
+        {/* Legs / Boots */}
+        <mesh position={[-0.1, -0.2, 0]} castShadow>
+          <boxGeometry args={[0.11, 0.26, 0.13]} />
+          <meshStandardMaterial color="#4b382a" roughness={0.8} />
+        </mesh>
+        <mesh position={[0.1, -0.2, 0]} castShadow>
+          <boxGeometry args={[0.11, 0.26, 0.13]} />
+          <meshStandardMaterial color="#4b382a" roughness={0.8} />
+        </mesh>
+
+        {/* Torso: Peasant Tunic & Belt */}
+        <mesh position={[0, 0.08, 0]} castShadow>
+          <boxGeometry args={[0.28, 0.32, 0.2]} />
+          <meshStandardMaterial color="#556b2f" roughness={0.7} />
+        </mesh>
+        <mesh position={[0, 0, 0]}>
+          <boxGeometry args={[0.29, 0.05, 0.21]} />
+          <meshStandardMaterial color="#3e2712" />
+        </mesh>
+
+        {/* Left Arm */}
+        <group position={[-0.19, 0.12, 0]}>
+          <mesh position={[0, -0.12, 0]} rotation={[0.2, 0, 0.1]} castShadow>
+            <boxGeometry args={[0.08, 0.26, 0.08]} />
+            <meshStandardMaterial color="#6b8e23" />
+          </mesh>
+          <mesh position={[0, -0.25, 0.02]}>
+            <sphereGeometry args={[0.055, 6, 6]} />
+            <meshStandardMaterial color="#f0c294" />
+          </mesh>
+        </group>
+
+        {/* Right Arm with Hoe or Basket */}
+        <group ref={armRef} position={[0.19, 0.14, 0]}>
+          <mesh position={[0, -0.12, 0]} castShadow>
+            <boxGeometry args={[0.08, 0.26, 0.08]} />
+            <meshStandardMaterial color="#6b8e23" />
+          </mesh>
+          <mesh position={[0, -0.25, 0]}>
+            <sphereGeometry args={[0.055, 6, 6]} />
+            <meshStandardMaterial color="#f0c294" />
+          </mesh>
+
+          {role === 'hoe' ? (
+            <group position={[0, -0.24, 0.1]} rotation={[0.4, 0, 0]}>
+              <mesh position={[0, 0.05, 0]}>
+                <cylinderGeometry args={[0.018, 0.018, 0.65, 5]} />
+                <meshStandardMaterial color="#8d6e63" roughness={0.8} />
+              </mesh>
+              <mesh position={[0, 0.36, 0.06]} rotation={[0.5, 0, 0]} castShadow>
+                <boxGeometry args={[0.16, 0.06, 0.03]} />
+                <meshStandardMaterial color="#57606f" metalness={0.7} />
+              </mesh>
+            </group>
+          ) : (
+            <group position={[0, -0.2, 0.15]}>
+              <mesh castShadow>
+                <cylinderGeometry args={[0.16, 0.12, 0.22, 8]} />
+                <meshStandardMaterial color="#a07855" roughness={0.9} />
+              </mesh>
+              <mesh position={[0, 0.09, 0]}>
+                <sphereGeometry args={[0.14, 6, 6]} />
+                <meshStandardMaterial color="#f1c40f" roughness={0.6} />
+              </mesh>
+            </group>
+          )}
+        </group>
+
+        {/* Head & Peasant Straw Hat */}
+        <group ref={headRef} position={[0, 0.32, 0]}>
+          <mesh castShadow>
+            <boxGeometry args={[0.22, 0.22, 0.2]} />
+            <meshStandardMaterial color="#f0c294" roughness={0.6} />
+          </mesh>
+          <mesh position={[0, 0.13, 0]}>
+            <cylinderGeometry args={[0.14, 0.16, 0.1, 8]} />
+            <meshStandardMaterial color="#e5c07b" roughness={0.9} />
+          </mesh>
+          <mesh position={[0, 0.08, 0]}>
+            <cylinderGeometry args={[0.3, 0.3, 0.02, 10]} />
+            <meshStandardMaterial color="#d4a373" roughness={0.9} />
+          </mesh>
+        </group>
+      </group>
+    </group>
+  );
+};
+
+const WindmillSails: React.FC<{ position: [number, number, number]; scale?: number; sailColor?: string }> = ({
+  position,
+  scale = 1,
+  sailColor = '#f5f6fa',
+}) => {
+  const sailsRef = useRef<Group>(null);
+  useFrame((_, dt) => {
+    if (sailsRef.current) {
+      sailsRef.current.rotation.z += dt * 1.5;
+    }
+  });
+
+  return (
+    <group position={position} scale={scale}>
+      <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
+        <cylinderGeometry args={[0.08, 0.08, 0.18, 8]} />
+        <meshStandardMaterial color="#3e2712" />
+      </mesh>
+      <group ref={sailsRef} position={[0, 0, 0.1]}>
+        {[0, Math.PI / 2, Math.PI, (Math.PI * 3) / 2].map((angle, i) => (
+          <group key={i} rotation={[0, 0, angle]}>
+            <mesh position={[0, 0.55, 0]} castShadow>
+              <boxGeometry args={[0.04, 1.1, 0.03]} />
+              <meshStandardMaterial color="#5a3d1c" />
+            </mesh>
+            <mesh position={[0.09, 0.65, 0.015]} castShadow>
+              <planeGeometry args={[0.16, 0.8]} />
+              <meshStandardMaterial color={sailColor} roughness={0.9} side={2} />
+            </mesh>
+          </group>
+        ))}
+      </group>
+    </group>
+  );
+};
+
+const FarmModel: React.FC<{ level: number }> = ({ level }) => {
+  const tier = getBuildingTier(level);
+
+  // TIER 1 (Nv 1-2): Huerto Rústico y Choza de Grano
+  if (tier === 1) {
+    return (
+      <group>
+        {/* Soil plot */}
+        <mesh position={[0, 0.08, 0]} receiveShadow>
+          <boxGeometry args={[2.2, 0.15, 2.0]} />
+          <meshStandardMaterial color="#4a2f18" roughness={1.0} />
+        </mesh>
+        {/* Small grain shed */}
+        <group position={[-0.55, 0.45, -0.45]}>
+          <mesh castShadow>
+            <boxGeometry args={[0.9, 0.7, 0.8]} />
+            <meshStandardMaterial color="#7a5229" />
+          </mesh>
+          {/* Thatch roof */}
+          <mesh position={[0, 0.45, 0]} rotation={[0, 0, 0]} castShadow>
+            <coneGeometry args={[0.75, 0.5, 4]} />
+            <meshStandardMaterial color="#d4a373" roughness={0.9} />
+          </mesh>
+        </group>
+        {/* Wheat crop rows */}
+        {[-0.3, 0.1, 0.5].map((z, row) =>
+          [0.2, 0.5, 0.8].map((x, col) => (
+            <mesh key={`${row}-${col}`} position={[x, 0.3, z]} castShadow>
+              <coneGeometry args={[0.1, 0.35, 5]} />
+              <meshStandardMaterial color="#f1c40f" roughness={0.8} />
+            </mesh>
+          ))
+        )}
+        {/* Wooden fence posts */}
+        {[-0.9, 0, 0.9].map((x, i) => (
+          <mesh key={i} position={[x, 0.25, 0.9]} castShadow>
+            <cylinderGeometry args={[0.03, 0.03, 0.4, 5]} />
+            <meshStandardMaterial color="#5a3d1c" />
+          </mesh>
+        ))}
+        {/* Active Farmer hoeing the wheat */}
+        <FarmerWorker position={[0.45, 0, 0.1]} rotation={[0, -0.6, 0]} role="hoe" />
+      </group>
+    );
+  }
+
+  // TIER 2 (Nv 3-4): Molino de Madera Holandés con Aspas y Trigales Dorados
+  if (tier === 2) {
+    return (
+      <group>
+        {/* Farm plot soil pad */}
+        <mesh position={[0, 0.08, 0]} receiveShadow>
+          <boxGeometry args={[2.3, 0.15, 2.2]} />
+          <meshStandardMaterial color="#5a3c1c" roughness={0.9} />
+        </mesh>
+        {/* Wooden Windmill Tower */}
+        <group position={[-0.45, 0.9, -0.35]}>
+          <mesh castShadow receiveShadow>
+            <cylinderGeometry args={[0.42, 0.6, 1.6, 8]} />
+            <meshStandardMaterial color="#8a5a2e" roughness={0.8} />
+          </mesh>
+          {/* Conical cap */}
+          <mesh position={[0, 0.95, 0]} castShadow>
+            <coneGeometry args={[0.5, 0.5, 8]} />
+            <meshStandardMaterial color="#5c3818" />
+          </mesh>
+          {/* Rotating Windmill Sails */}
+          <WindmillSails position={[0, 0.7, 0.55]} scale={1.0} />
+        </group>
+        {/* Flour sacks */}
+        {[[0.3, 0.5], [0.6, 0.4]].map(([x, z], i) => (
+          <mesh key={i} position={[x, 0.2, z]} castShadow>
+            <capsuleGeometry args={[0.1, 0.18, 4, 8]} />
+            <meshStandardMaterial color="#ecf0f1" roughness={0.8} />
+          </mesh>
+        ))}
+        {/* Golden wheat patch */}
+        {[-0.2, 0.1, 0.4].map((z, row) =>
+          [0.4, 0.7].map((x, col) => (
+            <mesh key={`${row}-${col}`} position={[x, 0.35, z]} castShadow>
+              <coneGeometry args={[0.12, 0.45, 6]} />
+              <meshStandardMaterial color="#f1c40f" emissive="#d4ac0d" emissiveIntensity={0.2} />
+            </mesh>
+          ))
+        )}
+        {/* Farmers working */}
+        <FarmerWorker position={[0.5, 0, -0.2]} rotation={[0, -0.5, 0]} role="hoe" />
+        <FarmerWorker position={[0.1, 0, 0.6]} rotation={[0, 0.8, 0]} role="basket" />
+      </group>
+    );
+  }
+
+  // TIER 3 (Nv 5-7): Molino de Piedra Medieval, Silo de Granos y Panadería
+  if (tier === 3) {
+    return (
+      <group>
+        {/* Cobblestone & soil foundation */}
+        <mesh position={[0, 0.08, 0]} receiveShadow>
+          <boxGeometry args={[2.4, 0.15, 2.3]} />
+          <meshStandardMaterial color="#474747" roughness={0.8} />
+        </mesh>
+        {/* Stone Windmill Tower */}
+        <group position={[-0.45, 1.1, -0.3]}>
+          <mesh castShadow receiveShadow>
+            <cylinderGeometry args={[0.48, 0.68, 2.0, 10]} />
+            <meshStandardMaterial color="#7f8c8d" roughness={0.7} />
+          </mesh>
+          {/* Shingled Dome Roof */}
+          <mesh position={[0, 1.15, 0]} castShadow>
+            <coneGeometry args={[0.58, 0.6, 10]} />
+            <meshStandardMaterial color="#881337" roughness={0.5} />
+          </mesh>
+          {/* Rotating Windmill Sails */}
+          <WindmillSails position={[0, 0.85, 0.6]} scale={1.15} sailColor="#f8fafc" />
+        </group>
+        {/* Stone Grain Silo */}
+        <group position={[0.55, 0.8, -0.45]}>
+          <mesh castShadow>
+            <cylinderGeometry args={[0.35, 0.35, 1.4, 8]} />
+            <meshStandardMaterial color="#95a5a6" />
+          </mesh>
+          <mesh position={[0, 0.8, 0]}>
+            <coneGeometry args={[0.4, 0.4, 8]} />
+            <meshStandardMaterial color="#2d3436" />
+          </mesh>
+        </group>
+        {/* Chimney bakery */}
+        <Chimney position={[-0.85, 0.8, 0.5]} height={1.1} />
+        {/* Flour Cart */}
+        <group position={[0.4, 0.25, 0.55]} rotation={[0, -0.3, 0]}>
+          <mesh castShadow>
+            <boxGeometry args={[0.5, 0.3, 0.35]} />
+            <meshStandardMaterial color="#6a3b1a" />
+          </mesh>
+          <mesh position={[0, 0.2, 0]}>
+            <sphereGeometry args={[0.18, 6, 6]} />
+            <meshStandardMaterial color="#ecf0f1" />
+          </mesh>
+        </group>
+        {/* Active Farmers */}
+        <FarmerWorker position={[-0.3, 0, 0.7]} rotation={[0, 0.4, 0]} role="hoe" />
+        <FarmerWorker position={[0.65, 0, 0.1]} rotation={[0, -0.9, 0]} role="basket" />
+      </group>
+    );
+  }
+
+  // TIER 4 (Nv 8-10): Finca Imperial de Cosecha Dorada con Gran Silo de Mármol
+  return (
+    <group>
+      {/* Marble foundation */}
+      <mesh position={[0, 0.1, 0]} receiveShadow>
+        <boxGeometry args={[2.5, 0.18, 2.4]} />
+        <meshStandardMaterial color="#2c3e50" roughness={0.6} />
+      </mesh>
+      {/* Imperial Windmill */}
+      <group position={[-0.5, 1.25, -0.3]}>
+        <mesh castShadow receiveShadow>
+          <cylinderGeometry args={[0.52, 0.72, 2.3, 12]} />
+          <meshStandardMaterial color="#f1f2f6" roughness={0.4} />
+        </mesh>
+        {/* Golden Roof */}
+        <mesh position={[0, 1.3, 0]} castShadow>
+          <coneGeometry args={[0.62, 0.7, 12]} />
+          <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.2} />
+        </mesh>
+        {/* Rotating Golden Sails */}
+        <WindmillSails position={[0, 0.95, 0.65]} scale={1.25} sailColor="#fef08a" />
+      </group>
+      {/* Grand Silo with Golden Dome */}
+      <group position={[0.6, 0.95, -0.45]}>
+        <mesh castShadow>
+          <cylinderGeometry args={[0.42, 0.42, 1.7, 10]} />
+          <meshStandardMaterial color="#dfe4ea" />
+        </mesh>
+        <mesh position={[0, 0.95, 0]}>
+          <sphereGeometry args={[0.45, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.5]} />
+          <meshStandardMaterial color="#ffd700" metalness={0.85} roughness={0.2} />
+        </mesh>
+      </group>
+      {/* Golden wheat crops with glowing harvest aura */}
+      {[[-0.2, 0.6], [0.2, 0.7], [0.6, 0.5]].map(([x, z], i) => (
+        <group key={i} position={[x, 0.35, z]}>
+          <mesh castShadow>
+            <coneGeometry args={[0.15, 0.5, 6]} />
+            <meshStandardMaterial color="#f1c40f" metalness={0.7} emissive="#f39c12" emissiveIntensity={0.4} />
+          </mesh>
+        </group>
+      ))}
+      {/* Imperial Farmers */}
+      <FarmerWorker position={[-0.3, 0, 0.75]} rotation={[0, 0.3, 0]} role="hoe" />
+      <FarmerWorker position={[0.55, 0, 0.2]} rotation={[0, -0.8, 0]} role="basket" />
+    </group>
+  );
+};
+
+// ===========================================================================
 // 3. BARRACKS (CUARTEL MILITAR) - 4 Tiers of Troop Training Camps
 // ===========================================================================
 const BarracksModel: React.FC<{ level: number }> = ({ level }) => {
@@ -1632,6 +1987,7 @@ export const WallModel: React.FC<{ level: number }> = ({ level }) => {
 const BUILDING_MODEL_SCALES: Record<BuildingType, number> = {
   townhall: 0.74,
   goldmine: 0.70,
+  farm: 0.72,
   barracks: 0.70,
   blacksmith: 0.70,
   armory: 0.70,
@@ -1658,6 +2014,8 @@ export const BuildingModel: React.FC<{
         return <TownhallModel level={level} />;
       case 'goldmine':
         return <GoldmineModel level={level} stamina={stamina} />;
+      case 'farm':
+        return <FarmModel level={level} />;
       case 'barracks':
         return <BarracksModel level={level} />;
       case 'blacksmith':

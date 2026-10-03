@@ -40,6 +40,7 @@ export interface GameState {
 
     coins: number;
     gems: number;
+    food: number;
     energy: number;
     lastEnergyUpdate: number;
     experience: number;
@@ -87,6 +88,7 @@ export const getInitialState = (): GameState => ({
 
     coins: GameConfig.startingCoins,
     gems: GameConfig.startingGems,
+    food: 50,
     energy: GameConfig.maxEnergy,
     lastEnergyUpdate: Date.now(),
     experience: 0,

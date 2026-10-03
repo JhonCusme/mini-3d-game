@@ -1,7 +1,7 @@
 import { useGame } from '../../core/GameContext';
 import { GameConfig } from '../../config/GameConfig';
 import {
-  BUILDINGS, buildingHp, defenseDamage, mineCapacity, mineRatePerSecond,
+  BUILDINGS, buildingHp, defenseDamage, mineCapacity, mineRatePerSecond, farmCapacity, farmRatePerSecond,
 } from '../../config/BuildingsConfig';
 import type { PlacedBuilding } from '../../core/GameState';
 import { HeroManager } from '../../core/HeroManager';
@@ -52,6 +52,15 @@ export const BuildingPanel: React.FC<{ building: PlacedBuilding; onClose: () => 
           </>
         );
       }
+      case 'farm':
+        return (
+          <>
+            <Stat label="Producción de Alimento" value={`${Math.round(farmRatePerSecond(lvl) * 3600)}/h`} next={`${Math.round(farmRatePerSecond(lvl + 1) * 3600)}/h`} />
+            <Stat label="Capacidad del Granero" value={farmCapacity(lvl)} next={farmCapacity(lvl + 1)} />
+            <Stat label="Cosecha Acumulada" value={`🍞 ${Math.floor(b.stored)}`} />
+            <Stat label="Reserva de Comida del Reino" value={`🍞 ${Math.floor(state.food || 0)}`} />
+          </>
+        );
       case 'barracks':
         return <Stat label="Capacidad de tropas" value={UpgradeManager.getTroopCapacity(state)} />;
       case 'blacksmith':
@@ -131,25 +140,48 @@ export const BuildingPanel: React.FC<{ building: PlacedBuilding; onClose: () => 
                   Los trabajadores pican y extraen oro sin descanso. Al fatigarse reducen su velocidad; aliméntalos con raciones del reino para restaurar su fuerza.
                 </p>
 
-                <button
-                  className="btn-primary"
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    background: stamina >= 95 ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, #ff9f43, #ee5253)',
-                    opacity: stamina >= 95 || state.coins < 50 ? 0.6 : 1,
-                    cursor: stamina >= 95 || state.coins < 50 ? 'default' : 'pointer'
-                  }}
-                  disabled={stamina >= 95 || state.coins < 50}
-                  onClick={() => feedMiners(b.uid)}
-                >
-                  {stamina >= 95 ? '✓ Mineros con energía al máximo' : '🍞 Dar Raciones a Mineros — 🪙 50'}
-                </button>
+                {(() => {
+                  const hasFood = (state.food || 0) >= 15;
+                  const canAfford = hasFood || state.coins >= 50;
+
+                  return (
+                    <button
+                      className="btn-primary"
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        background: stamina >= 95 ? 'rgba(255,255,255,0.08)' : hasFood ? 'linear-gradient(135deg, #2ed573, #10ac84)' : 'linear-gradient(135deg, #ff9f43, #ee5253)',
+                        opacity: stamina >= 95 || !canAfford ? 0.6 : 1,
+                        cursor: stamina >= 95 || !canAfford ? 'default' : 'pointer'
+                      }}
+                      disabled={stamina >= 95 || !canAfford}
+                      onClick={() => feedMiners(b.uid)}
+                    >
+                      {stamina >= 95 ? '✓ Mineros con energía al máximo' : hasFood ? '🍞 Alimentar con Granja — 15 Comida (Gratis)' : '🍞 Comprar Raciones — 🪙 50'}
+                    </button>
+                  );
+                })()}
               </div>
             );
           })()}
+
+          {b.type === 'farm' && (
+            <div style={panel} className="flex-col gap-2">
+              <div className="flex-row justify-between" style={{ alignItems: 'center' }}>
+                <b style={{ fontSize: '14px', color: 'var(--accent-gold)' }}>🌾 Campesinos y Molino</b>
+                <span style={{ fontSize: '11px', color: '#2ed573', fontWeight: 700 }}>Activo</span>
+              </div>
+              <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: '2px 0 6px 0', lineHeight: 1.4 }}>
+                Los campesinos siegan el trigo y muelen harina para hornear pan fresco del reino. Con el alimento cosechado alimentas a los mineros fatigados de forma 100% gratuita sin gastar oro.
+              </p>
+              <div className="flex-row justify-between" style={{ background: 'rgba(0,0,0,0.3)', padding: '8px', borderRadius: '8px', fontSize: '12px' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Cosecha en granero:</span>
+                <span style={{ color: '#f1c40f', fontWeight: 800 }}>🍞 {Math.floor(b.stored)}</span>
+              </div>
+            </div>
+          )}
 
           {b.type === 'altar' && (() => {
             const hStats = HeroManager.heroStats(state.heroLevel);

@@ -1452,8 +1452,8 @@ button:disabled {
 }
 
 .hud-res > span:first-child { margin-right: auto; font-size: 18px; }
-.hud-res b { font-weight: 400; }
 .hud-res.gold { border-color: rgba(255, 215, 0, 0.6); }
+.hud-res.food { border-color: rgba(245, 158, 11, 0.7); }
 .hud-res.gem { border-color: rgba(167, 139, 250, 0.7); }
 .hud-res.energy { border-color: rgba(0, 229, 160, 0.6); }
 

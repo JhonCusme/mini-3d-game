@@ -1,6 +1,6 @@
 import {
     BUILDINGS, BUILDER_COSTS, MAX_BUILDERS, VILLAGE_HALF, buildTimeSeconds, defenseUpgradeCost, gemsToFinish,
-    maxLevelFor, mineCapacity, mineRatePerSecond, townhallUpgradeCost, type BuildingType,
+    maxLevelFor, mineCapacity, mineRatePerSecond, farmCapacity, farmRatePerSecond, townhallUpgradeCost, type BuildingType,
 } from '../config/BuildingsConfig';
 import type { GameState, PlacedBuilding } from './GameState';
 import { UpgradeManager } from './UpgradeManager';
@@ -21,6 +21,7 @@ export function defaultVillage(state: Pick<GameState, 'level' | 'upgrades' | 'he
         b('armory', 5, 4, (up.troopHealth || 0) + 1),
         b('arena', -1, 6, (up.critRate || 0) + 1),
         b('altar', -1, -7, Math.max(1, state.heroLevel)),
+        b('farm', 8, 4, 1),
         b('cannon', 3, -8, 1),
     ];
     // Starter defensive wall ring enclosing the townhall core
@@ -218,16 +219,26 @@ export class VillageManager {
         };
     }
 
-    // ---------- Gold mine & Miner Workers ----------
+    // ---------- Gold Mine, Farm & Resource Production ----------
 
     static produce(state: GameState, seconds: number): GameState {
-        if (seconds <= 0 || !state.village.some(b => b.type === 'goldmine')) return state;
+        if (seconds <= 0 || !state.village.some(b => b.type === 'goldmine' || b.type === 'farm')) return state;
         const rateMult = state.playerKingdom === 'golden' ? 1.3 : 1.0;
         const capMult = state.playerKingdom === 'golden' ? 1.3 : 1.0;
         return {
             ...state,
             village: state.village.map(b => {
-                if (b.type !== 'goldmine' || b.level <= 0) return b;
+                if (b.level <= 0) return b;
+
+                // Farm: produces wheat and bread over time
+                if (b.type === 'farm') {
+                    const cap = farmCapacity(b.level);
+                    if (b.stored >= cap) return b;
+                    const addedFood = farmRatePerSecond(b.level) * seconds;
+                    return { ...b, stored: Math.min(cap, b.stored + addedFood) };
+                }
+
+                if (b.type !== 'goldmine') return b;
                 const cap = Math.round(mineCapacity(b.level) * capMult);
                 const currentStamina = b.minerStamina !== undefined ? b.minerStamina : 100;
 
@@ -261,26 +272,55 @@ export class VillageManager {
         };
     }
 
-    static feedMiners(state: GameState, uid: string): { state: GameState; success: boolean } {
+    static feedMiners(state: GameState, uid: string): { state: GameState; success: boolean; usedFood: boolean } {
         const b = this.get(state, uid);
-        if (!b || b.type !== 'goldmine') return { state, success: false };
-        const foodCost = 50; // Coins cost for fresh kingdom rations
-        if (state.coins < foodCost) return { state, success: false };
+        if (!b || b.type !== 'goldmine') return { state, success: false, usedFood: false };
+
+        // Priority 1: Free food from the kingdom's farm (15 food)
+        if ((state.food || 0) >= 15) {
+            return {
+                state: {
+                    ...state,
+                    food: state.food - 15,
+                    village: state.village.map(o => (o.uid === uid ? { ...o, minerStamina: 100, lastFedTime: Date.now() } : o)),
+                },
+                success: true,
+                usedFood: true,
+            };
+        }
+
+        // Priority 2: Fallback to gold (50 coins)
+        const coinCost = 50;
+        if (state.coins < coinCost) return { state, success: false, usedFood: false };
         return {
             state: {
                 ...state,
-                coins: state.coins - foodCost,
+                coins: state.coins - coinCost,
                 village: state.village.map(o => (o.uid === uid ? { ...o, minerStamina: 100, lastFedTime: Date.now() } : o)),
             },
             success: true,
+            usedFood: false,
         };
     }
 
-    static collect(state: GameState, uid: string): { state: GameState; amount: number } {
+    static collect(state: GameState, uid: string): { state: GameState; amount: number; type?: 'coins' | 'food' } {
         const b = this.get(state, uid);
-        if (!b || b.type !== 'goldmine') return { state, amount: 0 };
+        if (!b || (b.type !== 'goldmine' && b.type !== 'farm')) return { state, amount: 0 };
         const amount = Math.floor(b.stored);
         if (amount <= 0) return { state, amount: 0 };
+
+        if (b.type === 'farm') {
+            return {
+                state: {
+                    ...state,
+                    food: (state.food || 0) + amount,
+                    village: state.village.map(o => (o.uid === uid ? { ...o, stored: o.stored - amount } : o)),
+                },
+                amount,
+                type: 'food'
+            };
+        }
+
         return {
             state: {
                 ...state,
@@ -288,30 +328,42 @@ export class VillageManager {
                 village: state.village.map(o => (o.uid === uid ? { ...o, stored: o.stored - amount } : o)),
             },
             amount,
+            type: 'coins'
         };
     }
 
-    /** Fixes up saves from before individual walls existed. */
+    /** Fixes up saves from before individual walls or farm existed. */
     static ensureVillage(state: GameState): GameState {
         let village = state.village;
         if (!Array.isArray(village) || village.length === 0) {
             village = defaultVillage(state);
-        } else if (!village.some(b => b.type === 'wall')) {
-            // Migrate walls for existing player saves
-            const wallLvl = Math.max(1, state.upgrades.walls || 1);
+        } else {
             const b = (type: BuildingType, x: number, z: number, level: number): PlacedBuilding =>
                 ({ uid: newUid(type), type, level, x, z, upgradingUntil: 0, stored: 0 });
-            const newWalls: PlacedBuilding[] = [];
-            for (let x = -3; x <= 2; x++) {
-                if (!this.overlaps(state, 'wall', x, -4)) newWalls.push(b('wall', x, -4, wallLvl));
-                if (!this.overlaps(state, 'wall', x, 2)) newWalls.push(b('wall', x, 2, wallLvl));
+
+            // Ensure starter farm exists for existing players
+            if (!village.some(o => o.type === 'farm')) {
+                let fx = 8, fz = 4;
+                if (village.some(o => Math.abs(o.x - fx) < 2 && Math.abs(o.z - fz) < 2)) {
+                    fx = -8; fz = -7;
+                }
+                village = [...village, b('farm', fx, fz, 1)];
             }
-            for (let z = -3; z <= 1; z++) {
-                if (!this.overlaps(state, 'wall', -3, z)) newWalls.push(b('wall', -3, z, wallLvl));
-                if (!this.overlaps(state, 'wall', 2, z)) newWalls.push(b('wall', 2, z, wallLvl));
+
+            if (!village.some(o => o.type === 'wall')) {
+                const wallLvl = Math.max(1, state.upgrades.walls || 1);
+                const newWalls: PlacedBuilding[] = [];
+                for (let x = -3; x <= 2; x++) {
+                    if (!this.overlaps(state, 'wall', x, -4)) newWalls.push(b('wall', x, -4, wallLvl));
+                    if (!this.overlaps(state, 'wall', x, 2)) newWalls.push(b('wall', x, 2, wallLvl));
+                }
+                for (let z = -3; z <= 1; z++) {
+                    if (!this.overlaps(state, 'wall', -3, z)) newWalls.push(b('wall', -3, z, wallLvl));
+                    if (!this.overlaps(state, 'wall', 2, z)) newWalls.push(b('wall', 2, z, wallLvl));
+                }
+                village = [...village, ...newWalls];
             }
-            village = [...village, ...newWalls];
         }
-        return { ...state, village, builders: state.builders || 2 };
+        return { ...state, food: state.food ?? 50, village, builders: state.builders || 2 };
     }
 }

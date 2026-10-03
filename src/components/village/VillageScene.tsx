@@ -3,7 +3,7 @@ import { Canvas, useFrame, type ThreeEvent } from '@react-three/fiber';
 import { Html, OrbitControls } from '@react-three/drei';
 import { MOUSE, TOUCH, type Group } from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
-import { BUILDINGS, mineCapacity } from '../../config/BuildingsConfig';
+import { BUILDINGS, mineCapacity, farmCapacity } from '../../config/BuildingsConfig';
 import type { PlacedBuilding, TroopCounts, KingdomType } from '../../core/GameState';
 import { getKingdomConfig, type KingdomVisualTheme } from '../../config/KingdomsConfig';
 import { BuildingModel, Scaffolding } from './BuildingModels';
@@ -95,8 +95,8 @@ interface VillageSceneProps {
   heroRecoveringUntil?: number;
 }
 
-/** Spinning gold coin above the mine: tap it to collect. */
-const CollectCoin: React.FC<{ onCollect: () => void }> = ({ onCollect }) => {
+/** Spinning resource badge above goldmine (coin) or farm (bread/wheat): tap it to collect. */
+const CollectResource: React.FC<{ type: 'goldmine' | 'farm'; onCollect: () => void }> = ({ type, onCollect }) => {
   const ref = useRef<Group>(null);
   useFrame(({ clock }) => {
     if (!ref.current) return;
@@ -109,12 +109,26 @@ const CollectCoin: React.FC<{ onCollect: () => void }> = ({ onCollect }) => {
       position={[0, 3, 0]}
       onClick={e => { e.stopPropagation(); if (e.delta <= TAP_TOLERANCE) onCollect(); }}
     >
-      <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.6, 0.6, 0.15, 24]} />
-        <meshStandardMaterial color="#ffd23a" metalness={0.8} roughness={0.2} emissive="#b8860b" emissiveIntensity={0.5} />
-      </mesh>
+      {type === 'goldmine' ? (
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.6, 0.6, 0.15, 24]} />
+          <meshStandardMaterial color="#ffd23a" metalness={0.8} roughness={0.2} emissive="#b8860b" emissiveIntensity={0.5} />
+        </mesh>
+      ) : (
+        <group>
+          {/* Bread Loaf & Wheat harvest badge */}
+          <mesh position={[0, 0, 0]} scale={[1.1, 0.7, 0.7]}>
+            <sphereGeometry args={[0.55, 16, 12]} />
+            <meshStandardMaterial color="#d49244" roughness={0.7} emissive="#965612" emissiveIntensity={0.3} />
+          </mesh>
+          <mesh position={[0, 0.2, 0]} rotation={[0, 0, Math.PI / 6]}>
+            <cylinderGeometry args={[0.06, 0.08, 0.65, 8]} />
+            <meshStandardMaterial color="#fef08a" emissive="#ca8a04" emissiveIntensity={0.5} />
+          </mesh>
+        </group>
+      )}
       <mesh position={[0, 0, 0]}>
-        <sphereGeometry args={[0.95, 12, 8]} />
+        <sphereGeometry args={[1.0, 12, 8]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
     </group>
@@ -130,8 +144,8 @@ const BuildingNode: React.FC<{
   const [cx, , cz] = buildingCenter(ghost ? { ...b, x: ghost.x, z: ghost.z } : b);
   const upgrading = b.upgradingUntil > now;
   const isHeroRecovering = b.type === 'altar' && !!heroRecoveringUntil && heroRecoveringUntil > now;
-  const cap = b.type === 'goldmine' ? mineCapacity(b.level) : 0;
-  const showCollect = b.type === 'goldmine' && b.stored >= Math.min(10, cap * 0.05) && !ghost;
+  const cap = b.type === 'goldmine' ? mineCapacity(b.level) : b.type === 'farm' ? farmCapacity(b.level) : 0;
+  const showCollect = (b.type === 'goldmine' || b.type === 'farm') && b.stored >= Math.min(5, cap * 0.05) && !ghost;
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
@@ -175,7 +189,9 @@ const BuildingNode: React.FC<{
         </Html>
       )}
 
-      {showCollect && <CollectCoin onCollect={() => onCollect(b.uid)} />}
+      {showCollect && (b.type === 'goldmine' || b.type === 'farm') && (
+        <CollectResource type={b.type} onCollect={() => onCollect(b.uid)} />
+      )}
     </group>
   );
 };
