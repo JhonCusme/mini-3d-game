@@ -13,8 +13,12 @@ interface AuthContextType {
     user: GameUser | null;
     isLoading: boolean;
     isConfigured: boolean;
+    isRecoveryMode: boolean;
+    setIsRecoveryMode: (val: boolean) => void;
     login: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
     signup: (email: string, pass: string, name?: string) => Promise<{ success: boolean; error?: string }>;
+    resetPasswordForEmail: (email: string) => Promise<{ success: boolean; error?: string }>;
+    updatePassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>;
     playAsGuest: () => void;
     logout: () => Promise<void>;
     saveToCloud: (state: GameState) => Promise<boolean>;
@@ -27,12 +31,22 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<GameUser | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isRecoveryMode, setIsRecoveryMode] = useState(false);
 
     useEffect(() => {
         let mounted = true;
 
         async function initAuth() {
             try {
+                // Check if user landed from a password recovery link
+                if (typeof window !== 'undefined') {
+                    const hash = window.location.hash || '';
+                    const search = window.location.search || '';
+                    if (hash.includes('type=recovery') || search.includes('type=recovery')) {
+                        setIsRecoveryMode(true);
+                    }
+                }
+
                 if (supabase && isSupabaseConfigured) {
                     const { data: { session } } = await supabase.auth.getSession();
                     if (session?.user && mounted) {
@@ -66,8 +80,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         initAuth();
 
         if (supabase) {
-            const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
                 if (!mounted) return;
+                if (event === 'PASSWORD_RECOVERY') {
+                    setIsRecoveryMode(true);
+                }
                 if (session?.user) {
                     localStorage.removeItem(GUEST_STORAGE_KEY);
                     setUser({
@@ -91,6 +108,54 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             mounted = false;
         };
     }, []);
+
+    const resetPasswordForEmail = async (email: string): Promise<{ success: boolean; error?: string }> => {
+        if (!supabase) {
+            return { success: false, error: 'Servidor no configurado en este entorno.' };
+        }
+        try {
+            const redirectTo = typeof window !== 'undefined' ? window.location.origin : undefined;
+            const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+                redirectTo,
+            });
+            if (error) {
+                return { success: false, error: error.message };
+            }
+            return { success: true };
+        } catch (err: unknown) {
+            return { success: false, error: err instanceof Error ? err.message : 'Error desconocido' };
+        }
+    };
+
+    const updatePassword = async (newPassword: string): Promise<{ success: boolean; error?: string }> => {
+        if (!supabase) {
+            return { success: false, error: 'Servidor no configurado en este entorno.' };
+        }
+        try {
+            const { data, error } = await supabase.auth.updateUser({
+                password: newPassword,
+            });
+            if (error) {
+                return { success: false, error: error.message };
+            }
+            if (data.user) {
+                setIsRecoveryMode(false);
+                setUser({
+                    id: data.user.id,
+                    email: data.user.email,
+                    name: data.user.user_metadata?.name || data.user.email?.split('@')[0],
+                    isGuest: false,
+                });
+                if (typeof window !== 'undefined' && window.history?.replaceState) {
+                    window.history.replaceState(null, '', window.location.pathname);
+                }
+                return { success: true };
+            }
+            return { success: false, error: 'No se pudo actualizar la contraseña.' };
+        } catch (err: unknown) {
+            return { success: false, error: err instanceof Error ? err.message : 'Error desconocido' };
+        }
+    };
 
     const login = async (email: string, pass: string): Promise<{ success: boolean; error?: string }> => {
         if (!supabase) {
@@ -223,8 +288,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             user,
             isLoading,
             isConfigured: isSupabaseConfigured,
+            isRecoveryMode,
+            setIsRecoveryMode,
             login,
             signup,
+            resetPasswordForEmail,
+            updatePassword,
             playAsGuest,
             logout,
             saveToCloud,

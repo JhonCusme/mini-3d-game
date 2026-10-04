@@ -6,9 +6,13 @@ import { getKingdomConfig } from '../config/KingdomsConfig';
 
 export const SettingsScreen = () => {
   const { state, toggleMute, resetGame } = useGame();
-  const { user, logout } = useAuth();
+  const { user, logout, updatePassword } = useAuth();
   const [muted, setMuted] = useState(localStorage.getItem('mini_kingdom_muted') === 'true');
   const [confirmReset, setConfirmReset] = useState(false);
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [passMsg, setPassMsg] = useState<{ text: string; isError: boolean } | null>(null);
+  const [savingPass, setSavingPass] = useState(false);
   const kingdomInfo = getKingdomConfig(state.playerKingdom);
 
   const handleToggleMute = () => {
@@ -22,6 +26,30 @@ export const SettingsScreen = () => {
       setConfirmReset(false);
     } else {
       setConfirmReset(true);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPassMsg(null);
+    if (!newPassword || newPassword.length < 6) {
+      setPassMsg({ text: 'La contraseña debe tener al menos 6 caracteres.', isError: true });
+      return;
+    }
+    setSavingPass(true);
+    try {
+      const res = await updatePassword(newPassword);
+      if (res.success) {
+        setPassMsg({ text: '¡Contraseña actualizada con éxito!', isError: false });
+        setNewPassword('');
+        setTimeout(() => setShowPasswordChange(false), 2000);
+      } else {
+        setPassMsg({ text: res.error || 'Error al actualizar contraseña.', isError: true });
+      }
+    } catch {
+      setPassMsg({ text: 'Error inesperado.', isError: true });
+    } finally {
+      setSavingPass(false);
     }
   };
 
@@ -100,16 +128,67 @@ export const SettingsScreen = () => {
                 : 'Tu progreso solo está guardado en este dispositivo.'}
             </p>
           </div>
-          <button
-            className={user && !user.isGuest ? 'btn-primary' : 'btn-upgrade'}
-            onClick={async () => {
-              await logout();
-            }}
-            style={{ padding: '8px 14px', fontSize: '12px' }}
-          >
-            {user && !user.isGuest ? 'Cerrar Sesión' : '☁️ Conectar'}
-          </button>
+          <div className="flex-row gap-2">
+            {user && !user.isGuest && (
+              <button
+                className="btn-secondary"
+                onClick={() => {
+                  setShowPasswordChange(!showPasswordChange);
+                  setPassMsg(null);
+                }}
+                style={{ padding: '8px 12px', fontSize: '12px' }}
+              >
+                🔒 {showPasswordChange ? 'Cerrar' : 'Contraseña'}
+              </button>
+            )}
+            <button
+              className={user && !user.isGuest ? 'btn-primary' : 'btn-upgrade'}
+              onClick={async () => {
+                await logout();
+              }}
+              style={{ padding: '8px 14px', fontSize: '12px' }}
+            >
+              {user && !user.isGuest ? 'Cerrar Sesión' : '☁️ Conectar'}
+            </button>
+          </div>
         </div>
+
+        {showPasswordChange && user && !user.isGuest && (
+          <form onSubmit={handleChangePassword} style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(255,215,0,0.15)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent-gold)' }}>🔑 Cambiar Contraseña:</span>
+            <div className="flex-row gap-2">
+              <input
+                type="password"
+                placeholder="Nueva contraseña (min 6 car.)"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                style={{
+                  flex: 1,
+                  background: '#100624',
+                  border: '1.5px solid rgba(255, 215, 0, 0.3)',
+                  borderRadius: '10px',
+                  padding: '8px 12px',
+                  color: '#fff',
+                  fontSize: '13px',
+                  outline: 'none',
+                }}
+              />
+              <button
+                type="submit"
+                className="btn-upgrade"
+                disabled={savingPass}
+                style={{ padding: '8px 14px', fontSize: '12px' }}
+              >
+                {savingPass ? 'Guardando...' : 'Guardar'}
+              </button>
+            </div>
+            {passMsg && (
+              <span style={{ fontSize: '11px', color: passMsg.isError ? '#ff7675' : '#2ed573', fontWeight: 600 }}>
+                {passMsg.isError ? '⚠️ ' : '✅ '}{passMsg.text}
+              </span>
+            )}
+          </form>
+        )}
       </div>
 
       {/* Reset */}

@@ -35,23 +35,34 @@
   padding: 0;
 }
 
+html, body {
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: #0a0612;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
   font-family: 'Outfit', sans-serif;
-  background-color: #0a0612;
   color: var(--text-primary);
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
-  overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
 }
 
 #root {
   width: 100%;
-  height: 100vh;
-  max-width: var(--app-max-width);
+  width: 100dvw;
+  height: 100%;
+  height: 100dvh;
+  max-width: 100%;
   background: linear-gradient(180deg, var(--bg-primary) 0%, #0f0820 100%);
   position: relative;
   display: flex;
@@ -1786,13 +1797,44 @@ button:disabled {
 .attack-mode-card.multiplayer { background: linear-gradient(180deg, #ff9f43, #c0392b); border: 3px solid #ffd79a; box-shadow: 0 6px 0 #7a1f1f; }
 .attack-mode-card.campaign { background: linear-gradient(180deg, #4fc3ff, #2f6fd6); border: 3px solid #cdeeff; box-shadow: 0 6px 0 #1a3f80; }
 
-@media (max-height: 420px) {
-  .hud-attack { width: 88px; height: 88px; font-size: 15px; }
-  .hud-attack-icon { font-size: 36px; }
-  .hud-btn { width: 52px; height: 52px; font-size: 22px; }
-  .hud-btn.big { width: 70px; height: 70px; font-size: 30px; }
-  .action-btn { width: 60px; height: 60px; font-size: 20px; }
-  .action-bar { max-width: calc(100% - 360px); }
+@media (max-height: 480px) {
+  .hud-attack { width: 78px; height: 78px; font-size: 13px; border-radius: 18px; }
+  .hud-attack-icon { font-size: 32px; }
+  .hud-btn { width: 48px; height: 48px; font-size: 18px; border-radius: 12px; }
+  .hud-btn span:last-child { font-size: 9px; }
+  .hud-btn.big { width: 62px; height: 62px; font-size: 26px; border-radius: 14px; }
+  .hud-bottom-right { gap: 5px; }
+  .hud-profile { padding: 3px 8px 3px 3px; gap: 6px; }
+  .hud-profile img { width: 32px; height: 32px; }
+  .hud-profile b { font-size: 13px; }
+  .hud-profile span { font-size: 10px; }
+  .hud-trophies { font-size: 12px; padding: 2px 8px; }
+  .hud-builders { padding: 3px 10px; font-size: 12px; }
+  .hud-res { min-width: 95px; font-size: 13px; padding: 2px 7px; gap: 4px; }
+  .hud-res > span:first-child { font-size: 15px; }
+  .hud-res-content { min-width: 60px; }
+  .hud-top-right { gap: 4px; }
+  .action-btn { width: 56px; height: 56px; font-size: 18px; }
+  .action-bar { max-width: min(560px, calc(100% - 32px)); }
+  .sheet { max-height: calc(100dvh - 12px); border-radius: 16px; }
+  .sheet-header { padding: 6px 12px; }
+  .sheet-header h2 { font-size: 17px; }
+  .sheet-close { width: 32px; height: 32px; font-size: 15px; }
+  .sheet-body { padding: 10px 12px; }
+}
+
+@media (max-height: 380px) {
+  .hud-attack { width: 66px; height: 66px; font-size: 11px; border-radius: 14px; }
+  .hud-attack-icon { font-size: 26px; }
+  .hud-btn { width: 42px; height: 42px; font-size: 16px; border-radius: 10px; }
+  .hud-btn span:last-child { font-size: 8px; }
+  .hud-btn.big { width: 54px; height: 54px; font-size: 22px; border-radius: 12px; }
+  .hud-bottom-right { gap: 3px; }
+  .hud-res { min-width: 82px; font-size: 11.5px; padding: 2px 6px; }
+  .hud-res-numbers { font-size: 11.5px; }
+  .hud-top-right { gap: 3px; }
+  .action-btn { width: 48px; height: 48px; font-size: 16px; }
+  .sheet { max-height: calc(100dvh - 8px); }
 }
 
 .hud-compact .hud-bottom-left,
@@ -1803,7 +1845,7 @@ button:disabled {
 }
 
 .hud-bottom-left, .hud-bottom-right { transition: opacity 0.2s, transform 0.2s; }
-.action-bar { max-width: calc(100% - 40px); }
+.action-bar { max-width: min(600px, calc(100% - 32px)); }
 
 /* ===== REAL-TIME ATTACK ===== */
 .attack-screen {
@@ -2296,7 +2338,7 @@ button:disabled {
 }
 
 /* ============================================================
-   AUTH SCREEN (Login, Register & Guest Mode)
+   AUTH SCREEN (Login, Register, Forgot Password & Guest Mode)
    ============================================================ */
 .auth-screen {
   position: fixed;
@@ -2306,21 +2348,27 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   user-select: none;
 }
 
 .auth-card {
   width: 100%;
   max-width: 440px;
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: auto;
   background: linear-gradient(180deg, #2b1752 0%, #170c30 100%);
   border: 3px solid rgba(255, 215, 0, 0.45);
   border-radius: 24px;
-  padding: 22px 24px;
+  padding: 20px 24px;
   box-shadow: 0 16px 45px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.15);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   animation: popIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
@@ -2332,12 +2380,12 @@ button:disabled {
 }
 
 .auth-crest {
-  font-size: 42px;
+  font-size: 40px;
   filter: drop-shadow(0 4px 10px rgba(255, 215, 0, 0.5));
 }
 
 .auth-title {
-  font-size: 26px;
+  font-size: 24px;
   color: var(--accent-gold);
   text-shadow: 0 2px 0 #5c3b00;
   margin-top: 2px;
@@ -2389,6 +2437,20 @@ button:disabled {
   font-weight: 600;
 }
 
+.auth-success-banner {
+  background: rgba(46, 213, 115, 0.2);
+  border: 1px solid var(--accent-success);
+  border-radius: 10px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #2ed573;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
 .auth-form {
   display: flex;
   flex-direction: column;
@@ -2398,7 +2460,7 @@ button:disabled {
 .auth-field {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
 }
 
 .auth-field label {
@@ -2445,18 +2507,35 @@ button:disabled {
   color: #6d5b82;
 }
 
+.auth-link-btn {
+  background: none;
+  border: none;
+  color: var(--accent-gold);
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  opacity: 0.9;
+  transition: opacity 0.2s;
+  padding: 2px 4px;
+}
+
+.auth-link-btn:hover {
+  opacity: 1;
+}
+
 .auth-submit-btn {
   width: 100%;
-  padding: 13px;
+  padding: 12px;
   font-size: 14px;
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
 .auth-divider {
   display: flex;
   align-items: center;
   text-align: center;
-  margin: 4px 0;
+  margin: 2px 0;
 }
 
 .auth-divider::before,
@@ -2480,7 +2559,7 @@ button:disabled {
   border: 1.5px solid rgba(255, 255, 255, 0.18);
   color: var(--text-primary);
   border-radius: 12px;
-  padding: 11px;
+  padding: 10px;
   font-size: 13px;
   font-weight: 700;
   transition: all 0.2s ease;
@@ -2497,5 +2576,23 @@ button:disabled {
   font-size: 11px;
   color: var(--text-secondary);
   line-height: 1.3;
+}
+
+@media (max-height: 480px) {
+  .auth-card {
+    padding: 14px 18px;
+    gap: 8px;
+    border-radius: 18px;
+  }
+  .auth-crest { font-size: 26px; }
+  .auth-title { font-size: 19px; }
+  .auth-subtitle { font-size: 11px; }
+  .auth-tabs { padding: 2px; }
+  .auth-tab { padding: 4px 8px; font-size: 11.5px; }
+  .auth-form { gap: 8px; }
+  .auth-input-wrapper { padding: 2px 10px; }
+  .auth-input-wrapper input { padding: 5px 0; font-size: 13px; }
+  .auth-submit-btn { padding: 9px; font-size: 12.5px; }
+  .btn-guest { padding: 8px; font-size: 12px; }
 }
 
