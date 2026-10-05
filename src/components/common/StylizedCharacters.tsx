@@ -604,40 +604,59 @@ export const WitchCharacterModel: React.FC<{
       }
     });
 
-    // Base Riding Pose: pose bones to sit and straddle the broom naturally instead of rigid A-pose
+    // Anchor hair and hat directly to DEF-spine006 (the deform bone of the skull and face)
+    // so they stay 100% attached to her head and never sink in or expose a bald head!
+    cloned.updateMatrixWorld(true);
+    let hairMesh: any = null;
+    let hatMesh: any = null;
+    cloned.traverse((child) => {
+      if (child.name === 'hair') hairMesh = child;
+      if (child.name === 'hat') hatMesh = child;
+    });
+
+    if (boneMap['DEF-spine006']) {
+      if (hairMesh) boneMap['DEF-spine006'].attach(hairMesh);
+      if (hatMesh) boneMap['DEF-spine006'].attach(hatMesh);
+    }
+
+    // Broom Riding Pose: thighs straddling the broom shaft, knees bent, feet hanging down
     if (boneMap['DEF-thighL']) {
-      boneMap['DEF-thighL'].rotation.x -= 0.55;
-      boneMap['DEF-thighL'].rotation.z -= 0.12;
+      boneMap['DEF-thighL'].rotation.x -= 0.70;
+      boneMap['DEF-thighL'].rotation.z -= 0.22;
     }
     if (boneMap['DEF-shinL']) {
-      boneMap['DEF-shinL'].rotation.x += 0.65;
+      boneMap['DEF-shinL'].rotation.x += 0.85;
     }
     if (boneMap['DEF-thighR']) {
-      boneMap['DEF-thighR'].rotation.x -= 0.55;
-      boneMap['DEF-thighR'].rotation.z += 0.12;
+      boneMap['DEF-thighR'].rotation.x -= 0.70;
+      boneMap['DEF-thighR'].rotation.z += 0.22;
     }
     if (boneMap['DEF-shinR']) {
-      boneMap['DEF-shinR'].rotation.x += 0.65;
+      boneMap['DEF-shinR'].rotation.x += 0.85;
     }
+
+    // Arms brought down and forward, holding/steadying the broom handle
     if (boneMap['DEF-upper_armL']) {
-      boneMap['DEF-upper_armL'].rotation.x -= 0.45;
-      boneMap['DEF-upper_armL'].rotation.z -= 0.45;
+      boneMap['DEF-upper_armL'].rotation.x -= 0.52;
+      boneMap['DEF-upper_armL'].rotation.z -= 0.48;
     }
     if (boneMap['DEF-forearmL']) {
-      boneMap['DEF-forearmL'].rotation.y -= 0.3;
+      boneMap['DEF-forearmL'].rotation.y -= 0.35;
     }
     if (boneMap['DEF-upper_armR']) {
-      boneMap['DEF-upper_armR'].rotation.x -= 0.45;
-      boneMap['DEF-upper_armR'].rotation.z += 0.45;
+      boneMap['DEF-upper_armR'].rotation.x -= 0.52;
+      boneMap['DEF-upper_armR'].rotation.z += 0.48;
     }
     if (boneMap['DEF-forearmR']) {
-      boneMap['DEF-forearmR'].rotation.y += 0.3;
+      boneMap['DEF-forearmR'].rotation.y += 0.35;
     }
+
+    // Spine tilted forward into flight
     if (boneMap['DEF-spine002']) {
-      boneMap['DEF-spine002'].rotation.x += 0.15;
+      boneMap['DEF-spine002'].rotation.x += 0.18;
     }
     if (boneMap['DEF-spine003']) {
-      boneMap['DEF-spine003'].rotation.x += 0.1;
+      boneMap['DEF-spine003'].rotation.x += 0.12;
     }
 
     const wrap = new Group();
@@ -654,21 +673,21 @@ export const WitchCharacterModel: React.FC<{
 
     // Spine breathing & flight compensation
     if (bones['DEF-spine002']) {
-      bones['DEF-spine002'].rotation.x = 0.15 + Math.sin(t * 1.5) * 0.04;
+      bones['DEF-spine002'].rotation.x = 0.18 + Math.sin(t * 1.5) * 0.035;
     }
     if (bones['DEF-spine003']) {
-      bones['DEF-spine003'].rotation.z = Math.sin(t * 1.2) * 0.03;
+      bones['DEF-spine003'].rotation.z = Math.sin(t * 1.2) * 0.025;
     }
 
-    // Head looking ahead and tilting with the broom movements
-    if (bones['head']) {
-      bones['head'].rotation.y = Math.sin(t * 1.1) * 0.16;
-      bones['head'].rotation.z = Math.cos(t * 1.3) * 0.06;
+    // Animate DEF-spine006 (skull & face deform bone) so head, hair, and hat move 100% in sync!
+    if (bones['DEF-spine006']) {
+      bones['DEF-spine006'].rotation.y = Math.sin(t * 1.1) * 0.14;
+      bones['DEF-spine006'].rotation.z = Math.cos(t * 1.3) * 0.05;
     }
 
-    // Arms guiding the flight or casting
+    // Arms holding broom handle or casting
     if (bones['DEF-upper_armL']) {
-      bones['DEF-upper_armL'].rotation.x = -0.45 + Math.sin(t * 1.8) * 0.03;
+      bones['DEF-upper_armL'].rotation.x = -0.52 + Math.sin(t * 1.8) * 0.025;
     }
     if (bones['DEF-upper_armR']) {
       if (isAttacking) {
@@ -677,16 +696,16 @@ export const WitchCharacterModel: React.FC<{
         bones['DEF-upper_armR'].rotation.x = -0.9 + cast * 0.35;
         bones['DEF-upper_armR'].rotation.z = 0.2 + cast * 0.2;
       } else {
-        bones['DEF-upper_armR'].rotation.x = -0.45 + Math.sin(t * 1.8 + 0.5) * 0.03;
+        bones['DEF-upper_armR'].rotation.x = -0.52 + Math.sin(t * 1.8 + 0.5) * 0.025;
       }
     }
 
-    // Legs subtle flight wobble
+    // Legs subtle flight sway
     if (bones['DEF-shinL']) {
-      bones['DEF-shinL'].rotation.x = 0.65 + Math.sin(t * 1.5) * 0.025;
+      bones['DEF-shinL'].rotation.x = 0.85 + Math.sin(t * 1.5) * 0.02;
     }
     if (bones['DEF-shinR']) {
-      bones['DEF-shinR'].rotation.x = 0.65 + Math.cos(t * 1.5) * 0.025;
+      bones['DEF-shinR'].rotation.x = 0.85 + Math.cos(t * 1.5) * 0.02;
     }
   });
 
@@ -717,7 +736,7 @@ export const MageModel: React.FC<CharacterProps> = ({
 
     // Entire broom flight mount physics: bobbing, banking tilt, and forward surge
     if (flightMountRef.current) {
-      flightMountRef.current.position.y = 0.28 + Math.sin(t) * 0.06;
+      flightMountRef.current.position.y = 0.22 + Math.sin(t) * 0.06;
       flightMountRef.current.rotation.z = Math.sin(t * 0.9) * 0.06;
       flightMountRef.current.rotation.x = 0.08 + Math.cos(t * 0.8) * 0.04;
     }
@@ -731,12 +750,12 @@ export const MageModel: React.FC<CharacterProps> = ({
         <meshBasicMaterial color={teamColor} transparent opacity={0.45} />
       </mesh>
 
-      {/* --- UNIFIED FLYING MOUNT: 3D WITCH RIDING ONLY HER 3D BROOM --- */}
-      <group ref={flightMountRef} position={[0, 0.28, 0]}>
-        {/* Realistic 3D Witch's Broom Mount */}
-        <group position={[0, -0.04, 0]}>
+      {/* --- UNIFIED FLYING MOUNT: 3D WITCH SITTING COMFORTABLY ON HER 3D BROOM --- */}
+      <group ref={flightMountRef} position={[0, -0.05, 0]}>
+        {/* Realistic 3D Witch's Broom Mount positioned right between her thighs */}
+        <group position={[0, 0.48, 0]}>
           <React.Suspense fallback={null}>
-            <WitchBroomModel scale={0.82} />
+            <WitchBroomModel scale={0.86} />
           </React.Suspense>
         </group>
 
@@ -759,11 +778,11 @@ export const MageModel: React.FC<CharacterProps> = ({
         </React.Suspense>
 
         {/* Mystical Arcane Sparkles trailing behind the broom */}
-        <mesh position={[0, 0.05, -0.75]}>
+        <mesh position={[0, 0.52, -0.8]}>
           <sphereGeometry args={[0.04, 8, 8]} />
           <meshBasicMaterial color="#b48cff" transparent opacity={0.7} />
         </mesh>
-        <mesh position={[0, 0.12, 0.45]}>
+        <mesh position={[0, 0.55, 0.5]}>
           <sphereGeometry args={[0.03, 8, 8]} />
           <meshBasicMaterial color="#00ffff" transparent opacity={0.6} />
         </mesh>
