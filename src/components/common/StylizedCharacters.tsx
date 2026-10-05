@@ -1,6 +1,7 @@
-import React, { useRef } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import type { Group, Mesh } from 'three';
+import { useGLTF } from '@react-three/drei';
+import { Box3, Group, Vector3, type Mesh } from 'three';
 import type { TroopId } from '../../core/GameState';
 import { ProceduralTextures } from '../../core/textures/ProceduralTextures';
 
@@ -523,8 +524,52 @@ export const ArcherModel: React.FC<CharacterProps> = ({
 };
 
 // ===========================================================================
-// 3. ARCANE MAGE (Mago Arcano con Toga, Capucha Estelar, Báculo y Orbe Mágico)
+// 3. ARCANE MAGE (Mago Arcano con Toga, Capucha Estelar, Báculo y Escoba Mágica 3D)
 // ===========================================================================
+
+export const WitchBroomModel: React.FC<{ scale?: number }> = ({ scale = 1 }) => {
+  const { scene } = useGLTF('/models/Escoba.glb');
+  const broomGroup = useMemo(() => {
+    const cloned = scene.clone(true);
+    
+    // Auto-normalize scale and center
+    const box = new Box3().setFromObject(cloned);
+    const size = new Vector3();
+    box.getSize(size);
+    const maxDim = Math.max(size.x, size.y, size.z);
+    
+    // Target length ~1.65 units
+    const normScale = maxDim > 0 ? 1.65 / maxDim : 1;
+    
+    const center = new Vector3();
+    box.getCenter(center);
+    cloned.position.sub(center);
+
+    const wrapper = new Group();
+    wrapper.add(cloned);
+    wrapper.scale.setScalar(normScale * scale);
+
+    // If standing vertical (along Y), orient horizontally along forward flight axis (Z)
+    if (size.y > size.x && size.y > size.z) {
+      cloned.rotation.x = Math.PI / 2;
+    } else if (size.x > size.z) {
+      cloned.rotation.y = Math.PI / 2;
+    }
+
+    cloned.traverse((child) => {
+      if ((child as Mesh).isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+      }
+    });
+    return wrapper;
+  }, [scene, scale]);
+
+  return <primitive object={broomGroup} />;
+};
+
+useGLTF.preload('/models/Escoba.glb');
+
 export const MageModel: React.FC<CharacterProps> = ({
   teamColor = '#7b4dff',
   isAttacking = false,
@@ -535,6 +580,7 @@ export const MageModel: React.FC<CharacterProps> = ({
   const staffRef = useRef<Group>(null);
   const orbRef = useRef<Mesh>(null);
   const auraRef = useRef<Mesh>(null);
+  const broomRef = useRef<Group>(null);
 
   useFrame(({ clock }) => {
     const t = clock.elapsedTime * 3 + animOffset;
@@ -562,6 +608,13 @@ export const MageModel: React.FC<CharacterProps> = ({
         staffRef.current.position.z = 0.2 + cast * 0.1;
       }
     }
+
+    // Dynamic flight tilt on the broom
+    if (broomRef.current) {
+      const wobble = Math.sin(t * 1.5) * 0.06;
+      broomRef.current.rotation.z = -0.04 + wobble;
+      broomRef.current.rotation.x = 0.12 + Math.cos(t * 1.2) * 0.05;
+    }
   });
 
   return (
@@ -571,6 +624,13 @@ export const MageModel: React.FC<CharacterProps> = ({
         <ringGeometry args={[0.28, 0.48, 16]} />
         <meshBasicMaterial color={teamColor} transparent opacity={0.5} />
       </mesh>
+
+      {/* --- REALISTIC 3D WITCH'S BROOM FLYING MOUNT --- */}
+      <group ref={broomRef} position={[0, 0.24, 0]}>
+        <React.Suspense fallback={null}>
+          <WitchBroomModel scale={0.78} />
+        </React.Suspense>
+      </group>
 
       {/* --- FLOWING WIZARD ROBES --- */}
       <group position={[0, 0.45, 0]}>
