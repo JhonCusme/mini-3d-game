@@ -2640,4 +2640,9 @@ button:disabled {
   transform: translateY(1px) scale(0.98);
 }
 
-
+/* 3D Character Inspector Split Layout */
+@media (max-width: 720px) {
+  .inspector-split {
+    grid-template-columns: 1fr !important;
+  }
+}

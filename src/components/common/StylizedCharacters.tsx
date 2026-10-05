@@ -2,6 +2,7 @@ import React, { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import { Box3, Group, Vector3, type Mesh } from 'three';
+import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 import type { TroopId } from '../../core/GameState';
 import { ProceduralTextures } from '../../core/textures/ProceduralTextures';
 
@@ -571,32 +572,35 @@ export const WitchBroomModel: React.FC<{ scale?: number }> = ({ scale = 1 }) => 
 export const WitchCharacterModel: React.FC<{ scale?: number }> = ({ scale = 1 }) => {
   const { scene } = useGLTF('/models/Bruja.glb');
   const witchGroup = useMemo(() => {
-    const cloned = scene.clone(true);
-    
-    // Auto-normalize scale and center
-    const box = new Box3().setFromObject(cloned);
-    const size = new Vector3();
-    box.getSize(size);
-    const maxDim = Math.max(size.x, size.y, size.z);
-    
-    // Target height ~1.25 units
-    const normScale = maxDim > 0 ? 1.25 / maxDim : 1;
-    
-    const center = new Vector3();
-    box.getCenter(center);
-    // Align base
-    cloned.position.set(-center.x, -box.min.y, -center.z);
-
-    const wrapper = new Group();
-    wrapper.add(cloned);
-    wrapper.scale.setScalar(normScale * scale);
+    // SkeletonUtils.clone properly duplicates SkinnedMesh bones and bindings
+    const cloned = SkeletonUtils.clone(scene);
 
     cloned.traverse((child) => {
+      // Hide any Rigify widget / bone control shapes
+      if (child.name.startsWith('WGT') || child.name.startsWith('MCH-')) {
+        child.visible = false;
+      }
       if ((child as Mesh).isMesh) {
         child.castShadow = true;
         child.receiveShadow = true;
+        child.frustumCulled = false;
+        const mesh = child as Mesh;
+        if (mesh.material) {
+          const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+          mats.forEach((mat: any) => {
+            mat.side = 2; // DoubleSide
+            mat.depthWrite = true;
+            mat.needsUpdate = true;
+          });
+        }
       }
     });
+
+    const wrapper = new Group();
+    wrapper.add(cloned);
+    // Height of Bruja.glb is 3.38m; normalize down to ~1.3 unit game character scale
+    const normScale = (1.3 / 3.38) * scale;
+    wrapper.scale.setScalar(normScale);
     return wrapper;
   }, [scene, scale]);
 
@@ -707,13 +711,9 @@ export const MageModel: React.FC<CharacterProps> = ({
 
       {/* --- LEFT HAND CASTING SWIRL --- */}
       <group position={[-0.24, 0.55, 0.12]}>
-        <mesh position={[0, 0, 0]}>
-          <sphereGeometry args={[0.04, 6, 6]} />
-          <meshStandardMaterial color="#fcd5b4" />
-        </mesh>
-        <mesh position={[0, 0.04, 0]}>
-          <sphereGeometry args={[0.03, 8, 8]} />
-          <meshStandardMaterial color="#00ffff" emissive="#00ffff" emissiveIntensity={1} />
+        <mesh position={[0, 0.02, 0]}>
+          <sphereGeometry args={[0.035, 8, 8]} />
+          <meshStandardMaterial color="#00ffff" emissive="#00ffff" emissiveIntensity={1.5} />
         </mesh>
       </group>
     </group>

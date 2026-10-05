@@ -119,12 +119,12 @@ export const GameConfig = {
 
     // Troops
     troops: {
-        infantry: { id: 'infantry', name: 'Infantry', cost: 10, power: 1, hp: 10, unlockTerritory: 0, unlockBarracksLevel: 1 },
-        archers: { id: 'archers', name: 'Archers', cost: 20, power: 3, hp: 5, unlockTerritory: 1, unlockBarracksLevel: 2 },
-        cavalry: { id: 'cavalry', name: 'Cavalry', cost: 50, power: 5, hp: 20, unlockTerritory: 3, unlockBarracksLevel: 3 },
-        mages: { id: 'mages', name: 'Mages', cost: 100, power: 15, hp: 5, unlockTerritory: 5, unlockBarracksLevel: 4 },
-        catapults: { id: 'catapults', name: 'Catapults', cost: 250, power: 40, hp: 30, unlockTerritory: 7, unlockBarracksLevel: 5 },
-        healers: { id: 'healers', name: 'Healers', cost: 150, power: 2, hp: 15, unlockTerritory: 9, unlockBarracksLevel: 6 }
+        infantry: { id: 'infantry', name: 'Bárbaro', cost: 10, power: 1, hp: 10, unlockTerritory: 0, unlockBarracksLevel: 1 },
+        archers: { id: 'archers', name: 'Arquera', cost: 20, power: 3, hp: 5, unlockTerritory: 1, unlockBarracksLevel: 2 },
+        cavalry: { id: 'cavalry', name: 'Caballero', cost: 50, power: 5, hp: 20, unlockTerritory: 3, unlockBarracksLevel: 3 },
+        mages: { id: 'mages', name: 'Bruja', cost: 100, power: 15, hp: 5, unlockTerritory: 5, unlockBarracksLevel: 4 },
+        catapults: { id: 'catapults', name: 'Catapulta', cost: 250, power: 40, hp: 30, unlockTerritory: 7, unlockBarracksLevel: 5 },
+        healers: { id: 'healers', name: 'Curandera', cost: 150, power: 2, hp: 15, unlockTerritory: 9, unlockBarracksLevel: 6 }
     },
 
     // Quests

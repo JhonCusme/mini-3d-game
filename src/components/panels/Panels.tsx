@@ -4,7 +4,6 @@ import { GameConfig } from '../../config/GameConfig';
 import type { DefenseLogEntry, GodId, TroopCounts, TroopId } from '../../core/GameState';
 import { GodManager } from '../../core/GodManager';
 import { UpgradeManager } from '../../core/UpgradeManager';
-import { EconomyManager } from '../../core/EconomyManager';
 import { PvpManager } from '../../core/pvp/PvpManager';
 import { wallMaxHp } from '../../core/pvp/PvpBattle';
 import { TROOP_ICONS } from '../troopIcons';
@@ -224,62 +223,6 @@ export const DefenseLogPanel: React.FC<{ onRevenge?: (entry: DefenseLogEntry) =>
   );
 };
 
-/** Train troops (Barracks). */
-export const TrainTroopsPanel: React.FC = () => {
-  const { state, trainTroop } = useGame();
-  const total = PvpManager.totalTroops(state);
-  const max = UpgradeManager.getTroopCapacity(state);
-  return (
-    <div className="flex-col gap-2" style={{ width: '100%' }}>
-      <div className="flex-row justify-between">
-        <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Ejército (incluye guarnición)</span>
-        <span style={{ fontSize: '13px', fontWeight: 700, color: total >= max ? 'var(--accent-danger)' : 'var(--accent-energy)' }}>{total} / {max}</span>
-      </div>
-      <div className="card-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '8px' }}>
-        {TROOP_IDS.map(id => {
-          const troop = GameConfig.troops[id];
-          const isUnlocked = UpgradeManager.isTroopUnlocked(state, id);
-          const reqText = UpgradeManager.getUnlockRequirementText(id);
-          const canTrain = isUnlocked && EconomyManager.canAfford(state, troop.cost, 'coins') && total < max;
-          const lvl = state.troopLevels?.[id] || 1;
-          const mult = 1 + (lvl - 1) * 0.22;
-          const scaledPower = Math.round(troop.power * mult);
-          const scaledHp = Math.round(troop.hp * mult);
-          return (
-            <div key={id} className="troop-row" style={{ opacity: isUnlocked ? 1 : 0.65 }}>
-              <div className="flex-row gap-2">
-                <span className="troop-icon" style={{ filter: isUnlocked ? 'none' : 'grayscale(1)' }}>{TROOP_ICONS[id]}</span>
-                <div className="flex-col">
-                  <div className="flex-row gap-1" style={{ alignItems: 'baseline' }}>
-                    <span style={{ fontWeight: 700, fontSize: '13px' }}>{troop.name}</span>
-                    {isUnlocked ? (
-                      <span style={{ fontSize: '10px', color: 'var(--accent-gold)', fontWeight: 800 }}>Nv.{lvl}</span>
-                    ) : (
-                      <span style={{ fontSize: '10px', color: '#ff6b81', fontWeight: 700 }}>🔒 Bloqueado</span>
-                    )}
-                  </div>
-                  {isUnlocked ? (
-                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>⚔️{scaledPower} ❤️{scaledHp} · ×{state.troops[id]}</span>
-                  ) : (
-                    <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{reqText}</span>
-                  )}
-                </div>
-              </div>
-              <button
-                className="btn-primary"
-                disabled={!canTrain}
-                onClick={() => trainTroop(id)}
-                style={{ padding: '6px 10px', fontSize: '12px', minWidth: '70px' }}
-                title={!isUnlocked ? reqText : undefined}
-              >
-                {isUnlocked ? `🪙 ${troop.cost}` : '🔒'}
-              </button>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
+export { TrainTroopsInspector as TrainTroopsPanel } from './TrainTroopsInspector';
 
 export { TroopUpgradePanel } from './TroopUpgradePanel';
