@@ -545,11 +545,11 @@ export const WitchBroomModel: React.FC<{ scale?: number }> = ({ scale = 1 }) => 
     // The natural seat where a rider sits is at Y = 1.35.
     // Offset cloned so that seat is exactly at (0, 0, 0):
     cloned.position.set(0, -1.35, 0);
-
     const pivot = new Group();
     pivot.add(cloned);
     // Rotate so handle points forward (+Z) and bristles point backward (-Z)
-    pivot.rotation.x = Math.PI / 2;
+    // Dynamic flight pitch: tilt broom up in front (10 degrees), matching the classic witch riding reference
+    pivot.rotation.x = Math.PI / 2 - 0.16;
 
     const wrapper = new Group();
     wrapper.add(pivot);
@@ -569,7 +569,7 @@ export const WitchCharacterModel: React.FC<{
 }> = ({ scale = 1, isAttacking = false, animOffset = 0 }) => {
   const { scene } = useGLTF('/models/Bruja.glb');
 
-  const { wrapper, bones } = useMemo(() => {
+  const { wrapper, bones, baseRot } = useMemo(() => {
     // SkeletonUtils.clone properly duplicates SkinnedMesh bones and bindings
     const cloned = SkeletonUtils.clone(scene);
     const boneMap: Record<string, any> = {};
@@ -612,44 +612,67 @@ export const WitchCharacterModel: React.FC<{
       if (hatMesh) boneMap['DEF-spine006'].attach(hatMesh);
     }
 
+    // Spine tilted forward into flight along the broom handle
+    if (boneMap['DEF-spine002']) {
+      boneMap['DEF-spine002'].rotation.x += 0.28;
+    }
+    if (boneMap['DEF-spine003']) {
+      boneMap['DEF-spine003'].rotation.x += 0.22;
+    }
+
+    // Left Arm: reaches forward and in to grip the broom handle
+    if (boneMap['DEF-upper_armL']) {
+      boneMap['DEF-upper_armL'].rotation.x -= 0.70;
+      boneMap['DEF-upper_armL'].rotation.y -= 0.50;
+      boneMap['DEF-upper_armL'].rotation.z -= 0.70;
+    }
+    if (boneMap['DEF-forearmL']) {
+      boneMap['DEF-forearmL'].rotation.x += 0.40;
+    }
+    if (boneMap['DEF-handL']) {
+      boneMap['DEF-handL'].rotation.y += 0.25;
+      boneMap['DEF-handL'].rotation.z -= 0.20;
+    }
+
+    // Right Arm: reaches forward and in to grip the broom handle
+    if (boneMap['DEF-upper_armR']) {
+      boneMap['DEF-upper_armR'].rotation.x -= 0.40;
+      boneMap['DEF-upper_armR'].rotation.y += 0.40;
+      boneMap['DEF-upper_armR'].rotation.z += 0.80;
+    }
+    if (boneMap['DEF-forearmR']) {
+      boneMap['DEF-forearmR'].rotation.x += 0.40;
+    }
+    if (boneMap['DEF-handR']) {
+      boneMap['DEF-handR'].rotation.y -= 0.25;
+      boneMap['DEF-handR'].rotation.z += 0.20;
+    }
+
+    // Fingers curled naturally around the broom handle
+    const fingerBones = [
+      'DEF-f_index01L', 'DEF-f_index02L', 'DEF-f_middle01L', 'DEF-f_middle02L', 'DEF-f_ring01L', 'DEF-f_ring02L', 'DEF-f_pinky01L', 'DEF-thumb01L',
+      'DEF-f_index01R', 'DEF-f_index02R', 'DEF-f_middle01R', 'DEF-f_middle02R', 'DEF-f_ring01R', 'DEF-f_ring02R', 'DEF-f_pinky01R', 'DEF-thumb01R'
+    ];
+    fingerBones.forEach(fName => {
+      if (boneMap[fName]) {
+        boneMap[fName].rotation.x += 0.45;
+      }
+    });
+
     // Broom Riding Pose: thighs straddling the broom shaft, knees bent, feet hanging down
     if (boneMap['DEF-thighL']) {
       boneMap['DEF-thighL'].rotation.x -= 0.70;
-      boneMap['DEF-thighL'].rotation.z -= 0.22;
+      boneMap['DEF-thighL'].rotation.z -= 0.15;
     }
     if (boneMap['DEF-shinL']) {
       boneMap['DEF-shinL'].rotation.x += 0.85;
     }
     if (boneMap['DEF-thighR']) {
       boneMap['DEF-thighR'].rotation.x -= 0.70;
-      boneMap['DEF-thighR'].rotation.z += 0.22;
+      boneMap['DEF-thighR'].rotation.z += 0.15;
     }
     if (boneMap['DEF-shinR']) {
       boneMap['DEF-shinR'].rotation.x += 0.85;
-    }
-
-    // Arms brought down and forward, holding/steadying the broom handle
-    if (boneMap['DEF-upper_armL']) {
-      boneMap['DEF-upper_armL'].rotation.x -= 0.52;
-      boneMap['DEF-upper_armL'].rotation.z -= 0.48;
-    }
-    if (boneMap['DEF-forearmL']) {
-      boneMap['DEF-forearmL'].rotation.y -= 0.35;
-    }
-    if (boneMap['DEF-upper_armR']) {
-      boneMap['DEF-upper_armR'].rotation.x -= 0.52;
-      boneMap['DEF-upper_armR'].rotation.z += 0.48;
-    }
-    if (boneMap['DEF-forearmR']) {
-      boneMap['DEF-forearmR'].rotation.y += 0.35;
-    }
-
-    // Spine tilted forward into flight
-    if (boneMap['DEF-spine002']) {
-      boneMap['DEF-spine002'].rotation.x += 0.18;
-    }
-    if (boneMap['DEF-spine003']) {
-      boneMap['DEF-spine003'].rotation.x += 0.12;
     }
 
     const wrap = new Group();
@@ -657,9 +680,16 @@ export const WitchCharacterModel: React.FC<{
     // Height of Bruja.glb is 3.38m; normalize down to ~1.3 unit game character scale
     const normScale = (1.3 / 3.38) * scale;
     wrap.scale.setScalar(normScale);
-    // Align her pelvis/hips (which are at Y ~ 0.58 in scaled character space) exactly with the broom seat at Y = 0
-    wrap.position.set(0, -0.58 * (scale / 0.92), 0);
-    return { wrapper: wrap, bones: boneMap };
+    // Align her pelvis/hips so her seat and thighs sit comfortably ON TOP of the broom shaft
+    wrap.position.set(0, -0.40 * (scale / 0.92), 0);
+    // Save baseline rotations for smooth useFrame animation additions
+    const baseRotations: Record<string, { x: number; y: number; z: number }> = {};
+    Object.keys(boneMap).forEach(k => {
+      const r = boneMap[k].rotation;
+      baseRotations[k] = { x: r.x, y: r.y, z: r.z };
+    });
+
+    return { wrapper: wrap, bones: boneMap, baseRot: baseRotations };
   }, [scene, scale]);
 
   // Live dynamic flight animation in useFrame
@@ -667,40 +697,40 @@ export const WitchCharacterModel: React.FC<{
     const t = clock.elapsedTime * 2.8 + animOffset;
 
     // Spine breathing & flight compensation
-    if (bones['DEF-spine002']) {
-      bones['DEF-spine002'].rotation.x = 0.18 + Math.sin(t * 1.5) * 0.035;
+    if (bones['DEF-spine002'] && baseRot['DEF-spine002']) {
+      bones['DEF-spine002'].rotation.x = baseRot['DEF-spine002'].x + Math.sin(t * 1.5) * 0.025;
     }
-    if (bones['DEF-spine003']) {
-      bones['DEF-spine003'].rotation.z = Math.sin(t * 1.2) * 0.025;
+    if (bones['DEF-spine003'] && baseRot['DEF-spine003']) {
+      bones['DEF-spine003'].rotation.z = baseRot['DEF-spine003'].z + Math.sin(t * 1.2) * 0.02;
     }
 
     // Animate DEF-spine006 (skull & face deform bone) so head, hair, and hat move 100% in sync!
-    if (bones['DEF-spine006']) {
-      bones['DEF-spine006'].rotation.y = Math.sin(t * 1.1) * 0.14;
-      bones['DEF-spine006'].rotation.z = Math.cos(t * 1.3) * 0.05;
+    if (bones['DEF-spine006'] && baseRot['DEF-spine006']) {
+      bones['DEF-spine006'].rotation.y = baseRot['DEF-spine006'].y + Math.sin(t * 1.1) * 0.12;
+      bones['DEF-spine006'].rotation.z = baseRot['DEF-spine006'].z + Math.cos(t * 1.3) * 0.04;
     }
 
-    // Arms holding broom handle or casting
-    if (bones['DEF-upper_armL']) {
-      bones['DEF-upper_armL'].rotation.x = -0.52 + Math.sin(t * 1.8) * 0.025;
+    // Arms gripping broom handle or casting during attack
+    if (bones['DEF-upper_armL'] && baseRot['DEF-upper_armL']) {
+      bones['DEF-upper_armL'].rotation.x = baseRot['DEF-upper_armL'].x + Math.sin(t * 1.8) * 0.02;
     }
-    if (bones['DEF-upper_armR']) {
+    if (bones['DEF-upper_armR'] && baseRot['DEF-upper_armR']) {
       if (isAttacking) {
         // Dramatic attack cast forward
         const cast = Math.sin(clock.elapsedTime * 6);
-        bones['DEF-upper_armR'].rotation.x = -0.9 + cast * 0.35;
-        bones['DEF-upper_armR'].rotation.z = 0.2 + cast * 0.2;
+        bones['DEF-upper_armR'].rotation.x = baseRot['DEF-upper_armR'].x - 0.4 + cast * 0.35;
+        bones['DEF-upper_armR'].rotation.z = baseRot['DEF-upper_armR'].z + 0.3 + cast * 0.2;
       } else {
-        bones['DEF-upper_armR'].rotation.x = -0.52 + Math.sin(t * 1.8 + 0.5) * 0.025;
+        bones['DEF-upper_armR'].rotation.x = baseRot['DEF-upper_armR'].x + Math.sin(t * 1.8 + 0.5) * 0.02;
       }
     }
 
     // Legs subtle flight sway
-    if (bones['DEF-shinL']) {
-      bones['DEF-shinL'].rotation.x = 0.85 + Math.sin(t * 1.5) * 0.02;
+    if (bones['DEF-shinL'] && baseRot['DEF-shinL']) {
+      bones['DEF-shinL'].rotation.x = baseRot['DEF-shinL'].x + Math.sin(t * 1.5) * 0.015;
     }
-    if (bones['DEF-shinR']) {
-      bones['DEF-shinR'].rotation.x = 0.85 + Math.cos(t * 1.5) * 0.02;
+    if (bones['DEF-shinR'] && baseRot['DEF-shinR']) {
+      bones['DEF-shinR'].rotation.x = baseRot['DEF-shinR'].x + Math.cos(t * 1.5) * 0.015;
     }
   });
 
@@ -748,10 +778,12 @@ export const MageModel: React.FC<CharacterProps> = ({
 
       {/* --- UNIFIED FLYING MOUNT: 3D WITCH SITTING COMFORTABLY ON HER 3D BROOM --- */}
       <group ref={flightMountRef} position={[0, 0.62, 0]}>
-        {/* Realistic 3D Witch's Broom Mount: seat at (0, 0, 0) */}
-        <React.Suspense fallback={null}>
-          <WitchBroomModel scale={0.92} />
-        </React.Suspense>
+        {/* Realistic 3D Witch's Broom Mount: lowered slightly so shaft runs comfortably beneath thighs and seat */}
+        <group position={[0, -0.06, 0]}>
+          <React.Suspense fallback={null}>
+            <WitchBroomModel scale={0.92} />
+          </React.Suspense>
+        </group>
 
         {/* Realistic 3D Witch Character: hips positioned at (0, 0, 0) riding the broom */}
         <React.Suspense
@@ -772,11 +804,11 @@ export const MageModel: React.FC<CharacterProps> = ({
         </React.Suspense>
 
         {/* Mystical Arcane Sparkles trailing behind the broom */}
-        <mesh position={[0, 0.02, -0.75]}>
+        <mesh position={[0, -0.08, -0.75]}>
           <sphereGeometry args={[0.04, 8, 8]} />
           <meshBasicMaterial color="#b48cff" transparent opacity={0.7} />
         </mesh>
-        <mesh position={[0, 0.04, 0.5]}>
+        <mesh position={[0, 0.12, 0.5]}>
           <sphereGeometry args={[0.025, 8, 8]} />
           <meshBasicMaterial color="#00ffff" transparent opacity={0.6} />
         </mesh>
