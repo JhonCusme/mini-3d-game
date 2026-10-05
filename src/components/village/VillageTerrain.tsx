@@ -3,6 +3,7 @@ import { VILLAGE_HALF } from '../../config/BuildingsConfig';
 import type { KingdomType } from '../../core/GameState';
 import { getKingdomConfig } from '../../config/KingdomsConfig';
 import { KingdomDecor } from './KingdomDecor';
+import { ProceduralTextures } from '../../core/textures/ProceduralTextures';
 
 const WALL_COLORS: Record<KingdomType, string[]> = {
   frost: ['#8ba7bd', '#99b8d1', '#adc9e0', '#b9d5ec', '#cae3f7', '#d9ecfa', '#e5f3fc', '#82cbf5'],
@@ -50,7 +51,7 @@ export const Walls: React.FC<{
             <group key={i} position={[s.x, 0, s.z]}>
               <mesh position={[0, 0.15, 0]} castShadow>
                 <cylinderGeometry args={[0.04, 0.05, 0.3, 6]} />
-                <meshStandardMaterial color="#8d5b2d" roughness={0.9} />
+                <meshStandardMaterial map={ProceduralTextures.getWoodTexture('beam')} roughness={0.8} />
               </mesh>
               <mesh position={[0, 0.32, 0]}>
                 <coneGeometry args={[0.06, 0.1, 5]} />
@@ -73,6 +74,12 @@ export const Walls: React.FC<{
       ? '#1e272e'
       : (colorPalette[Math.min(level, colorPalette.length - 1)] || '#718093');
 
+  const wallTexture = isWood
+    ? ProceduralTextures.getWoodTexture('beam')
+    : isImperial
+    ? ProceduralTextures.getStoneBrickTexture('obsidian')
+    : ProceduralTextures.getStoneBrickTexture('castle');
+
   const h = 0.55 + Math.min(level, 10) * 0.08;
 
   return (
@@ -86,7 +93,7 @@ export const Walls: React.FC<{
         broken?.has(i) ? (
           <mesh key={i} position={[s.x, 0.1, s.z]}>
             <boxGeometry args={[0.5, 0.2, 0.5]} />
-            <meshStandardMaterial color={isWood ? '#3d2110' : '#4a4b4d'} />
+            <meshStandardMaterial map={wallTexture} color={isWood ? '#3d2110' : '#4a4b4d'} />
           </mesh>
         ) : (
           <group key={i} position={[s.x, 0, s.z]}>
@@ -94,8 +101,9 @@ export const Walls: React.FC<{
             <mesh position={[0, h / 2, 0]} castShadow receiveShadow>
               <boxGeometry args={s.horizontal ? [1.02, h, 0.44] : [0.44, h, 1.02]} />
               <meshStandardMaterial
+                map={wallTexture}
                 color={color}
-                roughness={isImperial ? 0.4 : 0.85}
+                roughness={isImperial ? 0.4 : 0.8}
                 metalness={isImperial ? 0.3 : 0}
               />
             </mesh>
@@ -103,19 +111,19 @@ export const Walls: React.FC<{
             {isWood && (
               <mesh position={[0, h + 0.08, 0]} rotation={[s.horizontal ? 0 : Math.PI / 2, 0, 0]}>
                 <coneGeometry args={[0.18, 0.2, 4]} />
-                <meshStandardMaterial color="#4a2810" roughness={0.9} />
+                <meshStandardMaterial map={ProceduralTextures.getWoodTexture('plank')} roughness={0.8} />
               </mesh>
             )}
             {isStone && (
               <mesh position={[0, h + 0.04, 0]}>
                 <boxGeometry args={s.horizontal ? [1.04, 0.08, 0.48] : [0.48, 0.08, 1.04]} />
-                <meshStandardMaterial color="#2f3542" />
+                <meshStandardMaterial map={ProceduralTextures.getStoneBrickTexture('dark')} color="#2f3542" />
               </mesh>
             )}
             {isImperial && (
               <mesh position={[0, h + 0.05, 0]}>
                 <boxGeometry args={s.horizontal ? [1.04, 0.1, 0.48] : [0.48, 0.1, 1.04]} />
-                <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.2} />
+                <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.9} roughness={0.2} />
               </mesh>
             )}
           </group>
@@ -137,22 +145,31 @@ export const VillageTerrain: React.FC<{
 
   return (
     <group>
-      {/* Expansive continuous valley terrain extending into the mountains */}
+      {/* Expansive continuous valley terrain with realistic multi-tone grass texture */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]} receiveShadow>
         <planeGeometry args={[220, 220]} />
-        <meshStandardMaterial color={tint || theme.groundColor} roughness={0.95} />
+        <meshStandardMaterial
+          map={ProceduralTextures.getGrassTexture(tint || theme.groundColor)}
+          roughness={0.85}
+        />
       </mesh>
 
-      {/* Gentle natural village clearing plot */}
+      {/* Gentle natural village clearing plot with rich organic soil & meadow texture */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.008, 0]} receiveShadow>
         <planeGeometry args={[VILLAGE_HALF * 2 + 0.6, VILLAGE_HALF * 2 + 0.6]} />
-        <meshStandardMaterial color={theme.plotColor} roughness={1} />
+        <meshStandardMaterial
+          map={ProceduralTextures.getVillagePlotTexture(theme.plotColor)}
+          roughness={0.8}
+        />
       </mesh>
 
-      {/* Natural dirt path trailing through the village into the mountains */}
+      {/* Medieval cobblestone & packed dirt path trailing through the village into the mountains */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.005, 14]} receiveShadow>
         <planeGeometry args={[3.2, 16]} />
-        <meshStandardMaterial color={theme.plotColor} roughness={1} />
+        <meshStandardMaterial
+          map={ProceduralTextures.getCobblestoneTexture()}
+          roughness={0.75}
+        />
       </mesh>
 
       {/* Placement Grid */}

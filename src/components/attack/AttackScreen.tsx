@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Canvas, useFrame, type ThreeEvent } from '@react-three/fiber';
+import { ACESFilmicToneMapping } from 'three';
 import { useGame } from '../../core/GameContext';
 import { useAuth } from '../../core/AuthContext';
 import { GameConfig } from '../../config/GameConfig';
@@ -228,7 +229,12 @@ export const AttackScreen: React.FC<{
   return createPortal(
     <div className="attack-screen">
       {sim && opponent && (
-        <Canvas shadows camera={{ position: [0, 33, 27], fov: 44 }} className="village-canvas">
+        <Canvas
+          shadows
+          camera={{ position: [0, 33, 27], fov: 44 }}
+          className="village-canvas"
+          gl={{ antialias: true, toneMapping: ACESFilmicToneMapping, toneMappingExposure: 1.15 }}
+        >
           <color attach="background" args={[oppTheme.skyColor]} />
           <fog attach="fog" args={[oppTheme.fogColor, oppTheme.fogNear, oppTheme.fogFar]} />
           <SceneLights theme={oppTheme} />

@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { Canvas, useFrame, type ThreeEvent } from '@react-three/fiber';
 import { Html, OrbitControls } from '@react-three/drei';
-import { MOUSE, TOUCH, type Group } from 'three';
+import { MOUSE, TOUCH, ACESFilmicToneMapping, type Group } from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { BUILDINGS, mineCapacity, farmCapacity } from '../../config/BuildingsConfig';
 import type { PlacedBuilding, TroopCounts, KingdomType } from '../../core/GameState';
@@ -56,21 +56,29 @@ export const SceneLights: React.FC<{ theme?: KingdomVisualTheme }> = ({ theme })
   <>
     <hemisphereLight
       args={[
-        theme?.hemisphereSky || '#dff2ff',
-        theme?.hemisphereGround || '#4f7a3a',
-        0.75,
+        theme?.hemisphereSky || '#eaf4ff',
+        theme?.hemisphereGround || '#3e5c2b',
+        0.82,
       ]}
     />
+    {/* Key Sun Directional Light */}
     <directionalLight
-      position={[18, 30, 10]}
-      intensity={theme?.lightIntensity || 1.6}
-      color={theme?.lightColor || '#ffffff'}
+      position={[18, 32, 12]}
+      intensity={theme?.lightIntensity ? theme.lightIntensity * 1.05 : 1.7}
+      color={theme?.lightColor || '#fff8ec'}
       castShadow
       shadow-mapSize={[2048, 2048]}
-      shadow-camera-left={-20}
-      shadow-camera-right={20}
-      shadow-camera-top={20}
-      shadow-camera-bottom={-20}
+      shadow-bias={-0.0004}
+      shadow-camera-left={-22}
+      shadow-camera-right={22}
+      shadow-camera-top={22}
+      shadow-camera-bottom={-22}
+    />
+    {/* Cinematic Rim/Fill Light for realistic 3D silhouettes & material sheen */}
+    <directionalLight
+      position={[-18, 22, -14]}
+      intensity={0.52}
+      color="#9bc5f5"
     />
   </>
 );
@@ -259,7 +267,12 @@ export const VillageScene: React.FC<VillageSceneProps> = ({
   };
 
   return (
-    <Canvas shadows camera={{ position: CAMERA_POSITION, fov: 38 }} className="village-canvas">
+    <Canvas
+      shadows
+      camera={{ position: CAMERA_POSITION, fov: 38 }}
+      className="village-canvas"
+      gl={{ antialias: true, toneMapping: ACESFilmicToneMapping, toneMappingExposure: 1.15 }}
+    >
       <color attach="background" args={[theme.skyColor]} />
       <fog attach="fog" args={[theme.fogColor, theme.fogNear, theme.fogFar]} />
       <SceneLights theme={theme} />

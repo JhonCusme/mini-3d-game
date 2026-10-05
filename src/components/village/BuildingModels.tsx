@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import type { Group, Mesh } from 'three';
 import type { BuildingType } from '../../config/BuildingsConfig';
 import { ArcherModel, HeroKingModel } from '../common/StylizedCharacters';
+import { ProceduralTextures } from '../../core/textures/ProceduralTextures';
 
 // ---------------------------------------------------------------------------
 // Helpers: Progressive Tier Calculation (1: Wood/Straw, 2: Wood/Tiles, 3: Stone/Castle, 4: Imperial/Gold)
@@ -125,24 +126,24 @@ const TownhallModel: React.FC<{ level: number }> = ({ level }) => {
         {/* Stone Pebble Foundation */}
         <mesh position={[0, 0.1, 0]} castShadow receiveShadow>
           <boxGeometry args={[3.2, 0.2, 3.2]} />
-          <meshStandardMaterial color="#7f8c8d" roughness={0.9} />
+          <meshStandardMaterial map={ProceduralTextures.getCobblestoneTexture()} roughness={0.9} />
         </mesh>
         {/* Rough Log Cabin Walls */}
         <mesh position={[0, 0.85, 0]} castShadow receiveShadow>
           <boxGeometry args={[2.7, 1.4, 2.7]} />
-          <meshStandardMaterial color="#6a3b1a" roughness={0.8} />
+          <meshStandardMaterial map={ProceduralTextures.getWoodTexture('beam')} roughness={0.8} />
         </mesh>
         {/* Log Corner Posts */}
         {[[-1.25, -1.25], [1.25, -1.25], [-1.25, 1.25], [1.25, 1.25]].map(([x, z], i) => (
           <mesh key={i} position={[x, 0.85, z]} castShadow>
             <cylinderGeometry args={[0.18, 0.2, 1.6, 6]} />
-            <meshStandardMaterial color="#4a2810" roughness={0.9} />
+            <meshStandardMaterial map={ProceduralTextures.getWoodTexture('beam')} roughness={0.9} />
           </mesh>
         ))}
         {/* Heavy Golden Straw Thatched Roof */}
         <mesh position={[0, 2.1, 0]} castShadow>
           <coneGeometry args={[2.3, 1.5, 4]} />
-          <meshStandardMaterial color="#e5b158" roughness={0.9} />
+          <meshStandardMaterial map={ProceduralTextures.getFabricTexture('#d4a373')} roughness={0.9} />
         </mesh>
         {/* Straw Peak Binding */}
         <mesh position={[0, 2.85, 0]}>
@@ -152,7 +153,7 @@ const TownhallModel: React.FC<{ level: number }> = ({ level }) => {
         {/* Rough Plank Door */}
         <mesh position={[0, 0.65, 1.36]}>
           <boxGeometry args={[0.85, 1.1, 0.06]} />
-          <meshStandardMaterial color="#3d2110" />
+          <meshStandardMaterial map={ProceduralTextures.getWoodTexture('dark')} roughness={0.8} />
         </mesh>
         {/* Tribal Torches flanking door */}
         <Torch position={[-0.7, 0.8, 1.42]} scale={1.2} />
@@ -168,45 +169,45 @@ const TownhallModel: React.FC<{ level: number }> = ({ level }) => {
         {/* Stone Masonry Base */}
         <mesh position={[0, 0.25, 0]} castShadow receiveShadow>
           <boxGeometry args={[3.4, 0.5, 3.4]} />
-          <meshStandardMaterial color="#636e72" roughness={0.9} />
+          <meshStandardMaterial map={ProceduralTextures.getCobblestoneTexture()} roughness={0.9} />
         </mesh>
         {/* Finished Timber House Walls */}
         <mesh position={[0, 1.2, 0]} castShadow receiveShadow>
           <boxGeometry args={[2.9, 1.5, 2.9]} />
-          <meshStandardMaterial color="#8b5a2b" roughness={0.7} />
+          <meshStandardMaterial map={ProceduralTextures.getWoodTexture('plank')} roughness={0.7} />
         </mesh>
         {/* Timber Post Accents */}
         {[[-1.38, -1.38], [1.38, -1.38], [-1.38, 1.38], [1.38, 1.38]].map(([x, z], i) => (
           <mesh key={i} position={[x, 1.2, z]} castShadow>
             <boxGeometry args={[0.2, 1.5, 0.2]} />
-            <meshStandardMaterial color="#4a2810" />
+            <meshStandardMaterial map={ProceduralTextures.getWoodTexture('beam')} roughness={0.8} />
           </mesh>
         ))}
         {/* Overhanging Red Terracotta Roof */}
         <mesh position={[0, 2.45, 0]} rotation={[0, Math.PI / 4, 0]} castShadow>
           <coneGeometry args={[2.5, 1.5, 4]} />
-          <meshStandardMaterial color="#d63031" roughness={0.6} />
+          <meshStandardMaterial color="#c0392b" roughness={0.6} />
         </mesh>
         {/* Attic Tower & Clock / Bell Cupola */}
         <mesh position={[0, 3.25, 0]} castShadow>
           <boxGeometry args={[1.0, 0.8, 1.0]} />
-          <meshStandardMaterial color="#8b5a2b" />
+          <meshStandardMaterial map={ProceduralTextures.getWoodTexture('plank')} roughness={0.7} />
         </mesh>
         <mesh position={[0, 3.9, 0]} rotation={[0, Math.PI / 4, 0]} castShadow>
           <coneGeometry args={[0.9, 0.8, 4]} />
-          <meshStandardMaterial color="#d63031" />
+          <meshStandardMaterial color="#c0392b" />
         </mesh>
         {/* Brass Bell */}
         <mesh position={[0, 3.3, 0.52]}>
           <cylinderGeometry args={[0.14, 0.2, 0.22, 8]} />
-          <meshStandardMaterial color="#ffd700" metalness={0.8} />
+          <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.9} roughness={0.2} />
         </mesh>
         {/* Chimney with Smoke */}
         <Chimney position={[0.9, 2.0, -0.6]} height={1.4} />
         {/* Oak Door with Iron Rivets */}
         <mesh position={[0, 0.8, 1.46]}>
           <boxGeometry args={[0.9, 1.2, 0.08]} />
-          <meshStandardMaterial color="#2d1a08" />
+          <meshStandardMaterial map={ProceduralTextures.getWoodTexture('dark')} roughness={0.8} />
         </mesh>
         {/* Lit Windows */}
         <LitWindow position={[-0.85, 1.3, 1.47]} size={[0.35, 0.45]} />
@@ -222,12 +223,12 @@ const TownhallModel: React.FC<{ level: number }> = ({ level }) => {
         {/* Heavy Stone Foundation */}
         <mesh position={[0, 0.35, 0]} castShadow receiveShadow>
           <boxGeometry args={[3.6, 0.7, 3.6]} />
-          <meshStandardMaterial color="#4a4b4d" roughness={0.9} />
+          <meshStandardMaterial map={ProceduralTextures.getStoneBrickTexture('dark')} roughness={0.9} />
         </mesh>
         {/* Central Castle Keep */}
         <mesh position={[0, 1.6, 0]} castShadow receiveShadow>
           <boxGeometry args={[2.7, 1.9, 2.7]} />
-          <meshStandardMaterial color="#7f8c8d" roughness={0.8} />
+          <meshStandardMaterial map={ProceduralTextures.getStoneBrickTexture('castle')} roughness={0.8} />
         </mesh>
         {/* 4 Corner Defensive Towers with Battlements */}
         {[[-1.4, -1.4], [1.4, -1.4], [-1.4, 1.4], [1.4, 1.4]].map(([x, z], i) => (
@@ -235,12 +236,12 @@ const TownhallModel: React.FC<{ level: number }> = ({ level }) => {
             {/* Tower Body */}
             <mesh position={[0, 1.7, 0]} castShadow>
               <cylinderGeometry args={[0.5, 0.55, 2.8, 10]} />
-              <meshStandardMaterial color="#718093" roughness={0.8} />
+              <meshStandardMaterial map={ProceduralTextures.getStoneBrickTexture('castle')} roughness={0.8} />
             </mesh>
             {/* Tower Battlement Balcony */}
             <mesh position={[0, 3.15, 0]} castShadow>
               <cylinderGeometry args={[0.62, 0.52, 0.25, 10]} />
-              <meshStandardMaterial color="#4a4b4d" />
+              <meshStandardMaterial map={ProceduralTextures.getStoneBrickTexture('dark')} roughness={0.85} />
             </mesh>
             {/* Blue Slate Conical Roof */}
             <mesh position={[0, 3.85, 0]} castShadow>
@@ -252,7 +253,7 @@ const TownhallModel: React.FC<{ level: number }> = ({ level }) => {
         {/* Central Upper Citadel */}
         <mesh position={[0, 2.85, 0]} castShadow>
           <boxGeometry args={[1.7, 1.3, 1.7]} />
-          <meshStandardMaterial color="#7f8c8d" roughness={0.7} />
+          <meshStandardMaterial map={ProceduralTextures.getStoneBrickTexture('castle')} roughness={0.7} />
         </mesh>
         {/* Central Royal Blue Pyramid Roof */}
         <mesh position={[0, 3.9, 0]} rotation={[0, Math.PI / 4, 0]} castShadow>
@@ -262,27 +263,27 @@ const TownhallModel: React.FC<{ level: number }> = ({ level }) => {
         {/* Grand Banner Mast */}
         <mesh position={[0, 4.9, 0]}>
           <cylinderGeometry args={[0.04, 0.04, 1.0, 6]} />
-          <meshStandardMaterial color="#2d3436" metalness={0.8} />
+          <meshStandardMaterial map={ProceduralTextures.getMetalTexture('dark')} metalness={0.8} />
         </mesh>
         {/* Royal Kingdom Flag */}
         <mesh position={[0.3, 5.05, 0]}>
           <boxGeometry args={[0.55, 0.35, 0.02]} />
-          <meshStandardMaterial color="#e84118" />
+          <meshStandardMaterial map={ProceduralTextures.getFabricTexture('#e84118')} />
         </mesh>
         {/* Fortified Castle Gate */}
         <mesh position={[0, 0.95, 1.48]} castShadow>
           <boxGeometry args={[1.1, 1.4, 0.1]} />
-          <meshStandardMaterial color="#2c3e50" metalness={0.7} roughness={0.3} />
+          <meshStandardMaterial map={ProceduralTextures.getMetalTexture('iron')} metalness={0.75} roughness={0.35} />
         </mesh>
         {/* Stone Arch around Gate */}
         <mesh position={[0, 1.7, 1.5]}>
           <boxGeometry args={[1.3, 0.2, 0.15]} />
-          <meshStandardMaterial color="#4a4b4d" />
+          <meshStandardMaterial map={ProceduralTextures.getStoneBrickTexture('dark')} />
         </mesh>
         {/* Royal Crest Shield */}
         <mesh position={[0, 2.05, 1.52]}>
           <boxGeometry args={[0.35, 0.45, 0.05]} />
-          <meshStandardMaterial color="#ffd700" metalness={0.8} roughness={0.2} />
+          <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.85} roughness={0.2} />
         </mesh>
       </group>
     );
@@ -294,29 +295,29 @@ const TownhallModel: React.FC<{ level: number }> = ({ level }) => {
       {/* Monumental Obsidian Pedestal */}
       <mesh position={[0, 0.45, 0]} castShadow receiveShadow>
         <boxGeometry args={[3.8, 0.9, 3.8]} />
-        <meshStandardMaterial color="#2d3436" roughness={0.8} metalness={0.2} />
+        <meshStandardMaterial map={ProceduralTextures.getStoneBrickTexture('obsidian')} roughness={0.6} metalness={0.2} />
       </mesh>
       {/* Gold Inlaid Base Trim */}
       <mesh position={[0, 0.9, 0]}>
         <boxGeometry args={[3.85, 0.1, 3.85]} />
-        <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.2} />
+        <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.9} roughness={0.2} />
       </mesh>
       {/* Central Obsidian Keep */}
       <mesh position={[0, 2.0, 0]} castShadow receiveShadow>
         <boxGeometry args={[2.9, 2.2, 2.9]} />
-        <meshStandardMaterial color="#1e272e" roughness={0.6} />
+        <meshStandardMaterial map={ProceduralTextures.getStoneBrickTexture('obsidian')} roughness={0.5} />
       </mesh>
       {/* 4 Corner Colossal Towers with Gold Battlements */}
       {[[-1.5, -1.5], [1.5, -1.5], [-1.5, 1.5], [1.5, 1.5]].map(([x, z], i) => (
         <group key={i} position={[x, 0, z]}>
           <mesh position={[0, 2.2, 0]} castShadow>
             <cylinderGeometry args={[0.56, 0.62, 3.6, 12]} />
-            <meshStandardMaterial color="#1e272e" roughness={0.7} />
+            <meshStandardMaterial map={ProceduralTextures.getStoneBrickTexture('obsidian')} roughness={0.6} />
           </mesh>
           {/* Gold Battlement Crown */}
           <mesh position={[0, 4.05, 0]} castShadow>
             <cylinderGeometry args={[0.7, 0.58, 0.35, 12]} />
-            <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.2} />
+            <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.9} roughness={0.2} />
           </mesh>
           {/* Deep Crimson Imperial Spire */}
           <mesh position={[0, 4.9, 0]} castShadow>
@@ -326,36 +327,36 @@ const TownhallModel: React.FC<{ level: number }> = ({ level }) => {
           {/* Golden Finial on Spires */}
           <mesh position={[0, 5.75, 0]}>
             <sphereGeometry args={[0.1, 8, 8]} />
-            <meshStandardMaterial color="#ffd700" metalness={0.95} />
+            <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.95} />
           </mesh>
         </group>
       ))}
       {/* Upper Royal Penthouse */}
       <mesh position={[0, 3.5, 0]} castShadow>
         <boxGeometry args={[1.9, 1.4, 1.9]} />
-        <meshStandardMaterial color="#1e272e" />
+        <meshStandardMaterial map={ProceduralTextures.getStoneBrickTexture('obsidian')} />
       </mesh>
       {/* Grand Golden Dome */}
       <mesh position={[0, 4.6, 0]} castShadow>
         <sphereGeometry args={[1.3, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.52]} />
-        <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.2} />
+        <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.9} roughness={0.2} />
       </mesh>
       {/* Imperial Crown Spire */}
       <mesh position={[0, 5.6, 0]}>
         <coneGeometry args={[0.18, 0.9, 8]} />
-        <meshStandardMaterial color="#ffd700" metalness={0.95} />
+        <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.95} />
       </mesh>
       {/* Colossal Reinforced Gold Gate */}
       <mesh position={[0, 1.15, 1.55]} castShadow>
         <boxGeometry args={[1.25, 1.6, 0.12]} />
-        <meshStandardMaterial color="#ffd700" metalness={0.85} roughness={0.25} />
+        <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.85} roughness={0.25} />
       </mesh>
       {/* Grand Lion Guardians beside Gate */}
       {[-0.9, 0.9].map((x, i) => (
         <group key={i} position={[x, 0.8, 1.65]}>
           <mesh castShadow>
             <boxGeometry args={[0.35, 0.65, 0.35]} />
-            <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.2} />
+            <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.9} roughness={0.2} />
           </mesh>
         </group>
       ))}
@@ -435,32 +436,32 @@ export const MinerWorker: React.FC<{
         {/* Legs / Boots */}
         <mesh position={[-0.1, -0.2, isFatigued ? 0.12 : 0]} castShadow>
           <boxGeometry args={[0.12, 0.26, 0.14]} />
-          <meshStandardMaterial color="#2d3436" roughness={0.8} />
+          <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('dark')} roughness={0.8} />
         </mesh>
         <mesh position={[0.1, -0.2, isFatigued ? 0.12 : 0]} castShadow>
           <boxGeometry args={[0.12, 0.26, 0.14]} />
-          <meshStandardMaterial color="#2d3436" roughness={0.8} />
+          <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('dark')} roughness={0.8} />
         </mesh>
 
         {/* Torso & Miner Apron */}
         <mesh position={[0, 0.08, 0]} castShadow>
           <boxGeometry args={[0.3, 0.32, 0.22]} />
-          <meshStandardMaterial color="#34495e" roughness={0.7} />
+          <meshStandardMaterial map={ProceduralTextures.getFabricTexture('#34495e')} roughness={0.7} />
         </mesh>
         <mesh position={[0, 0.07, 0.115]}>
           <boxGeometry args={[0.22, 0.26, 0.02]} />
-          <meshStandardMaterial color="#795548" roughness={0.9} />
+          <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('brown')} roughness={0.85} />
         </mesh>
 
         {/* Left Arm */}
         <group position={[-0.2, 0.12, 0]}>
           <mesh position={[0, -0.12, 0]} rotation={[0.2, 0, 0.2]} castShadow>
             <boxGeometry args={[0.09, 0.26, 0.09]} />
-            <meshStandardMaterial color="#d35400" />
+            <meshStandardMaterial map={ProceduralTextures.getFabricTexture('#d35400')} />
           </mesh>
           <mesh position={[0.02, -0.25, 0.04]}>
             <sphereGeometry args={[0.06, 6, 6]} />
-            <meshStandardMaterial color="#f0c294" />
+            <meshStandardMaterial map={ProceduralTextures.getSkinTexture('warm')} />
           </mesh>
         </group>
 
@@ -468,22 +469,22 @@ export const MinerWorker: React.FC<{
         <group ref={armRef} position={[0.2, 0.14, 0]}>
           <mesh position={[0, -0.12, 0]} castShadow>
             <boxGeometry args={[0.09, 0.26, 0.09]} />
-            <meshStandardMaterial color="#d35400" />
+            <meshStandardMaterial map={ProceduralTextures.getFabricTexture('#d35400')} />
           </mesh>
           <mesh position={[0, -0.25, 0]}>
             <sphereGeometry args={[0.06, 6, 6]} />
-            <meshStandardMaterial color="#f0c294" />
+            <meshStandardMaterial map={ProceduralTextures.getSkinTexture('warm')} />
           </mesh>
 
           {/* Pickaxe Tool */}
           <group position={[0, -0.25, 0.1]} rotation={[isFatigued ? 0.3 : 0.6, 0, 0]}>
             <mesh position={[0, 0.05, 0]}>
               <cylinderGeometry args={[0.02, 0.02, 0.55, 5]} />
-              <meshStandardMaterial color="#8d6e63" roughness={0.8} />
+              <meshStandardMaterial map={ProceduralTextures.getWoodTexture('beam')} roughness={0.8} />
             </mesh>
             <mesh position={[0, 0.3, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
               <coneGeometry args={[0.06, 0.42, 5]} />
-              <meshStandardMaterial color="#7f8c8d" metalness={0.75} roughness={0.3} />
+              <meshStandardMaterial map={ProceduralTextures.getMetalTexture('iron')} metalness={0.85} roughness={0.25} />
             </mesh>
           </group>
         </group>
@@ -492,15 +493,15 @@ export const MinerWorker: React.FC<{
         <group ref={headRef} position={[0, 0.32, 0]}>
           <mesh castShadow>
             <boxGeometry args={[0.22, 0.22, 0.2]} />
-            <meshStandardMaterial color="#f0c294" roughness={0.6} />
+            <meshStandardMaterial map={ProceduralTextures.getSkinTexture('warm')} roughness={0.6} />
           </mesh>
           <mesh position={[0, 0.12, 0]}>
             <boxGeometry args={[0.26, 0.1, 0.24]} />
-            <meshStandardMaterial color="#e67e22" roughness={0.4} />
+            <meshStandardMaterial map={ProceduralTextures.getMetalTexture('steel')} color="#e67e22" roughness={0.4} />
           </mesh>
           <mesh position={[0, 0.07, 0.08]} rotation={[0.2, 0, 0]}>
             <boxGeometry args={[0.26, 0.03, 0.12]} />
-            <meshStandardMaterial color="#d35400" />
+            <meshStandardMaterial map={ProceduralTextures.getMetalTexture('dark')} />
           </mesh>
           {/* Headlamp */}
           <mesh position={[0, 0.14, 0.13]} rotation={[Math.PI / 2, 0, 0]}>
@@ -721,32 +722,32 @@ export const FarmerWorker: React.FC<{
         {/* Legs / Boots */}
         <mesh position={[-0.1, -0.2, 0]} castShadow>
           <boxGeometry args={[0.11, 0.26, 0.13]} />
-          <meshStandardMaterial color="#4b382a" roughness={0.8} />
+          <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('dark')} roughness={0.8} />
         </mesh>
         <mesh position={[0.1, -0.2, 0]} castShadow>
           <boxGeometry args={[0.11, 0.26, 0.13]} />
-          <meshStandardMaterial color="#4b382a" roughness={0.8} />
+          <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('dark')} roughness={0.8} />
         </mesh>
 
         {/* Torso: Peasant Tunic & Belt */}
         <mesh position={[0, 0.08, 0]} castShadow>
           <boxGeometry args={[0.28, 0.32, 0.2]} />
-          <meshStandardMaterial color="#556b2f" roughness={0.7} />
+          <meshStandardMaterial map={ProceduralTextures.getFabricTexture('#4d6b38')} roughness={0.7} />
         </mesh>
         <mesh position={[0, 0, 0]}>
           <boxGeometry args={[0.29, 0.05, 0.21]} />
-          <meshStandardMaterial color="#3e2712" />
+          <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('brown')} roughness={0.85} />
         </mesh>
 
         {/* Left Arm */}
         <group position={[-0.19, 0.12, 0]}>
           <mesh position={[0, -0.12, 0]} rotation={[0.2, 0, 0.1]} castShadow>
             <boxGeometry args={[0.08, 0.26, 0.08]} />
-            <meshStandardMaterial color="#6b8e23" />
+            <meshStandardMaterial map={ProceduralTextures.getFabricTexture('#556b2f')} />
           </mesh>
           <mesh position={[0, -0.25, 0.02]}>
             <sphereGeometry args={[0.055, 6, 6]} />
-            <meshStandardMaterial color="#f0c294" />
+            <meshStandardMaterial map={ProceduralTextures.getSkinTexture('warm')} roughness={0.65} />
           </mesh>
         </group>
 
@@ -754,33 +755,33 @@ export const FarmerWorker: React.FC<{
         <group ref={armRef} position={[0.19, 0.14, 0]}>
           <mesh position={[0, -0.12, 0]} castShadow>
             <boxGeometry args={[0.08, 0.26, 0.08]} />
-            <meshStandardMaterial color="#6b8e23" />
+            <meshStandardMaterial map={ProceduralTextures.getFabricTexture('#556b2f')} />
           </mesh>
           <mesh position={[0, -0.25, 0]}>
             <sphereGeometry args={[0.055, 6, 6]} />
-            <meshStandardMaterial color="#f0c294" />
+            <meshStandardMaterial map={ProceduralTextures.getSkinTexture('warm')} roughness={0.65} />
           </mesh>
 
           {role === 'hoe' ? (
             <group position={[0, -0.24, 0.1]} rotation={[0.4, 0, 0]}>
               <mesh position={[0, 0.05, 0]}>
                 <cylinderGeometry args={[0.018, 0.018, 0.65, 5]} />
-                <meshStandardMaterial color="#8d6e63" roughness={0.8} />
+                <meshStandardMaterial map={ProceduralTextures.getWoodTexture('beam')} roughness={0.8} />
               </mesh>
               <mesh position={[0, 0.36, 0.06]} rotation={[0.5, 0, 0]} castShadow>
                 <boxGeometry args={[0.16, 0.06, 0.03]} />
-                <meshStandardMaterial color="#57606f" metalness={0.7} />
+                <meshStandardMaterial map={ProceduralTextures.getMetalTexture('iron')} roughness={0.4} metalness={0.8} />
               </mesh>
             </group>
           ) : (
             <group position={[0, -0.2, 0.15]}>
               <mesh castShadow>
                 <cylinderGeometry args={[0.16, 0.12, 0.22, 8]} />
-                <meshStandardMaterial color="#a07855" roughness={0.9} />
+                <meshStandardMaterial map={ProceduralTextures.getWoodTexture('plank')} roughness={0.9} />
               </mesh>
               <mesh position={[0, 0.09, 0]}>
                 <sphereGeometry args={[0.14, 6, 6]} />
-                <meshStandardMaterial color="#f1c40f" roughness={0.6} />
+                <meshStandardMaterial color="#f1c40f" roughness={0.7} />
               </mesh>
             </group>
           )}
@@ -790,15 +791,15 @@ export const FarmerWorker: React.FC<{
         <group ref={headRef} position={[0, 0.32, 0]}>
           <mesh castShadow>
             <boxGeometry args={[0.22, 0.22, 0.2]} />
-            <meshStandardMaterial color="#f0c294" roughness={0.6} />
+            <meshStandardMaterial map={ProceduralTextures.getSkinTexture('warm')} roughness={0.6} />
           </mesh>
           <mesh position={[0, 0.13, 0]}>
             <cylinderGeometry args={[0.14, 0.16, 0.1, 8]} />
-            <meshStandardMaterial color="#e5c07b" roughness={0.9} />
+            <meshStandardMaterial map={ProceduralTextures.getFabricTexture('#d4a373')} roughness={0.9} />
           </mesh>
           <mesh position={[0, 0.08, 0]}>
             <cylinderGeometry args={[0.3, 0.3, 0.02, 10]} />
-            <meshStandardMaterial color="#d4a373" roughness={0.9} />
+            <meshStandardMaterial map={ProceduralTextures.getFabricTexture('#d4a373')} roughness={0.9} />
           </mesh>
         </group>
       </group>
@@ -1050,22 +1051,22 @@ const BarracksModel: React.FC<{ level: number }> = ({ level }) => {
         {/* Dirt Footprint */}
         <mesh position={[0, 0.05, 0]} receiveShadow>
           <boxGeometry args={[2.5, 0.1, 2.0]} />
-          <meshStandardMaterial color="#5a3d1c" roughness={1} />
+          <meshStandardMaterial map={ProceduralTextures.getWoodTexture('dark')} roughness={1} />
         </mesh>
         {/* Canvas Military Tent */}
         <mesh position={[-0.3, 0.75, 0]} rotation={[0, 0, 0]} castShadow>
           <coneGeometry args={[1.1, 1.4, 4]} />
-          <meshStandardMaterial color="#c0392b" roughness={0.8} />
+          <meshStandardMaterial map={ProceduralTextures.getFabricTexture('#c0392b')} roughness={0.8} />
         </mesh>
         {/* Target Dummy for Practice */}
         <group position={[0.7, 0.5, 0.3]}>
           <mesh castShadow>
             <cylinderGeometry args={[0.04, 0.04, 0.9, 6]} />
-            <meshStandardMaterial color="#4a2810" />
+            <meshStandardMaterial map={ProceduralTextures.getWoodTexture('beam')} />
           </mesh>
           <mesh position={[0, 0.25, 0]} castShadow>
             <cylinderGeometry args={[0.22, 0.22, 0.12, 12]} />
-            <meshStandardMaterial color="#f5cd79" />
+            <meshStandardMaterial map={ProceduralTextures.getWoodTexture('plank')} />
           </mesh>
           {/* Target Red Bullseye */}
           <mesh position={[0, 0.25, 0.07]}>
@@ -1077,7 +1078,7 @@ const BarracksModel: React.FC<{ level: number }> = ({ level }) => {
         <group position={[0.7, 0.35, -0.5]}>
           <mesh>
             <boxGeometry args={[0.1, 0.6, 0.5]} />
-            <meshStandardMaterial color="#5a3d1c" />
+            <meshStandardMaterial map={ProceduralTextures.getWoodTexture('plank')} />
           </mesh>
         </group>
       </group>
@@ -1091,27 +1092,27 @@ const BarracksModel: React.FC<{ level: number }> = ({ level }) => {
         {/* Stone Base */}
         <mesh position={[0, 0.2, 0]} castShadow receiveShadow>
           <boxGeometry args={[2.6, 0.4, 2.0]} />
-          <meshStandardMaterial color="#636e72" roughness={0.9} />
+          <meshStandardMaterial map={ProceduralTextures.getCobblestoneTexture()} roughness={0.9} />
         </mesh>
         {/* Timber Barracks Building */}
         <mesh position={[0, 0.9, 0]} castShadow receiveShadow>
           <boxGeometry args={[2.3, 1.1, 1.7]} />
-          <meshStandardMaterial color="#b23b3b" roughness={0.8} />
+          <meshStandardMaterial map={ProceduralTextures.getWoodTexture('plank')} roughness={0.8} />
         </mesh>
         {/* Overhanging Gabled Roof */}
         <mesh position={[0, 1.75, 0]} rotation={[0, Math.PI / 4, 0]} castShadow>
           <coneGeometry args={[1.7, 0.9, 4]} />
-          <meshStandardMaterial color="#6b3f2a" roughness={0.7} />
+          <meshStandardMaterial map={ProceduralTextures.getWoodTexture('dark')} roughness={0.7} />
         </mesh>
         {/* Reinforced Iron Door */}
         <mesh position={[0, 0.7, 0.86]}>
           <boxGeometry args={[0.7, 1.0, 0.06]} />
-          <meshStandardMaterial color="#2d3436" />
+          <meshStandardMaterial map={ProceduralTextures.getMetalTexture('iron')} />
         </mesh>
         {/* Training Swords Mounted Outside */}
         <mesh position={[0.8, 0.9, 0.88]} rotation={[0, 0, 0.4]}>
           <boxGeometry args={[0.05, 0.6, 0.03]} />
-          <meshStandardMaterial color="#bdc3c7" metalness={0.8} />
+          <meshStandardMaterial map={ProceduralTextures.getMetalTexture('steel')} metalness={0.85} />
         </mesh>
         <Torch position={[-0.8, 0.9, 0.9]} scale={0.9} />
       </group>
@@ -1125,12 +1126,12 @@ const BarracksModel: React.FC<{ level: number }> = ({ level }) => {
         {/* Castle Stone Walls */}
         <mesh position={[0, 0.9, 0]} castShadow receiveShadow>
           <boxGeometry args={[2.6, 1.8, 2.1]} />
-          <meshStandardMaterial color="#718093" roughness={0.8} />
+          <meshStandardMaterial map={ProceduralTextures.getStoneBrickTexture('castle')} roughness={0.8} />
         </mesh>
         {/* Roof Battlements (Almenas) */}
         <mesh position={[0, 1.9, 0]} castShadow>
           <boxGeometry args={[2.75, 0.3, 2.25]} />
-          <meshStandardMaterial color="#4a4b4d" />
+          <meshStandardMaterial map={ProceduralTextures.getStoneBrickTexture('dark')} />
         </mesh>
         {/* Slanted Slate Tower Roof */}
         <mesh position={[0, 2.45, 0]} rotation={[0, Math.PI / 4, 0]} castShadow>
@@ -1141,11 +1142,11 @@ const BarracksModel: React.FC<{ level: number }> = ({ level }) => {
         <group position={[0, 1.4, 1.08]}>
           <mesh rotation={[0, 0, 0.7]}>
             <boxGeometry args={[0.06, 0.7, 0.04]} />
-            <meshStandardMaterial color="#ffd700" metalness={0.8} />
+            <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.85} />
           </mesh>
           <mesh rotation={[0, 0, -0.7]}>
             <boxGeometry args={[0.06, 0.7, 0.04]} />
-            <meshStandardMaterial color="#ffd700" metalness={0.8} />
+            <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.85} />
           </mesh>
         </group>
       </group>
@@ -1158,13 +1159,13 @@ const BarracksModel: React.FC<{ level: number }> = ({ level }) => {
       {/* Dark Granite War Academy */}
       <mesh position={[0, 1.0, 0]} castShadow receiveShadow>
         <boxGeometry args={[2.7, 2.0, 2.2]} />
-        <meshStandardMaterial color="#1e272e" roughness={0.6} />
+        <meshStandardMaterial map={ProceduralTextures.getStoneBrickTexture('obsidian')} roughness={0.6} />
       </mesh>
       {/* Gold Corner Pillars */}
       {[[-1.25, -1.0], [1.25, -1.0], [-1.25, 1.0], [1.25, 1.0]].map(([x, z], i) => (
         <mesh key={i} position={[x, 1.0, z]} castShadow>
           <boxGeometry args={[0.25, 2.1, 0.25]} />
-          <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.2} />
+          <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.9} roughness={0.2} />
         </mesh>
       ))}
       {/* Imperial Crimson Crown Roof */}
@@ -1175,7 +1176,7 @@ const BarracksModel: React.FC<{ level: number }> = ({ level }) => {
       {/* Golden Eagle Crest */}
       <mesh position={[0, 3.4, 0]}>
         <dodecahedronGeometry args={[0.22, 0]} />
-        <meshStandardMaterial color="#ffd700" metalness={0.95} />
+        <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.95} />
       </mesh>
     </group>
   );
@@ -1327,19 +1328,19 @@ const CannonModel: React.FC<{ level: number; aimAngle?: number }> = ({ level, ai
         {/* Dirt / Log Stand */}
         <mesh position={[0, 0.12, 0]} castShadow receiveShadow>
           <cylinderGeometry args={[0.75, 0.85, 0.24, 8]} />
-          <meshStandardMaterial color="#5a3d1c" roughness={0.9} />
+          <meshStandardMaterial map={ProceduralTextures.getWoodTexture('beam')} roughness={0.9} />
         </mesh>
         {/* Rotating Carriage */}
         <group position={[0, 0.45, 0]} rotation={[0, aimAngle ?? Math.PI / 4, 0]}>
           {/* Wooden Carriage */}
           <mesh position={[0, -0.05, 0]} castShadow>
             <boxGeometry args={[0.45, 0.25, 0.55]} />
-            <meshStandardMaterial color="#6a3b1a" />
+            <meshStandardMaterial map={ProceduralTextures.getWoodTexture('plank')} roughness={0.8} />
           </mesh>
           {/* Bronze Barrel */}
           <mesh position={[0, 0.06, 0.25]} rotation={[Math.PI / 2 - 0.15, 0, 0]} castShadow>
             <cylinderGeometry args={[0.13, 0.17, 0.8, 8]} />
-            <meshStandardMaterial color="#cd6133" metalness={0.7} roughness={0.4} />
+            <meshStandardMaterial map={ProceduralTextures.getMetalTexture('steel')} metalness={0.7} roughness={0.4} />
           </mesh>
         </group>
       </group>
@@ -1353,17 +1354,17 @@ const CannonModel: React.FC<{ level: number; aimAngle?: number }> = ({ level, ai
         {/* River Stone Circular Foundation */}
         <mesh position={[0, 0.2, 0]} castShadow receiveShadow>
           <cylinderGeometry args={[0.85, 0.95, 0.4, 10]} />
-          <meshStandardMaterial color="#718093" roughness={0.9} />
+          <meshStandardMaterial map={ProceduralTextures.getCobblestoneTexture()} roughness={0.9} />
         </mesh>
         {/* Rotating Cannon */}
         <group position={[0, 0.6, 0]} rotation={[0, aimAngle ?? Math.PI / 4, 0]}>
           <mesh castShadow>
             <sphereGeometry args={[0.38, 10, 8]} />
-            <meshStandardMaterial color="#2f3542" metalness={0.7} roughness={0.3} />
+            <meshStandardMaterial map={ProceduralTextures.getMetalTexture('iron')} metalness={0.75} roughness={0.3} />
           </mesh>
           <mesh position={[0, 0.05, 0.45]} rotation={[Math.PI / 2 - 0.12, 0, 0]} castShadow>
             <cylinderGeometry args={[0.16, 0.2, 0.95, 10]} />
-            <meshStandardMaterial color="#2f3542" metalness={0.8} roughness={0.3} />
+            <meshStandardMaterial map={ProceduralTextures.getMetalTexture('iron')} metalness={0.85} roughness={0.25} />
           </mesh>
         </group>
       </group>
@@ -1377,28 +1378,28 @@ const CannonModel: React.FC<{ level: number; aimAngle?: number }> = ({ level, ai
         {/* Fortified Octagonal Stone Mount */}
         <mesh position={[0, 0.25, 0]} castShadow receiveShadow>
           <cylinderGeometry args={[0.9, 1.0, 0.5, 8]} />
-          <meshStandardMaterial color="#4a4b4d" roughness={0.8} />
+          <meshStandardMaterial map={ProceduralTextures.getStoneBrickTexture('castle')} roughness={0.8} />
         </mesh>
         {/* Iron Turning Ring */}
         <mesh position={[0, 0.52, 0]}>
           <cylinderGeometry args={[0.82, 0.82, 0.08, 12]} />
-          <meshStandardMaterial color="#1e272e" metalness={0.9} />
+          <meshStandardMaterial map={ProceduralTextures.getMetalTexture('dark')} metalness={0.9} />
         </mesh>
         {/* Heavy Double Ringed Gun */}
         <group position={[0, 0.72, 0]} rotation={[0, aimAngle ?? Math.PI / 4, 0]}>
           <mesh castShadow>
             <sphereGeometry args={[0.42, 12, 10]} />
-            <meshStandardMaterial color="#2c3e50" metalness={0.85} roughness={0.25} />
+            <meshStandardMaterial map={ProceduralTextures.getMetalTexture('iron')} metalness={0.85} roughness={0.25} />
           </mesh>
           <mesh position={[0, 0.06, 0.52]} rotation={[Math.PI / 2 - 0.12, 0, 0]} castShadow>
             <cylinderGeometry args={[0.18 + lvlTint * 0.03, 0.24, 1.15, 10]} />
-            <meshStandardMaterial color="#1e272e" metalness={0.9} roughness={0.2} />
+            <meshStandardMaterial map={ProceduralTextures.getMetalTexture('iron')} metalness={0.9} roughness={0.2} />
           </mesh>
           {/* Steel Reinforcement Rings */}
           {[0.3, 0.65].map((z, i) => (
             <mesh key={i} position={[0, 0.06, z]} rotation={[Math.PI / 2 - 0.12, 0, 0]}>
               <torusGeometry args={[0.22, 0.03, 6, 12]} />
-              <meshStandardMaterial color="#95a5a6" metalness={0.95} />
+              <meshStandardMaterial map={ProceduralTextures.getMetalTexture('steel')} metalness={0.95} />
             </mesh>
           ))}
         </group>
@@ -1412,26 +1413,26 @@ const CannonModel: React.FC<{ level: number; aimAngle?: number }> = ({ level, ai
       {/* Obsidian Platform with Gold Rim */}
       <mesh position={[0, 0.3, 0]} castShadow receiveShadow>
         <cylinderGeometry args={[0.95, 1.05, 0.6, 12]} />
-        <meshStandardMaterial color="#1e272e" roughness={0.7} />
+        <meshStandardMaterial map={ProceduralTextures.getStoneBrickTexture('obsidian')} roughness={0.7} />
       </mesh>
       <mesh position={[0, 0.62, 0]}>
         <cylinderGeometry args={[0.92, 0.92, 0.08, 12]} />
-        <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.2} />
+        <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.9} roughness={0.2} />
       </mesh>
       {/* Colossal Cannon */}
       <group position={[0, 0.85, 0]} rotation={[0, aimAngle ?? Math.PI / 4, 0]}>
         <mesh castShadow>
           <sphereGeometry args={[0.46, 14, 12]} />
-          <meshStandardMaterial color="#ffd700" metalness={0.85} roughness={0.25} />
+          <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.85} roughness={0.25} />
         </mesh>
         <mesh position={[0, 0.08, 0.6]} rotation={[Math.PI / 2 - 0.1, 0, 0]} castShadow>
           <cylinderGeometry args={[0.22, 0.28, 1.3, 12]} />
-          <meshStandardMaterial color="#1e272e" metalness={0.9} roughness={0.2} />
+          <meshStandardMaterial map={ProceduralTextures.getMetalTexture('dark')} metalness={0.9} roughness={0.2} />
         </mesh>
         {/* Dragon Mouth Flared Muzzle */}
         <mesh position={[0, 0.15, 1.25]} rotation={[Math.PI / 2 - 0.1, 0, 0]}>
           <cylinderGeometry args={[0.28, 0.2, 0.22, 10]} />
-          <meshStandardMaterial color="#ffd700" metalness={0.95} roughness={0.15} />
+          <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.95} roughness={0.15} />
         </mesh>
       </group>
     </group>
@@ -1452,18 +1453,18 @@ const ArcherTowerModel: React.FC<{ level: number; aimAngle?: number }> = ({ leve
         {[[-0.5, -0.5], [0.5, -0.5], [-0.5, 0.5], [0.5, 0.5]].map(([x, z], i) => (
           <mesh key={i} position={[x, 1.1, z]} rotation={[x * 0.1, 0, z * 0.1]} castShadow>
             <cylinderGeometry args={[0.07, 0.09, 2.2, 6]} />
-            <meshStandardMaterial color="#5a3d1c" roughness={0.9} />
+            <meshStandardMaterial map={ProceduralTextures.getWoodTexture('beam')} roughness={0.9} />
           </mesh>
         ))}
         {/* Cross Beams */}
         <mesh position={[0, 1.1, 0]}>
           <boxGeometry args={[1.1, 0.08, 1.1]} />
-          <meshStandardMaterial color="#4a2810" />
+          <meshStandardMaterial map={ProceduralTextures.getWoodTexture('dark')} />
         </mesh>
         {/* Plank Platform */}
         <mesh position={[0, 2.2, 0]} castShadow receiveShadow>
           <boxGeometry args={[1.35, 0.15, 1.35]} />
-          <meshStandardMaterial color="#8b5a2b" roughness={0.8} />
+          <meshStandardMaterial map={ProceduralTextures.getWoodTexture('plank')} roughness={0.8} />
         </mesh>
         {/* Stake Railing */}
         <mesh position={[0, 2.45, 0]}>
@@ -1486,25 +1487,25 @@ const ArcherTowerModel: React.FC<{ level: number; aimAngle?: number }> = ({ leve
         {[[-0.55, -0.55], [0.55, -0.55], [-0.55, 0.55], [0.55, 0.55]].map(([x, z], i) => (
           <mesh key={i} position={[x, 0.25, z]} castShadow>
             <boxGeometry args={[0.3, 0.5, 0.3]} />
-            <meshStandardMaterial color="#718093" />
+            <meshStandardMaterial map={ProceduralTextures.getCobblestoneTexture()} />
           </mesh>
         ))}
         {/* Heavy Timber Framing */}
         {[[-0.55, -0.55], [0.55, -0.55], [-0.55, 0.55], [0.55, 0.55]].map(([x, z], i) => (
           <mesh key={i} position={[x, 1.45, z]} castShadow>
             <boxGeometry args={[0.16, 2.4, 0.16]} />
-            <meshStandardMaterial color="#4a2810" />
+            <meshStandardMaterial map={ProceduralTextures.getWoodTexture('beam')} />
           </mesh>
         ))}
         {/* Upper Balcony Platform */}
         <mesh position={[0, 2.65, 0]} castShadow receiveShadow>
           <boxGeometry args={[1.5, 0.2, 1.5]} />
-          <meshStandardMaterial color="#8b5a2b" />
+          <meshStandardMaterial map={ProceduralTextures.getWoodTexture('plank')} />
         </mesh>
         {/* Timber Parapet Railing */}
         <mesh position={[0, 2.9, 0]}>
           <boxGeometry args={[1.45, 0.45, 1.45]} />
-          <meshStandardMaterial color="#6a3b1a" />
+          <meshStandardMaterial map={ProceduralTextures.getWoodTexture('dark')} />
         </mesh>
         {/* Archer Heroine */}
         <group position={[0, 2.75, 0]} rotation={[0, aimAngle ?? 0, 0]}>
@@ -1521,17 +1522,17 @@ const ArcherTowerModel: React.FC<{ level: number; aimAngle?: number }> = ({ leve
         {/* Solid Stone Bastion Column */}
         <mesh position={[0, 1.4, 0]} castShadow receiveShadow>
           <cylinderGeometry args={[0.65, 0.78, 2.8, 12]} />
-          <meshStandardMaterial color="#718093" roughness={0.8} />
+          <meshStandardMaterial map={ProceduralTextures.getStoneBrickTexture('castle')} roughness={0.8} />
         </mesh>
         {/* Flared Balcony with Stone Battlements */}
         <mesh position={[0, 2.85, 0]} castShadow>
           <cylinderGeometry args={[0.82, 0.65, 0.25, 12]} />
-          <meshStandardMaterial color="#4a4b4d" />
+          <meshStandardMaterial map={ProceduralTextures.getStoneBrickTexture('dark')} />
         </mesh>
         {/* Merlons (Almenas) */}
         <mesh position={[0, 3.15, 0]}>
           <cylinderGeometry args={[0.84, 0.84, 0.4, 12, 1, true]} />
-          <meshStandardMaterial color="#718093" />
+          <meshStandardMaterial map={ProceduralTextures.getStoneBrickTexture('castle')} />
         </mesh>
         {/* Guarding Archer */}
         <group position={[0, 2.95, 0]} rotation={[0, aimAngle ?? 0, 0]}>
@@ -1547,12 +1548,12 @@ const ArcherTowerModel: React.FC<{ level: number; aimAngle?: number }> = ({ leve
       {/* Imperial Dark Column */}
       <mesh position={[0, 1.6, 0]} castShadow receiveShadow>
         <cylinderGeometry args={[0.7, 0.85, 3.2, 14]} />
-        <meshStandardMaterial color="#1e272e" roughness={0.7} />
+        <meshStandardMaterial map={ProceduralTextures.getStoneBrickTexture('obsidian')} roughness={0.7} />
       </mesh>
       {/* Gold Trimmed Balcony */}
       <mesh position={[0, 3.25, 0]} castShadow>
         <cylinderGeometry args={[0.9, 0.72, 0.3, 14]} />
-        <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.2} />
+        <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.9} roughness={0.2} />
       </mesh>
       {/* Elite Archer Heroine */}
       <group position={[0, 3.4, 0]} rotation={[0, aimAngle ?? 0, 0]}>

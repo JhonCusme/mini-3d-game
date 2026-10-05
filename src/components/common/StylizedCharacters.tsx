@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import type { Group, Mesh } from 'three';
 import type { TroopId } from '../../core/GameState';
+import { ProceduralTextures } from '../../core/textures/ProceduralTextures';
 
 export interface CharacterProps {
   teamColor?: string;
@@ -68,16 +69,16 @@ export const BarbarianModel: React.FC<CharacterProps> = ({
       {/* --- PELVIS & LEATHER KILT --- */}
       <mesh position={[0, 0.36, 0]} castShadow>
         <boxGeometry args={[0.3, 0.16, 0.22]} />
-        <meshStandardMaterial color="#6a3b1a" roughness={0.8} />
+        <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('brown')} roughness={0.7} />
       </mesh>
       {/* Belt with Gold Buckle */}
       <mesh position={[0, 0.44, 0.01]}>
         <boxGeometry args={[0.32, 0.06, 0.24]} />
-        <meshStandardMaterial color="#3d2110" roughness={0.6} />
+        <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('dark')} roughness={0.6} />
       </mesh>
       <mesh position={[0, 0.44, 0.125]}>
         <boxGeometry args={[0.1, 0.08, 0.02]} />
-        <meshStandardMaterial color="#ffd700" metalness={0.8} roughness={0.3} />
+        <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.9} roughness={0.2} />
       </mesh>
 
       {/* --- TORSO & CHEST HARNESS --- */}
@@ -85,17 +86,17 @@ export const BarbarianModel: React.FC<CharacterProps> = ({
         {/* Muscular torso */}
         <mesh castShadow>
           <boxGeometry args={[0.36, 0.26, 0.24]} />
-          <meshStandardMaterial color="#f0b67f" roughness={0.7} />
+          <meshStandardMaterial map={ProceduralTextures.getSkinTexture('warm')} roughness={0.6} />
         </mesh>
         {/* Leather Armor Harness with Team Color Accent */}
         <mesh position={[0, 0, 0.01]}>
           <boxGeometry args={[0.38, 0.24, 0.25]} />
-          <meshStandardMaterial color={teamColor} roughness={0.7} />
+          <meshStandardMaterial map={ProceduralTextures.getFabricTexture(teamColor)} roughness={0.65} />
         </mesh>
         {/* Cross leather strap */}
         <mesh position={[0, 0.02, 0.13]} rotation={[0, 0, 0.5]}>
           <boxGeometry args={[0.06, 0.34, 0.02]} />
-          <meshStandardMaterial color="#4a2810" roughness={0.8} />
+          <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('dark')} roughness={0.7} />
         </mesh>
       </group>
 
@@ -104,7 +105,7 @@ export const BarbarianModel: React.FC<CharacterProps> = ({
         {/* Head */}
         <mesh castShadow>
           <sphereGeometry args={[0.15, 12, 10]} />
-          <meshStandardMaterial color="#f0b67f" roughness={0.6} />
+          <meshStandardMaterial map={ProceduralTextures.getSkinTexture('warm')} roughness={0.6} />
         </mesh>
         
         {/* Eyes (stylized Clash dots) */}
@@ -144,12 +145,12 @@ export const BarbarianModel: React.FC<CharacterProps> = ({
         {/* Iron Viking Helmet */}
         <mesh position={[0, 0.08, 0]} castShadow>
           <sphereGeometry args={[0.16, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.52]} />
-          <meshStandardMaterial color="#636e72" metalness={0.7} roughness={0.3} />
+          <meshStandardMaterial map={ProceduralTextures.getMetalTexture('iron')} metalness={0.8} roughness={0.25} />
         </mesh>
         {/* Helmet Rim & Rivets */}
         <mesh position={[0, 0.06, 0]}>
           <cylinderGeometry args={[0.165, 0.165, 0.03, 16]} />
-          <meshStandardMaterial color="#2d3436" metalness={0.8} roughness={0.3} />
+          <meshStandardMaterial map={ProceduralTextures.getMetalTexture('dark')} metalness={0.85} roughness={0.2} />
         </mesh>
         {/* Left Horn */}
         <group position={[-0.15, 0.08, 0]} rotation={[0, 0, 0.8]}>
@@ -171,22 +172,22 @@ export const BarbarianModel: React.FC<CharacterProps> = ({
       <group ref={leftLegRef} position={[-0.09, 0.28, 0]}>
         <mesh position={[0, -0.08, 0]} castShadow>
           <cylinderGeometry args={[0.05, 0.05, 0.16, 8]} />
-          <meshStandardMaterial color="#f0b67f" />
+          <meshStandardMaterial map={ProceduralTextures.getSkinTexture('warm')} roughness={0.6} />
         </mesh>
         {/* Leather Fur Boot */}
         <mesh position={[0, -0.2, 0.02]} castShadow>
           <boxGeometry args={[0.11, 0.12, 0.16]} />
-          <meshStandardMaterial color="#4a2810" roughness={0.9} />
+          <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('dark')} roughness={0.8} />
         </mesh>
       </group>
       <group ref={rightLegRef} position={[0.09, 0.28, 0]}>
         <mesh position={[0, -0.08, 0]} castShadow>
           <cylinderGeometry args={[0.05, 0.05, 0.16, 8]} />
-          <meshStandardMaterial color="#f0b67f" />
+          <meshStandardMaterial map={ProceduralTextures.getSkinTexture('warm')} roughness={0.6} />
         </mesh>
         <mesh position={[0, -0.2, 0.02]} castShadow>
           <boxGeometry args={[0.11, 0.12, 0.16]} />
-          <meshStandardMaterial color="#4a2810" roughness={0.9} />
+          <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('dark')} roughness={0.8} />
         </mesh>
       </group>
 
@@ -195,28 +196,28 @@ export const BarbarianModel: React.FC<CharacterProps> = ({
         {/* Arm */}
         <mesh position={[0, -0.1, 0]} castShadow>
           <cylinderGeometry args={[0.05, 0.05, 0.2, 8]} />
-          <meshStandardMaterial color="#f0b67f" />
+          <meshStandardMaterial map={ProceduralTextures.getSkinTexture('warm')} roughness={0.6} />
         </mesh>
         {/* Spiked Bracer */}
         <mesh position={[0, -0.16, 0]}>
           <cylinderGeometry args={[0.06, 0.06, 0.08, 8]} />
-          <meshStandardMaterial color="#2d3436" metalness={0.7} roughness={0.3} />
+          <meshStandardMaterial map={ProceduralTextures.getMetalTexture('dark')} metalness={0.8} roughness={0.25} />
         </mesh>
         {/* Round Wooden Shield */}
         <group position={[-0.07, -0.15, 0.08]} rotation={[0, 0.3, 0]}>
           <mesh castShadow receiveShadow>
             <cylinderGeometry args={[0.22, 0.22, 0.04, 16]} />
-            <meshStandardMaterial color="#8b5a2b" roughness={0.8} />
+            <meshStandardMaterial map={ProceduralTextures.getWoodTexture('plank')} roughness={0.7} />
           </mesh>
           {/* Iron Rim */}
           <mesh>
             <torusGeometry args={[0.22, 0.02, 8, 16]} />
-            <meshStandardMaterial color="#2d3436" metalness={0.8} roughness={0.2} />
+            <meshStandardMaterial map={ProceduralTextures.getMetalTexture('iron')} metalness={0.85} roughness={0.2} />
           </mesh>
           {/* Team Color Center Boss */}
           <mesh position={[0, 0.025, 0]}>
             <sphereGeometry args={[0.08, 8, 8]} />
-            <meshStandardMaterial color={teamColor} metalness={0.5} roughness={0.3} />
+            <meshStandardMaterial map={ProceduralTextures.getMetalTexture('steel')} color={teamColor} metalness={0.6} roughness={0.3} />
           </mesh>
         </group>
       </group>
@@ -225,38 +226,38 @@ export const BarbarianModel: React.FC<CharacterProps> = ({
       <group ref={rightArmRef} position={[0.23, 0.64, 0]}>
         <mesh position={[0, -0.1, 0]} castShadow>
           <cylinderGeometry args={[0.05, 0.05, 0.2, 8]} />
-          <meshStandardMaterial color="#f0b67f" />
+          <meshStandardMaterial map={ProceduralTextures.getSkinTexture('warm')} roughness={0.6} />
         </mesh>
         <mesh position={[0, -0.16, 0]}>
           <cylinderGeometry args={[0.06, 0.06, 0.08, 8]} />
-          <meshStandardMaterial color="#2d3436" metalness={0.7} roughness={0.3} />
+          <meshStandardMaterial map={ProceduralTextures.getMetalTexture('dark')} metalness={0.8} roughness={0.25} />
         </mesh>
         {/* Sturdy Broadsword */}
         <group ref={swordRef} position={[0, -0.22, 0.1]} rotation={[1.1, 0, 0]}>
           {/* Leather Grip */}
           <mesh position={[0, -0.06, 0]}>
             <cylinderGeometry args={[0.02, 0.02, 0.12, 6]} />
-            <meshStandardMaterial color="#3d2110" />
+            <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('dark')} roughness={0.7} />
           </mesh>
           {/* Gold Pommel */}
           <mesh position={[0, -0.13, 0]}>
             <sphereGeometry args={[0.035, 6, 6]} />
-            <meshStandardMaterial color="#ffd700" metalness={0.8} roughness={0.3} />
+            <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.9} roughness={0.2} />
           </mesh>
           {/* Crossguard */}
           <mesh position={[0, 0.01, 0]}>
             <boxGeometry args={[0.16, 0.03, 0.04]} />
-            <meshStandardMaterial color="#ffd700" metalness={0.8} roughness={0.3} />
+            <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.9} roughness={0.2} />
           </mesh>
           {/* Steel Blade */}
           <mesh position={[0, 0.28, 0]} castShadow>
             <boxGeometry args={[0.06, 0.52, 0.015]} />
-            <meshStandardMaterial color="#dcdde1" metalness={0.9} roughness={0.2} />
+            <meshStandardMaterial map={ProceduralTextures.getMetalTexture('steel')} metalness={0.95} roughness={0.15} />
           </mesh>
           {/* Blade Point */}
           <mesh position={[0, 0.57, 0]} rotation={[0, 0, Math.PI / 4]} castShadow>
             <boxGeometry args={[0.042, 0.042, 0.015]} />
-            <meshStandardMaterial color="#dcdde1" metalness={0.9} roughness={0.2} />
+            <meshStandardMaterial map={ProceduralTextures.getMetalTexture('steel')} metalness={0.95} roughness={0.15} />
           </mesh>
         </group>
       </group>
@@ -326,41 +327,41 @@ export const ArcherModel: React.FC<CharacterProps> = ({
       {/* --- LEATHER BELT & SKIRT --- */}
       <mesh position={[0, 0.38, 0]} castShadow>
         <cylinderGeometry args={[0.13, 0.18, 0.2, 8]} />
-        <meshStandardMaterial color={teamColor} roughness={0.7} />
+        <meshStandardMaterial map={ProceduralTextures.getFabricTexture(teamColor)} roughness={0.65} />
       </mesh>
       <mesh position={[0, 0.48, 0]}>
         <cylinderGeometry args={[0.135, 0.135, 0.04, 8]} />
-        <meshStandardMaterial color="#4a2810" />
+        <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('dark')} roughness={0.6} />
       </mesh>
       {/* Belt Pouch */}
       <mesh position={[0.11, 0.46, 0.05]} rotation={[0, 0.4, 0]}>
         <boxGeometry args={[0.06, 0.08, 0.05]} />
-        <meshStandardMaterial color="#2d1a08" />
+        <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('brown')} roughness={0.7} />
       </mesh>
 
       {/* --- TORSO & ARCHER TUNIC --- */}
       <group position={[0, 0.6, 0]}>
         <mesh castShadow>
           <boxGeometry args={[0.26, 0.22, 0.18]} />
-          <meshStandardMaterial color={teamColor} roughness={0.6} />
+          <meshStandardMaterial map={ProceduralTextures.getFabricTexture(teamColor)} roughness={0.6} />
         </mesh>
         {/* Leather Quiver Strap across chest */}
         <mesh position={[0, 0.02, 0.095]} rotation={[0, 0, -0.6]}>
           <boxGeometry args={[0.04, 0.32, 0.015]} />
-          <meshStandardMaterial color="#3d2110" />
+          <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('dark')} roughness={0.7} />
         </mesh>
         {/* Quiver on back */}
         <group position={[-0.06, 0.05, -0.13]} rotation={[-0.3, 0.2, 0.5]}>
           <mesh castShadow>
             <cylinderGeometry args={[0.06, 0.045, 0.34, 8]} />
-            <meshStandardMaterial color="#4a2810" roughness={0.8} />
+            <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('brown')} roughness={0.75} />
           </mesh>
           {/* Fletching / Arrows visible in quiver */}
           {[-0.02, 0, 0.02].map((x, i) => (
             <group key={i} position={[x, 0.2 + i * 0.02, (i - 1) * 0.02]}>
               <mesh>
                 <cylinderGeometry args={[0.007, 0.007, 0.12, 4]} />
-                <meshStandardMaterial color="#c8a06e" />
+                <meshStandardMaterial map={ProceduralTextures.getWoodTexture('beam')} />
               </mesh>
               {/* Pink / White Fletching Feather */}
               <mesh position={[0, 0.05, 0]}>
@@ -377,7 +378,7 @@ export const ArcherModel: React.FC<CharacterProps> = ({
         {/* Face */}
         <mesh castShadow>
           <sphereGeometry args={[0.13, 10, 8]} />
-          <meshStandardMaterial color="#fcd5b4" roughness={0.5} />
+          <meshStandardMaterial map={ProceduralTextures.getSkinTexture('fair')} roughness={0.5} />
         </mesh>
         {/* Expressive dark eyes */}
         <mesh position={[-0.045, 0.02, 0.115]}>
@@ -412,7 +413,7 @@ export const ArcherModel: React.FC<CharacterProps> = ({
         {/* Golden Archer Tiara / Headband */}
         <mesh position={[0, 0.06, 0.06]} rotation={[0.2, 0, 0]}>
           <torusGeometry args={[0.13, 0.012, 6, 16]} />
-          <meshStandardMaterial color="#ffd700" metalness={0.8} roughness={0.3} />
+          <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.9} roughness={0.2} />
         </mesh>
       </group>
 
@@ -420,21 +421,21 @@ export const ArcherModel: React.FC<CharacterProps> = ({
       <group ref={leftLegRef} position={[-0.07, 0.28, 0]}>
         <mesh position={[0, -0.08, 0]} castShadow>
           <cylinderGeometry args={[0.04, 0.04, 0.16, 8]} />
-          <meshStandardMaterial color="#fcd5b4" />
+          <meshStandardMaterial map={ProceduralTextures.getSkinTexture('fair')} roughness={0.5} />
         </mesh>
         <mesh position={[0, -0.18, 0.02]} castShadow>
           <boxGeometry args={[0.09, 0.14, 0.14]} />
-          <meshStandardMaterial color="#4a2810" roughness={0.8} />
+          <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('brown')} roughness={0.75} />
         </mesh>
       </group>
       <group ref={rightLegRef} position={[0.07, 0.28, 0]}>
         <mesh position={[0, -0.08, 0]} castShadow>
           <cylinderGeometry args={[0.04, 0.04, 0.16, 8]} />
-          <meshStandardMaterial color="#fcd5b4" />
+          <meshStandardMaterial map={ProceduralTextures.getSkinTexture('fair')} roughness={0.5} />
         </mesh>
         <mesh position={[0, -0.18, 0.02]} castShadow>
           <boxGeometry args={[0.09, 0.14, 0.14]} />
-          <meshStandardMaterial color="#4a2810" roughness={0.8} />
+          <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('brown')} roughness={0.75} />
         </mesh>
       </group>
 
@@ -442,29 +443,29 @@ export const ArcherModel: React.FC<CharacterProps> = ({
       <group ref={leftArmRef} position={[-0.18, 0.65, 0]}>
         <mesh position={[0, -0.1, 0]} castShadow>
           <cylinderGeometry args={[0.035, 0.035, 0.2, 6]} />
-          <meshStandardMaterial color="#fcd5b4" />
+          <meshStandardMaterial map={ProceduralTextures.getSkinTexture('fair')} roughness={0.5} />
         </mesh>
         {/* Archery Glove */}
         <mesh position={[0, -0.18, 0]}>
           <cylinderGeometry args={[0.04, 0.04, 0.06, 6]} />
-          <meshStandardMaterial color="#2d1a08" />
+          <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('dark')} roughness={0.7} />
         </mesh>
         {/* Recurve Bow */}
         <group position={[0, -0.22, 0.1]} rotation={[0, 0, 0.2]}>
           {/* Wooden Bow Grip */}
           <mesh castShadow>
             <cylinderGeometry args={[0.025, 0.025, 0.14, 6]} />
-            <meshStandardMaterial color="#8b5a2b" roughness={0.7} />
+            <meshStandardMaterial map={ProceduralTextures.getWoodTexture('beam')} roughness={0.7} />
           </mesh>
           {/* Upper Limb (Curved) */}
           <mesh position={[0, 0.18, -0.04]} rotation={[0.4, 0, 0]} castShadow>
             <boxGeometry args={[0.03, 0.26, 0.018]} />
-            <meshStandardMaterial color="#6a3b1a" roughness={0.7} />
+            <meshStandardMaterial map={ProceduralTextures.getWoodTexture('dark')} roughness={0.7} />
           </mesh>
           {/* Lower Limb (Curved) */}
           <mesh position={[0, -0.18, -0.04]} rotation={[-0.4, 0, 0]} castShadow>
             <boxGeometry args={[0.03, 0.26, 0.018]} />
-            <meshStandardMaterial color="#6a3b1a" roughness={0.7} />
+            <meshStandardMaterial map={ProceduralTextures.getWoodTexture('dark')} roughness={0.7} />
           </mesh>
           {/* Bowstring */}
           <mesh ref={bowstringRef} position={[0, 0, -0.12]}>
@@ -478,23 +479,23 @@ export const ArcherModel: React.FC<CharacterProps> = ({
       <group ref={rightArmRef} position={[0.18, 0.65, 0]}>
         <mesh position={[0, -0.1, 0]} castShadow>
           <cylinderGeometry args={[0.035, 0.035, 0.2, 6]} />
-          <meshStandardMaterial color="#fcd5b4" />
+          <meshStandardMaterial map={ProceduralTextures.getSkinTexture('fair')} roughness={0.5} />
         </mesh>
         <mesh position={[0, -0.18, 0]}>
           <cylinderGeometry args={[0.04, 0.04, 0.06, 6]} />
-          <meshStandardMaterial color="#2d1a08" />
+          <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('dark')} roughness={0.7} />
         </mesh>
         {/* Arrow (shown while shooting/practicing) */}
         {(isAttacking || isPracticing) && (
           <group position={[-0.05, -0.18, 0.15]} rotation={[0, 0.4, 0]}>
             <mesh castShadow>
               <cylinderGeometry args={[0.008, 0.008, 0.55, 4]} />
-              <meshStandardMaterial color="#c8a06e" />
+              <meshStandardMaterial map={ProceduralTextures.getWoodTexture('beam')} />
             </mesh>
             {/* Arrowhead */}
             <mesh position={[0, 0.28, 0]} rotation={[0, 0, 0]}>
               <coneGeometry args={[0.025, 0.06, 4]} />
-              <meshStandardMaterial color="#dcdde1" metalness={0.9} />
+              <meshStandardMaterial map={ProceduralTextures.getMetalTexture('steel')} metalness={0.9} />
             </mesh>
           </group>
         )}
@@ -557,17 +558,17 @@ export const MageModel: React.FC<CharacterProps> = ({
       <group position={[0, 0.45, 0]}>
         <mesh castShadow receiveShadow>
           <cylinderGeometry args={[0.18, 0.34, 0.72, 10]} />
-          <meshStandardMaterial color={teamColor} roughness={0.6} />
+          <meshStandardMaterial map={ProceduralTextures.getFabricTexture(teamColor)} roughness={0.65} />
         </mesh>
         {/* Golden Hem Trim */}
         <mesh position={[0, -0.34, 0]}>
           <cylinderGeometry args={[0.345, 0.35, 0.05, 10]} />
-          <meshStandardMaterial color="#ffd700" metalness={0.7} roughness={0.3} />
+          <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.9} roughness={0.2} />
         </mesh>
         {/* Golden Waist Sash with Runic Gem */}
         <mesh position={[0, 0.04, 0]}>
           <cylinderGeometry args={[0.2, 0.2, 0.06, 10]} />
-          <meshStandardMaterial color="#ffd700" metalness={0.8} roughness={0.3} />
+          <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.9} roughness={0.2} />
         </mesh>
         <mesh position={[0, 0.04, 0.2]}>
           <octahedronGeometry args={[0.045, 0]} />
@@ -580,7 +581,7 @@ export const MageModel: React.FC<CharacterProps> = ({
         {/* Face */}
         <mesh castShadow>
           <sphereGeometry args={[0.13, 10, 8]} />
-          <meshStandardMaterial color="#fcd5b4" roughness={0.6} />
+          <meshStandardMaterial map={ProceduralTextures.getSkinTexture('fair')} roughness={0.5} />
         </mesh>
 
         {/* Glowing Arcane Cyan Eyes */}
@@ -606,22 +607,22 @@ export const MageModel: React.FC<CharacterProps> = ({
           {/* Hat Brim */}
           <mesh position={[0, 0, 0]} rotation={[0.1, 0, 0]}>
             <cylinderGeometry args={[0.26, 0.26, 0.03, 12]} />
-            <meshStandardMaterial color="#2c1a4d" roughness={0.7} />
+            <meshStandardMaterial map={ProceduralTextures.getFabricTexture('#2c1a4d')} roughness={0.7} />
           </mesh>
           {/* Hat Cone */}
           <mesh position={[0, 0.18, -0.02]} rotation={[-0.15, 0, 0]} castShadow>
             <coneGeometry args={[0.18, 0.36, 8]} />
-            <meshStandardMaterial color="#2c1a4d" roughness={0.7} />
+            <meshStandardMaterial map={ProceduralTextures.getFabricTexture('#2c1a4d')} roughness={0.7} />
           </mesh>
           {/* Curved Hat Tip */}
           <mesh position={[0, 0.36, -0.08]} rotation={[-0.6, 0, 0]}>
             <coneGeometry args={[0.09, 0.2, 6]} />
-            <meshStandardMaterial color="#2c1a4d" roughness={0.7} />
+            <meshStandardMaterial map={ProceduralTextures.getFabricTexture('#2c1a4d')} roughness={0.7} />
           </mesh>
           {/* Golden Star Clasp */}
           <mesh position={[0, 0.06, 0.16]}>
             <octahedronGeometry args={[0.035, 0]} />
-            <meshStandardMaterial color="#ffd700" metalness={0.8} />
+            <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.9} />
           </mesh>
         </group>
       </group>
@@ -631,12 +632,12 @@ export const MageModel: React.FC<CharacterProps> = ({
         {/* Carved Wooden Staff */}
         <mesh position={[0, 0, 0]} castShadow>
           <cylinderGeometry args={[0.025, 0.02, 1.0, 6]} />
-          <meshStandardMaterial color="#5a3d1c" roughness={0.9} />
+          <meshStandardMaterial map={ProceduralTextures.getWoodTexture('dark')} roughness={0.8} />
         </mesh>
         {/* Golden Staff Head / Socket */}
         <mesh position={[0, 0.52, 0]}>
           <torusGeometry args={[0.06, 0.02, 6, 12]} />
-          <meshStandardMaterial color="#ffd700" metalness={0.8} />
+          <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.9} />
         </mesh>
         {/* Levitating Pulsing Crystal Orb */}
         <mesh ref={orbRef} position={[0, 0.54, 0]}>
@@ -716,16 +717,16 @@ export const CavalryModel: React.FC<CharacterProps> = ({
         {/* --- WAR HORSE BODY --- */}
         <mesh position={[0, 0.44, 0]} castShadow>
           <boxGeometry args={[0.36, 0.34, 0.82]} />
-          <meshStandardMaterial color="#7a441e" roughness={0.7} />
+          <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('tan')} roughness={0.7} />
         </mesh>
         {/* Horse Saddle Blanket with Team Color & Gold Fringe */}
         <mesh position={[0, 0.46, -0.02]}>
           <boxGeometry args={[0.38, 0.32, 0.42]} />
-          <meshStandardMaterial color={teamColor} roughness={0.6} />
+          <meshStandardMaterial map={ProceduralTextures.getFabricTexture(teamColor)} roughness={0.6} />
         </mesh>
         <mesh position={[0, 0.33, -0.02]}>
           <boxGeometry args={[0.39, 0.04, 0.44]} />
-          <meshStandardMaterial color="#ffd700" metalness={0.7} />
+          <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.9} />
         </mesh>
 
         {/* Horse Neck & Head */}
@@ -733,7 +734,7 @@ export const CavalryModel: React.FC<CharacterProps> = ({
           {/* Neck */}
           <mesh castShadow>
             <boxGeometry args={[0.2, 0.38, 0.24]} />
-            <meshStandardMaterial color="#7a441e" roughness={0.7} />
+            <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('tan')} roughness={0.7} />
           </mesh>
           {/* Mane */}
           <mesh position={[0, 0.1, -0.13]}>
@@ -744,7 +745,7 @@ export const CavalryModel: React.FC<CharacterProps> = ({
           <group position={[0, 0.26, 0.12]} rotation={[0.6, 0, 0]}>
             <mesh castShadow>
               <boxGeometry args={[0.18, 0.2, 0.32]} />
-              <meshStandardMaterial color="#7a441e" roughness={0.7} />
+              <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('tan')} roughness={0.7} />
             </mesh>
             {/* White Face Blaze / Marking */}
             <mesh position={[0, 0.105, 0.02]}>
@@ -763,11 +764,11 @@ export const CavalryModel: React.FC<CharacterProps> = ({
             {/* Pointed Alert Ears */}
             <mesh position={[-0.07, 0.15, -0.1]} rotation={[-0.3, 0, -0.2]}>
               <coneGeometry args={[0.03, 0.1, 4]} />
-              <meshStandardMaterial color="#7a441e" />
+              <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('tan')} />
             </mesh>
             <mesh position={[0.07, 0.15, -0.1]} rotation={[-0.3, 0, 0.2]}>
               <coneGeometry args={[0.03, 0.1, 4]} />
-              <meshStandardMaterial color="#7a441e" />
+              <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('tan')} />
             </mesh>
           </group>
         </group>
@@ -785,7 +786,7 @@ export const CavalryModel: React.FC<CharacterProps> = ({
           {[-0.12, 0.12].map((x, i) => (
             <mesh key={i} position={[x, -0.18, 0]} castShadow>
               <cylinderGeometry args={[0.045, 0.04, 0.36, 6]} />
-              <meshStandardMaterial color="#5a2f12" />
+              <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('dark')} />
             </mesh>
           ))}
         </group>
@@ -795,7 +796,7 @@ export const CavalryModel: React.FC<CharacterProps> = ({
           {[-0.12, 0.12].map((x, i) => (
             <mesh key={i} position={[x, -0.18, 0]} castShadow>
               <cylinderGeometry args={[0.048, 0.04, 0.36, 6]} />
-              <meshStandardMaterial color="#5a2f12" />
+              <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('dark')} />
             </mesh>
           ))}
         </group>
@@ -806,19 +807,19 @@ export const CavalryModel: React.FC<CharacterProps> = ({
         {/* Steel Cuirass (Pecho de armadura) */}
         <mesh position={[0, 0.16, 0]} castShadow>
           <boxGeometry args={[0.3, 0.3, 0.22]} />
-          <meshStandardMaterial color="#bdc3c7" metalness={0.85} roughness={0.25} />
+          <meshStandardMaterial map={ProceduralTextures.getMetalTexture('steel')} metalness={0.9} roughness={0.2} />
         </mesh>
         {/* Golden Lion/Royal Crest on Chest */}
         <mesh position={[0, 0.18, 0.115]}>
           <boxGeometry args={[0.1, 0.1, 0.02]} />
-          <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.2} />
+          <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.95} roughness={0.15} />
         </mesh>
 
         {/* Knight Greathelm Helmet */}
         <group position={[0, 0.44, 0]}>
           <mesh castShadow>
             <cylinderGeometry args={[0.13, 0.13, 0.24, 8]} />
-            <meshStandardMaterial color="#bdc3c7" metalness={0.85} roughness={0.25} />
+            <meshStandardMaterial map={ProceduralTextures.getMetalTexture('steel')} metalness={0.9} roughness={0.2} />
           </mesh>
           {/* Eye Slit Visor */}
           <mesh position={[0, 0.02, 0.13]}>
@@ -828,7 +829,7 @@ export const CavalryModel: React.FC<CharacterProps> = ({
           {/* Helmet Crest Plume (Feather in team color) */}
           <mesh position={[0, 0.2, -0.04]} rotation={[-0.4, 0, 0]}>
             <coneGeometry args={[0.06, 0.22, 6]} />
-            <meshStandardMaterial color={teamColor} />
+            <meshStandardMaterial map={ProceduralTextures.getFabricTexture(teamColor)} />
           </mesh>
         </group>
 
@@ -836,12 +837,12 @@ export const CavalryModel: React.FC<CharacterProps> = ({
         <group position={[-0.24, 0.15, 0.08]} rotation={[0, 0.5, 0]}>
           <mesh castShadow>
             <boxGeometry args={[0.04, 0.38, 0.28]} />
-            <meshStandardMaterial color={teamColor} metalness={0.4} roughness={0.4} />
+            <meshStandardMaterial map={ProceduralTextures.getFabricTexture(teamColor)} roughness={0.4} />
           </mesh>
           {/* Shield Steel Border */}
           <mesh position={[-0.01, 0, 0]}>
             <boxGeometry args={[0.03, 0.4, 0.3]} />
-            <meshStandardMaterial color="#dcdde1" metalness={0.9} roughness={0.2} />
+            <meshStandardMaterial map={ProceduralTextures.getMetalTexture('steel')} metalness={0.9} roughness={0.2} />
           </mesh>
         </group>
 
@@ -850,17 +851,17 @@ export const CavalryModel: React.FC<CharacterProps> = ({
           {/* Hand Guard Vamplate */}
           <mesh position={[0, 0, -0.2]}>
             <coneGeometry args={[0.1, 0.14, 8]} />
-            <meshStandardMaterial color="#ffd700" metalness={0.8} />
+            <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.9} />
           </mesh>
           {/* Long Tapered Steel Lance */}
           <mesh position={[0, 0, 0.6]} rotation={[Math.PI / 2, 0, 0]} castShadow>
             <cylinderGeometry args={[0.015, 0.035, 1.5, 8]} />
-            <meshStandardMaterial color="#bdc3c7" metalness={0.9} roughness={0.2} />
+            <meshStandardMaterial map={ProceduralTextures.getMetalTexture('steel')} metalness={0.95} roughness={0.15} />
           </mesh>
           {/* Lance Team Pennant Flag */}
           <mesh position={[0, -0.08, 0.8]}>
             <boxGeometry args={[0.01, 0.16, 0.3]} />
-            <meshStandardMaterial color={teamColor} />
+            <meshStandardMaterial map={ProceduralTextures.getFabricTexture(teamColor)} />
           </mesh>
         </group>
       </group>
@@ -896,19 +897,19 @@ export const CatapultModel: React.FC<CharacterProps> = ({
       {/* --- HEAVY TIMBER CHASSIS --- */}
       <mesh position={[0, 0.24, 0]} castShadow receiveShadow>
         <boxGeometry args={[0.7, 0.18, 0.95]} />
-        <meshStandardMaterial color="#5a3d1c" roughness={0.9} />
+        <meshStandardMaterial map={ProceduralTextures.getWoodTexture('plank')} roughness={0.8} />
       </mesh>
       {/* Team Color Banner Plate */}
       <mesh position={[0, 0.24, 0.48]}>
         <boxGeometry args={[0.32, 0.1, 0.02]} />
-        <meshStandardMaterial color={teamColor} />
+        <meshStandardMaterial map={ProceduralTextures.getFabricTexture(teamColor)} />
       </mesh>
       {/* Iron Reinforcement Corner Brackets */}
       {[-0.34, 0.34].map((x, i) =>
         [-0.45, 0.45].map((z, j) => (
           <mesh key={`${i}-${j}`} position={[x, 0.24, z]}>
             <boxGeometry args={[0.06, 0.2, 0.08]} />
-            <meshStandardMaterial color="#2f3542" metalness={0.8} roughness={0.3} />
+            <meshStandardMaterial map={ProceduralTextures.getMetalTexture('dark')} metalness={0.85} roughness={0.25} />
           </mesh>
         ))
       )}
@@ -920,16 +921,16 @@ export const CatapultModel: React.FC<CharacterProps> = ({
             {/* Iron Banded Rim */}
             <mesh rotation={[0, 0, Math.PI / 2]} castShadow>
               <cylinderGeometry args={[0.2, 0.2, 0.08, 14]} />
-              <meshStandardMaterial color="#3e2712" roughness={0.8} />
+              <meshStandardMaterial map={ProceduralTextures.getWoodTexture('dark')} roughness={0.8} />
             </mesh>
             <mesh rotation={[0, 0, Math.PI / 2]}>
               <torusGeometry args={[0.2, 0.015, 6, 14]} />
-              <meshStandardMaterial color="#2f3542" metalness={0.8} />
+              <meshStandardMaterial map={ProceduralTextures.getMetalTexture('dark')} metalness={0.8} />
             </mesh>
             {/* Central Hubcap */}
             <mesh rotation={[0, 0, Math.PI / 2]}>
               <cylinderGeometry args={[0.06, 0.06, 0.1, 8]} />
-              <meshStandardMaterial color="#ffd700" metalness={0.8} />
+              <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.85} />
             </mesh>
           </group>
         ))
@@ -940,18 +941,18 @@ export const CatapultModel: React.FC<CharacterProps> = ({
         <group key={i} position={[x, 0.5, 0]}>
           <mesh rotation={[0.3, 0, 0]} castShadow>
             <boxGeometry args={[0.08, 0.5, 0.08]} />
-            <meshStandardMaterial color="#4a3014" />
+            <meshStandardMaterial map={ProceduralTextures.getWoodTexture('beam')} />
           </mesh>
           <mesh rotation={[-0.3, 0, 0]} castShadow>
             <boxGeometry args={[0.08, 0.5, 0.08]} />
-            <meshStandardMaterial color="#4a3014" />
+            <meshStandardMaterial map={ProceduralTextures.getWoodTexture('beam')} />
           </mesh>
         </group>
       ))}
       {/* Heavy Crossbeam Axle */}
       <mesh position={[0, 0.65, 0]} rotation={[0, 0, Math.PI / 2]}>
         <cylinderGeometry args={[0.05, 0.05, 0.62, 8]} />
-        <meshStandardMaterial color="#2f3542" metalness={0.8} />
+        <meshStandardMaterial map={ProceduralTextures.getMetalTexture('steel')} metalness={0.85} />
       </mesh>
 
       {/* --- THROWING ARM & ROCK BUCKET --- */}
@@ -959,22 +960,22 @@ export const CatapultModel: React.FC<CharacterProps> = ({
         {/* Main Timber Beam */}
         <mesh position={[0, 0.35, 0.3]} rotation={[0.6, 0, 0]} castShadow>
           <boxGeometry args={[0.09, 0.09, 0.95]} />
-          <meshStandardMaterial color="#5a3d1c" roughness={0.8} />
+          <meshStandardMaterial map={ProceduralTextures.getWoodTexture('plank')} roughness={0.75} />
         </mesh>
         {/* Heavy Iron Counterweight at bottom */}
         <mesh position={[0, -0.15, -0.2]}>
           <boxGeometry args={[0.3, 0.22, 0.2]} />
-          <meshStandardMaterial color="#2f3542" metalness={0.7} />
+          <meshStandardMaterial map={ProceduralTextures.getMetalTexture('dark')} metalness={0.8} />
         </mesh>
         {/* Rock Basket / Spoon */}
         <mesh position={[0, 0.72, 0.65]}>
           <cylinderGeometry args={[0.18, 0.1, 0.14, 8]} />
-          <meshStandardMaterial color="#3e2712" />
+          <meshStandardMaterial map={ProceduralTextures.getWoodTexture('dark')} />
         </mesh>
         {/* Loaded Jagged Granite Boulder */}
         <mesh position={[0, 0.8, 0.65]} castShadow>
           <dodecahedronGeometry args={[0.14, 0]} />
-          <meshStandardMaterial color="#747d8c" roughness={0.9} />
+          <meshStandardMaterial map={ProceduralTextures.getStoneBrickTexture('castle')} roughness={0.85} />
         </mesh>
       </group>
     </group>
@@ -1031,7 +1032,7 @@ export const HealerModel: React.FC<CharacterProps> = ({
       <group position={[0, 0.44, 0]}>
         <mesh castShadow receiveShadow>
           <cylinderGeometry args={[0.16, 0.32, 0.68, 10]} />
-          <meshStandardMaterial color="#f5f6fa" roughness={0.4} />
+          <meshStandardMaterial map={ProceduralTextures.getFabricTexture('#f5f6fa')} roughness={0.4} />
         </mesh>
         {/* Emerald Gem Brooch */}
         <mesh position={[0, 0.18, 0.15]}>
@@ -1041,7 +1042,7 @@ export const HealerModel: React.FC<CharacterProps> = ({
         {/* Golden Embroidery */}
         <mesh position={[0, -0.32, 0]}>
           <cylinderGeometry args={[0.325, 0.33, 0.04, 10]} />
-          <meshStandardMaterial color="#ffd700" metalness={0.7} />
+          <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.9} />
         </mesh>
       </group>
 
@@ -1049,7 +1050,7 @@ export const HealerModel: React.FC<CharacterProps> = ({
       <group position={[0, 0.86, 0]}>
         <mesh castShadow>
           <sphereGeometry args={[0.13, 10, 8]} />
-          <meshStandardMaterial color="#fcd5b4" roughness={0.5} />
+          <meshStandardMaterial map={ProceduralTextures.getSkinTexture('fair')} roughness={0.5} />
         </mesh>
         {/* Gentle Eyes */}
         <mesh position={[-0.045, 0.02, 0.12]}>
@@ -1068,7 +1069,7 @@ export const HealerModel: React.FC<CharacterProps> = ({
         {/* Floating Golden Halo */}
         <mesh ref={haloRef} position={[0, 0.34, 0]} rotation={[Math.PI / 2, 0, 0]}>
           <torusGeometry args={[0.16, 0.025, 8, 16]} />
-          <meshStandardMaterial color="#ffd700" emissive="#ffd700" emissiveIntensity={0.7} />
+          <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} emissive="#ffd700" emissiveIntensity={0.6} />
         </mesh>
       </group>
 
@@ -1076,13 +1077,13 @@ export const HealerModel: React.FC<CharacterProps> = ({
       <group ref={leftWingRef} position={[-0.14, 0.65, -0.12]}>
         <mesh castShadow>
           <boxGeometry args={[0.34, 0.44, 0.03]} />
-          <meshStandardMaterial color="#ffffff" roughness={0.2} transparent opacity={0.92} />
+          <meshStandardMaterial map={ProceduralTextures.getFabricTexture('#ffffff')} roughness={0.3} transparent opacity={0.94} />
         </mesh>
       </group>
       <group ref={rightWingRef} position={[0.14, 0.65, -0.12]}>
         <mesh castShadow>
           <boxGeometry args={[0.34, 0.44, 0.03]} />
-          <meshStandardMaterial color="#ffffff" roughness={0.2} transparent opacity={0.92} />
+          <meshStandardMaterial map={ProceduralTextures.getFabricTexture('#ffffff')} roughness={0.3} transparent opacity={0.94} />
         </mesh>
       </group>
 
@@ -1090,7 +1091,7 @@ export const HealerModel: React.FC<CharacterProps> = ({
       <group ref={staffRef} position={[0.22, 0.58, 0.1]}>
         <mesh castShadow>
           <cylinderGeometry args={[0.02, 0.02, 0.85, 6]} />
-          <meshStandardMaterial color="#ffd700" metalness={0.8} />
+          <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.9} />
         </mesh>
         {/* Emerald Caduceus Cross */}
         <mesh position={[0, 0.42, 0]}>
@@ -1244,11 +1245,11 @@ export const HeroKingModel: React.FC<{ level?: number; scale?: number; isMoving?
         <group key={i} ref={i === 0 ? leftLegRef : rightLegRef} position={[x, 0.25, 0]}>
           <mesh castShadow>
             <cylinderGeometry args={[0.06, 0.055, 0.35, 8]} />
-            <meshStandardMaterial color="#2d3436" metalness={0.8} roughness={0.3} />
+            <meshStandardMaterial map={ProceduralTextures.getMetalTexture('dark')} metalness={0.85} roughness={0.25} />
           </mesh>
           <mesh position={[0, -0.15, 0.03]} castShadow>
             <boxGeometry args={[0.12, 0.12, 0.18]} />
-            <meshStandardMaterial color="#ffd700" metalness={0.85} roughness={0.25} />
+            <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.9} roughness={0.2} />
           </mesh>
         </group>
       ))}
@@ -1257,19 +1258,19 @@ export const HeroKingModel: React.FC<{ level?: number; scale?: number; isMoving?
       <group position={[0, 0.62, 0]}>
         <mesh castShadow>
           <boxGeometry args={[0.38, 0.35, 0.26]} />
-          <meshStandardMaterial color="#dcdde1" metalness={0.85} roughness={0.2} />
+          <meshStandardMaterial map={ProceduralTextures.getMetalTexture('steel')} metalness={0.9} roughness={0.2} />
         </mesh>
         {/* Golden Lion Crest on Chest */}
         <mesh position={[0, 0.04, 0.135]}>
           <boxGeometry args={[0.16, 0.16, 0.02]} />
-          <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.2} />
+          <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.95} roughness={0.15} />
         </mesh>
         {/* Heavy Golden Shoulder Pauldrons */}
         {[-0.24, 0.24].map((x, i) => (
           <group key={i} position={[x, 0.16, 0]}>
             <mesh castShadow>
               <sphereGeometry args={[0.11, 8, 8]} />
-              <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.2} />
+              <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.95} roughness={0.15} />
             </mesh>
           </group>
         ))}
@@ -1278,12 +1279,12 @@ export const HeroKingModel: React.FC<{ level?: number; scale?: number; isMoving?
         <group ref={capeRef} position={[0, 0.16, -0.13]}>
           <mesh position={[0, -0.32, 0]} castShadow>
             <boxGeometry args={[0.36, 0.65, 0.02]} />
-            <meshStandardMaterial color="#881337" roughness={0.7} />
+            <meshStandardMaterial map={ProceduralTextures.getFabricTexture('#881337')} roughness={0.7} />
           </mesh>
           {/* White Fur Trim on Cape Top */}
           <mesh position={[0, 0.01, 0]}>
             <boxGeometry args={[0.38, 0.08, 0.04]} />
-            <meshStandardMaterial color="#f8fafc" roughness={0.9} />
+            <meshStandardMaterial map={ProceduralTextures.getFabricTexture('#f8fafc')} roughness={0.85} />
           </mesh>
         </group>
       </group>
@@ -1293,7 +1294,7 @@ export const HeroKingModel: React.FC<{ level?: number; scale?: number; isMoving?
         {/* Face */}
         <mesh castShadow>
           <sphereGeometry args={[0.14, 10, 8]} />
-          <meshStandardMaterial color="#fcd5b4" roughness={0.6} />
+          <meshStandardMaterial map={ProceduralTextures.getSkinTexture('warm')} roughness={0.55} />
         </mesh>
         {/* Determined Eyes */}
         <mesh position={[-0.045, 0.02, 0.13]}>
@@ -1317,7 +1318,7 @@ export const HeroKingModel: React.FC<{ level?: number; scale?: number; isMoving?
           {/* Crown Base Band */}
           <mesh>
             <cylinderGeometry args={[0.155, 0.155, 0.05, 12]} />
-            <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.2} />
+            <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.95} roughness={0.15} />
           </mesh>
           {/* Ruby Jewels on Crown */}
           {[0, (Math.PI * 2) / 3, (Math.PI * 4) / 3].map((angle, i) => (
@@ -1335,7 +1336,7 @@ export const HeroKingModel: React.FC<{ level?: number; scale?: number; isMoving?
             return (
               <mesh key={i} position={[Math.sin(a) * 0.14, 0.06, Math.cos(a) * 0.14]}>
                 <coneGeometry args={[0.035, 0.09, 4]} />
-                <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.2} />
+                <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.95} roughness={0.15} />
               </mesh>
             );
           })}
@@ -1347,23 +1348,23 @@ export const HeroKingModel: React.FC<{ level?: number; scale?: number; isMoving?
         {/* Crossguard */}
         <mesh position={[0, 0.15, 0]}>
           <boxGeometry args={[0.26, 0.04, 0.04]} />
-          <meshStandardMaterial color="#ffd700" metalness={0.9} />
+          <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.95} />
         </mesh>
         {/* Leather Grip */}
         <mesh position={[0, 0.25, 0]}>
           <cylinderGeometry args={[0.02, 0.02, 0.16, 6]} />
-          <meshStandardMaterial color="#881337" />
+          <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('dark')} />
         </mesh>
         {/* Crown Pommel */}
         <mesh position={[0, 0.35, 0]}>
           <sphereGeometry args={[0.04, 6, 6]} />
-          <meshStandardMaterial color="#ffd700" metalness={0.9} />
+          <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.95} />
         </mesh>
         {/* Gleaming Steel Blade Planted Downward */}
         <mesh position={[0, -0.22, 0]} castShadow>
           <boxGeometry args={[0.08, 0.7, 0.02]} />
           <meshStandardMaterial
-            color="#f1f5f9"
+            map={ProceduralTextures.getMetalTexture('steel')}
             metalness={0.95}
             roughness={0.15}
             emissive="#38bdf8"
