@@ -27,48 +27,48 @@ const TROOP_META: Record<TroopId, TroopMeta> = {
     targetType: 'Terrestre (Cuerpo a cuerpo)',
     speed: 'Media (1.0x)',
     description: 'Guerrero fiero de primera línea. Equipado con espadón templado y hombreras de hierro, resiste el fuego enemigo y abre paso al resto del ejército.',
-    modelScale: 1.35,
-    cameraY: 0.75,
+    modelScale: 1.25,
+    cameraY: 0.65,
   },
   archers: {
     role: 'Tiradora Ágil a Distancia',
     targetType: 'Terrestre y Aéreo (Flechas)',
     speed: 'Rápida (1.2x)',
     description: 'Experta arquera elfa de cabellera magenta. Dispara ráfagas veloces de flechas certeras desde la retaguardia, perfecta para abatir defensas lejanas.',
-    modelScale: 1.35,
-    cameraY: 0.75,
+    modelScale: 1.25,
+    cameraY: 0.65,
   },
   cavalry: {
     role: 'Carga Pesada & Flanqueo',
     targetType: 'Terrestre (Lanza de torneo)',
     speed: 'Muy Rápida (1.6x)',
     description: 'Caballero montado con armadura completa y corcel de guerra. Su devastadora carga rompe las filas enemigas y alcanza objetivos clave con rapidez.',
-    modelScale: 1.15,
-    cameraY: 0.9,
+    modelScale: 1.1,
+    cameraY: 0.72,
   },
   mages: {
     role: 'Bruja Arcana & Hechicera',
     targetType: 'Terrestre y Aéreo (Hechizos arcanos)',
     speed: 'Rápida (Vuelo en escoba mágica)',
     description: 'Poderosa bruja mística montada en su escoba voladora encantada. Con su icónico sombrero puntiagudo y cabellos oscuros, surca los cielos y desata ráfagas de magia arcana sobre las defensas enemigas.',
-    modelScale: 1.35,
-    cameraY: 0.85,
+    modelScale: 1.08,
+    cameraY: 0.62,
   },
   catapults: {
     role: 'Asedio & Destrucción de Murallas',
     targetType: 'Estructuras y Murallas (Área)',
     speed: 'Lenta (0.7x)',
     description: 'Ingeniería de asedio pesada construida con madera de roble y engranajes de hierro. Arroja peñascos llameantes que pulverizan las murallas y baluartes más resistentes.',
-    modelScale: 1.1,
-    cameraY: 0.7,
+    modelScale: 1.05,
+    cameraY: 0.55,
   },
   healers: {
     role: 'Apoyo Sagrado & Sanación',
     targetType: 'Tropas aliadas (Regeneración)',
     speed: 'Rápida (Alas angelicales)',
     description: 'Serena sacerdotisa bendecida con alas sagradas y aureola mística. Proyecta halos de luz divina que restauran continuamente la salud de las tropas heridas.',
-    modelScale: 1.35,
-    cameraY: 0.8,
+    modelScale: 1.2,
+    cameraY: 0.65,
   },
 };
 
@@ -82,7 +82,7 @@ const Troop3DStage: React.FC<{
   return (
     <Canvas
       shadows
-      camera={{ position: [0, meta.cameraY + 0.35, 2.75], fov: 42 }}
+      camera={{ position: [0, meta.cameraY + 0.15, 2.9], fov: 44 }}
       style={{ width: '100%', height: '100%', pointerEvents: 'auto' }}
     >
       {/* Dynamic studio lighting */}
@@ -96,10 +96,11 @@ const Troop3DStage: React.FC<{
       <directionalLight position={[-3, 3, -2]} intensity={0.65} color="#8ec5fc" />
       <pointLight position={[0, 3, 0]} intensity={0.8} color="#e0c3fc" />
 
-      {/* OrbitControls for full 360° mouse / touch rotation */}
+      {/* OrbitControls targeting the character's torso / center for perfect framing */}
       <OrbitControls
+        target={[0, meta.cameraY, 0]}
         enableZoom={true}
-        minDistance={1.6}
+        minDistance={1.5}
         maxDistance={4.2}
         enablePan={false}
         minPolarAngle={Math.PI / 6}

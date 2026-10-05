@@ -1,7 +1,7 @@
 import React, { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
-import { Box3, Group, Vector3, type Mesh } from 'three';
+import { Group, type Mesh } from 'three';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 import type { TroopId } from '../../core/GameState';
 import { ProceduralTextures } from '../../core/textures/ProceduralTextures';
@@ -532,30 +532,6 @@ export const WitchBroomModel: React.FC<{ scale?: number }> = ({ scale = 1 }) => 
   const { scene } = useGLTF('/models/Escoba.glb');
   const broomGroup = useMemo(() => {
     const cloned = scene.clone(true);
-    
-    // Auto-normalize scale and center
-    const box = new Box3().setFromObject(cloned);
-    const size = new Vector3();
-    box.getSize(size);
-    const maxDim = Math.max(size.x, size.y, size.z);
-    
-    // Target length ~1.65 units
-    const normScale = maxDim > 0 ? 1.65 / maxDim : 1;
-    
-    const center = new Vector3();
-    box.getCenter(center);
-    cloned.position.sub(center);
-
-    const wrapper = new Group();
-    wrapper.add(cloned);
-    wrapper.scale.setScalar(normScale * scale);
-
-    // If standing vertical (along Y), orient horizontally along forward flight axis (Z)
-    if (size.y > size.x && size.y > size.z) {
-      cloned.rotation.x = Math.PI / 2;
-    } else if (size.x > size.z) {
-      cloned.rotation.y = Math.PI / 2;
-    }
 
     cloned.traverse((child) => {
       if ((child as Mesh).isMesh) {
@@ -563,6 +539,23 @@ export const WitchBroomModel: React.FC<{ scale?: number }> = ({ scale = 1 }) => 
         child.receiveShadow = true;
       }
     });
+
+    // In raw Escoba.glb:
+    // Y extends from ~0 (bristles) to ~2.97 (handle tip).
+    // The natural seat where a rider sits is at Y = 1.35.
+    // Offset cloned so that seat is exactly at (0, 0, 0):
+    cloned.position.set(0, -1.35, 0);
+
+    const pivot = new Group();
+    pivot.add(cloned);
+    // Rotate so handle points forward (+Z) and bristles point backward (-Z)
+    pivot.rotation.x = Math.PI / 2;
+
+    const wrapper = new Group();
+    wrapper.add(pivot);
+    // Total raw length is ~3.02m. Normalize to ~1.65m target length:
+    const normScale = (1.65 / 3.02) * scale;
+    wrapper.scale.setScalar(normScale);
     return wrapper;
   }, [scene, scale]);
 
@@ -664,6 +657,8 @@ export const WitchCharacterModel: React.FC<{
     // Height of Bruja.glb is 3.38m; normalize down to ~1.3 unit game character scale
     const normScale = (1.3 / 3.38) * scale;
     wrap.scale.setScalar(normScale);
+    // Align her pelvis/hips (which are at Y ~ 0.58 in scaled character space) exactly with the broom seat at Y = 0
+    wrap.position.set(0, -0.58 * (scale / 0.92), 0);
     return { wrapper: wrap, bones: boneMap };
   }, [scene, scale]);
 
@@ -736,9 +731,10 @@ export const MageModel: React.FC<CharacterProps> = ({
 
     // Entire broom flight mount physics: bobbing, banking tilt, and forward surge
     if (flightMountRef.current) {
-      flightMountRef.current.position.y = 0.22 + Math.sin(t) * 0.06;
-      flightMountRef.current.rotation.z = Math.sin(t * 0.9) * 0.06;
-      flightMountRef.current.rotation.x = 0.08 + Math.cos(t * 0.8) * 0.04;
+      // Float at Y = 0.62 so boots hang at Y ~ 0.10, clear of the ground
+      flightMountRef.current.position.y = 0.62 + Math.sin(t) * 0.05;
+      flightMountRef.current.rotation.z = Math.sin(t * 0.9) * 0.05;
+      flightMountRef.current.rotation.x = 0.06 + Math.cos(t * 0.8) * 0.03;
     }
   });
 
@@ -746,20 +742,18 @@ export const MageModel: React.FC<CharacterProps> = ({
     <group scale={scale}>
       {/* --- ARCANE GLYPH ON GROUND --- */}
       <mesh ref={auraRef} position={[0, 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.28, 0.48, 16]} />
+        <ringGeometry args={[0.3, 0.5, 24]} />
         <meshBasicMaterial color={teamColor} transparent opacity={0.45} />
       </mesh>
 
       {/* --- UNIFIED FLYING MOUNT: 3D WITCH SITTING COMFORTABLY ON HER 3D BROOM --- */}
-      <group ref={flightMountRef} position={[0, -0.05, 0]}>
-        {/* Realistic 3D Witch's Broom Mount positioned right between her thighs */}
-        <group position={[0, 0.48, 0]}>
-          <React.Suspense fallback={null}>
-            <WitchBroomModel scale={0.86} />
-          </React.Suspense>
-        </group>
+      <group ref={flightMountRef} position={[0, 0.62, 0]}>
+        {/* Realistic 3D Witch's Broom Mount: seat at (0, 0, 0) */}
+        <React.Suspense fallback={null}>
+          <WitchBroomModel scale={0.92} />
+        </React.Suspense>
 
-        {/* Realistic 3D Witch Character with full hair, hat, riding pose & animations */}
+        {/* Realistic 3D Witch Character: hips positioned at (0, 0, 0) riding the broom */}
         <React.Suspense
           fallback={
             <group position={[0, 0.2, 0]}>
@@ -778,12 +772,12 @@ export const MageModel: React.FC<CharacterProps> = ({
         </React.Suspense>
 
         {/* Mystical Arcane Sparkles trailing behind the broom */}
-        <mesh position={[0, 0.52, -0.8]}>
+        <mesh position={[0, 0.02, -0.75]}>
           <sphereGeometry args={[0.04, 8, 8]} />
           <meshBasicMaterial color="#b48cff" transparent opacity={0.7} />
         </mesh>
-        <mesh position={[0, 0.55, 0.5]}>
-          <sphereGeometry args={[0.03, 8, 8]} />
+        <mesh position={[0, 0.04, 0.5]}>
+          <sphereGeometry args={[0.025, 8, 8]} />
           <meshBasicMaterial color="#00ffff" transparent opacity={0.6} />
         </mesh>
       </group>
