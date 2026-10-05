@@ -568,7 +568,42 @@ export const WitchBroomModel: React.FC<{ scale?: number }> = ({ scale = 1 }) => 
   return <primitive object={broomGroup} />;
 };
 
-useGLTF.preload('/models/Escoba.glb');
+export const WitchCharacterModel: React.FC<{ scale?: number }> = ({ scale = 1 }) => {
+  const { scene } = useGLTF('/models/Bruja.glb');
+  const witchGroup = useMemo(() => {
+    const cloned = scene.clone(true);
+    
+    // Auto-normalize scale and center
+    const box = new Box3().setFromObject(cloned);
+    const size = new Vector3();
+    box.getSize(size);
+    const maxDim = Math.max(size.x, size.y, size.z);
+    
+    // Target height ~1.25 units
+    const normScale = maxDim > 0 ? 1.25 / maxDim : 1;
+    
+    const center = new Vector3();
+    box.getCenter(center);
+    // Align base
+    cloned.position.set(-center.x, -box.min.y, -center.z);
+
+    const wrapper = new Group();
+    wrapper.add(cloned);
+    wrapper.scale.setScalar(normScale * scale);
+
+    cloned.traverse((child) => {
+      if ((child as Mesh).isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+      }
+    });
+    return wrapper;
+  }, [scene, scale]);
+
+  return <primitive object={witchGroup} />;
+};
+
+useGLTF.preload('/models/Bruja.glb');
 
 export const MageModel: React.FC<CharacterProps> = ({
   teamColor = '#7b4dff',
@@ -626,83 +661,24 @@ export const MageModel: React.FC<CharacterProps> = ({
       </mesh>
 
       {/* --- REALISTIC 3D WITCH'S BROOM FLYING MOUNT --- */}
-      <group ref={broomRef} position={[0, 0.24, 0]}>
+      <group ref={broomRef} position={[0, 0.22, 0]}>
         <React.Suspense fallback={null}>
           <WitchBroomModel scale={0.78} />
         </React.Suspense>
       </group>
 
-      {/* --- FLOWING WIZARD ROBES --- */}
-      <group position={[0, 0.45, 0]}>
-        <mesh castShadow receiveShadow>
-          <cylinderGeometry args={[0.18, 0.34, 0.72, 10]} />
-          <meshStandardMaterial map={ProceduralTextures.getFabricTexture(teamColor)} roughness={0.65} />
-        </mesh>
-        {/* Golden Hem Trim */}
-        <mesh position={[0, -0.34, 0]}>
-          <cylinderGeometry args={[0.345, 0.35, 0.05, 10]} />
-          <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.9} roughness={0.2} />
-        </mesh>
-        {/* Golden Waist Sash with Runic Gem */}
-        <mesh position={[0, 0.04, 0]}>
-          <cylinderGeometry args={[0.2, 0.2, 0.06, 10]} />
-          <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.9} roughness={0.2} />
-        </mesh>
-        <mesh position={[0, 0.04, 0.2]}>
-          <octahedronGeometry args={[0.045, 0]} />
-          <meshStandardMaterial color="#00ffff" emissive="#00ffff" emissiveIntensity={0.8} />
-        </mesh>
-      </group>
-
-      {/* --- HEAD, WHITE BEARD & WIZARD HAT --- */}
-      <group position={[0, 0.88, 0]}>
-        {/* Face */}
-        <mesh castShadow>
-          <sphereGeometry args={[0.13, 10, 8]} />
-          <meshStandardMaterial map={ProceduralTextures.getSkinTexture('fair')} roughness={0.5} />
-        </mesh>
-
-        {/* Glowing Arcane Cyan Eyes */}
-        <mesh position={[-0.045, 0.02, 0.12]}>
-          <sphereGeometry args={[0.022, 6, 6]} />
-          <meshStandardMaterial color="#00ffff" emissive="#00ffff" emissiveIntensity={1} />
-        </mesh>
-        <mesh position={[0.045, 0.02, 0.12]}>
-          <sphereGeometry args={[0.022, 6, 6]} />
-          <meshStandardMaterial color="#00ffff" emissive="#00ffff" emissiveIntensity={1} />
-        </mesh>
-
-        {/* Long Sculpted White Beard */}
-        <group position={[0, -0.06, 0.1]}>
-          <mesh castShadow>
-            <coneGeometry args={[0.1, 0.26, 6]} />
-            <meshStandardMaterial color="#f5f6fa" roughness={0.6} />
-          </mesh>
-        </group>
-
-        {/* Pointy Wizard Hat with Folded Tip */}
-        <group position={[0, 0.09, 0]}>
-          {/* Hat Brim */}
-          <mesh position={[0, 0, 0]} rotation={[0.1, 0, 0]}>
-            <cylinderGeometry args={[0.26, 0.26, 0.03, 12]} />
-            <meshStandardMaterial map={ProceduralTextures.getFabricTexture('#2c1a4d')} roughness={0.7} />
-          </mesh>
-          {/* Hat Cone */}
-          <mesh position={[0, 0.18, -0.02]} rotation={[-0.15, 0, 0]} castShadow>
-            <coneGeometry args={[0.18, 0.36, 8]} />
-            <meshStandardMaterial map={ProceduralTextures.getFabricTexture('#2c1a4d')} roughness={0.7} />
-          </mesh>
-          {/* Curved Hat Tip */}
-          <mesh position={[0, 0.36, -0.08]} rotation={[-0.6, 0, 0]}>
-            <coneGeometry args={[0.09, 0.2, 6]} />
-            <meshStandardMaterial map={ProceduralTextures.getFabricTexture('#2c1a4d')} roughness={0.7} />
-          </mesh>
-          {/* Golden Star Clasp */}
-          <mesh position={[0, 0.06, 0.16]}>
-            <octahedronGeometry args={[0.035, 0]} />
-            <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.9} />
-          </mesh>
-        </group>
+      {/* --- REALISTIC 3D WITCH CHARACTER --- */}
+      <group position={[0, 0.28, 0]}>
+        <React.Suspense fallback={
+          <group position={[0, 0.2, 0]}>
+            <mesh castShadow receiveShadow>
+              <cylinderGeometry args={[0.18, 0.34, 0.72, 10]} />
+              <meshStandardMaterial map={ProceduralTextures.getFabricTexture(teamColor)} roughness={0.65} />
+            </mesh>
+          </group>
+        }>
+          <WitchCharacterModel scale={0.88} />
+        </React.Suspense>
       </group>
 
       {/* --- RIGHT HAND & GNARLED ARCANE STAFF --- */}
