@@ -50,8 +50,8 @@ const TROOP_META: Record<TroopId, TroopMeta> = {
     role: 'Bruja Arcana & Hechicera',
     targetType: 'Terrestre y Aéreo (Hechizos arcanos)',
     speed: 'Rápida (Vuelo en escoba mágica)',
-    description: 'Poderosa bruja mística montada en su escoba voladora encantada. Canaliza esferas de energía pura y relámpagos con su báculo arcano, infligiendo un daño colosal.',
-    modelScale: 1.3,
+    description: 'Poderosa bruja mística montada en su escoba voladora encantada. Con su icónico sombrero puntiagudo y cabellos oscuros, surca los cielos y desata ráfagas de magia arcana sobre las defensas enemigas.',
+    modelScale: 1.35,
     cameraY: 0.85,
   },
   catapults: {

@@ -569,42 +569,128 @@ export const WitchBroomModel: React.FC<{ scale?: number }> = ({ scale = 1 }) => 
   return <primitive object={broomGroup} />;
 };
 
-export const WitchCharacterModel: React.FC<{ scale?: number }> = ({ scale = 1 }) => {
+export const WitchCharacterModel: React.FC<{
+  scale?: number;
+  isAttacking?: boolean;
+  animOffset?: number;
+}> = ({ scale = 1, isAttacking = false, animOffset = 0 }) => {
   const { scene } = useGLTF('/models/Bruja.glb');
-  const witchGroup = useMemo(() => {
+
+  const { wrapper, bones } = useMemo(() => {
     // SkeletonUtils.clone properly duplicates SkinnedMesh bones and bindings
     const cloned = SkeletonUtils.clone(scene);
+    const boneMap: Record<string, any> = {};
 
     cloned.traverse((child) => {
-      // Hide any Rigify widget / bone control shapes
-      if (child.name.startsWith('WGT') || child.name.startsWith('MCH-')) {
-        child.visible = false;
+      // Collect deform bones and head/neck
+      if (child.name.startsWith('DEF-') || child.name === 'head' || child.name === 'neck') {
+        boneMap[child.name] = child;
       }
       if ((child as Mesh).isMesh) {
         child.castShadow = true;
         child.receiveShadow = true;
         child.frustumCulled = false;
+        child.visible = true;
         const mesh = child as Mesh;
         if (mesh.material) {
           const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
           mats.forEach((mat: any) => {
             mat.side = 2; // DoubleSide
             mat.depthWrite = true;
+            mat.alphaTest = 0.5;
             mat.needsUpdate = true;
           });
         }
       }
     });
 
-    const wrapper = new Group();
-    wrapper.add(cloned);
+    // Base Riding Pose: pose bones to sit and straddle the broom naturally instead of rigid A-pose
+    if (boneMap['DEF-thighL']) {
+      boneMap['DEF-thighL'].rotation.x -= 0.55;
+      boneMap['DEF-thighL'].rotation.z -= 0.12;
+    }
+    if (boneMap['DEF-shinL']) {
+      boneMap['DEF-shinL'].rotation.x += 0.65;
+    }
+    if (boneMap['DEF-thighR']) {
+      boneMap['DEF-thighR'].rotation.x -= 0.55;
+      boneMap['DEF-thighR'].rotation.z += 0.12;
+    }
+    if (boneMap['DEF-shinR']) {
+      boneMap['DEF-shinR'].rotation.x += 0.65;
+    }
+    if (boneMap['DEF-upper_armL']) {
+      boneMap['DEF-upper_armL'].rotation.x -= 0.45;
+      boneMap['DEF-upper_armL'].rotation.z -= 0.45;
+    }
+    if (boneMap['DEF-forearmL']) {
+      boneMap['DEF-forearmL'].rotation.y -= 0.3;
+    }
+    if (boneMap['DEF-upper_armR']) {
+      boneMap['DEF-upper_armR'].rotation.x -= 0.45;
+      boneMap['DEF-upper_armR'].rotation.z += 0.45;
+    }
+    if (boneMap['DEF-forearmR']) {
+      boneMap['DEF-forearmR'].rotation.y += 0.3;
+    }
+    if (boneMap['DEF-spine002']) {
+      boneMap['DEF-spine002'].rotation.x += 0.15;
+    }
+    if (boneMap['DEF-spine003']) {
+      boneMap['DEF-spine003'].rotation.x += 0.1;
+    }
+
+    const wrap = new Group();
+    wrap.add(cloned);
     // Height of Bruja.glb is 3.38m; normalize down to ~1.3 unit game character scale
     const normScale = (1.3 / 3.38) * scale;
-    wrapper.scale.setScalar(normScale);
-    return wrapper;
+    wrap.scale.setScalar(normScale);
+    return { wrapper: wrap, bones: boneMap };
   }, [scene, scale]);
 
-  return <primitive object={witchGroup} />;
+  // Live dynamic flight animation in useFrame
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime * 2.8 + animOffset;
+
+    // Spine breathing & flight compensation
+    if (bones['DEF-spine002']) {
+      bones['DEF-spine002'].rotation.x = 0.15 + Math.sin(t * 1.5) * 0.04;
+    }
+    if (bones['DEF-spine003']) {
+      bones['DEF-spine003'].rotation.z = Math.sin(t * 1.2) * 0.03;
+    }
+
+    // Head looking ahead and tilting with the broom movements
+    if (bones['head']) {
+      bones['head'].rotation.y = Math.sin(t * 1.1) * 0.16;
+      bones['head'].rotation.z = Math.cos(t * 1.3) * 0.06;
+    }
+
+    // Arms guiding the flight or casting
+    if (bones['DEF-upper_armL']) {
+      bones['DEF-upper_armL'].rotation.x = -0.45 + Math.sin(t * 1.8) * 0.03;
+    }
+    if (bones['DEF-upper_armR']) {
+      if (isAttacking) {
+        // Dramatic attack cast forward
+        const cast = Math.sin(clock.elapsedTime * 6);
+        bones['DEF-upper_armR'].rotation.x = -0.9 + cast * 0.35;
+        bones['DEF-upper_armR'].rotation.z = 0.2 + cast * 0.2;
+      } else {
+        bones['DEF-upper_armR'].rotation.x = -0.45 + Math.sin(t * 1.8 + 0.5) * 0.03;
+      }
+    }
+
+    // Legs subtle flight wobble
+    if (bones['DEF-shinL']) {
+      bones['DEF-shinL'].rotation.x = 0.65 + Math.sin(t * 1.5) * 0.025;
+    }
+    if (bones['DEF-shinR']) {
+      bones['DEF-shinR'].rotation.x = 0.65 + Math.cos(t * 1.5) * 0.025;
+    }
+  });
+
+  return <primitive object={wrapper} />;
 };
 
 useGLTF.preload('/models/Bruja.glb');
@@ -616,43 +702,24 @@ export const MageModel: React.FC<CharacterProps> = ({
   animOffset = 0,
   scale = 1,
 }) => {
-  const staffRef = useRef<Group>(null);
-  const orbRef = useRef<Mesh>(null);
+  const flightMountRef = useRef<Group>(null);
   const auraRef = useRef<Mesh>(null);
-  const broomRef = useRef<Group>(null);
 
   useFrame(({ clock }) => {
-    const t = clock.elapsedTime * 3 + animOffset;
+    const t = clock.elapsedTime * 2.8 + animOffset;
 
-    // Floating levitation bobbing
+    // Ground arcane glyph levitation pulse
     if (auraRef.current) {
       auraRef.current.rotation.z = t * 0.4;
       const pulse = 1 + Math.sin(t * 2) * 0.15;
       auraRef.current.scale.set(pulse, pulse, 1);
     }
 
-    // Orb mystical pulsation
-    if (orbRef.current) {
-      orbRef.current.rotation.y = t * 1.5;
-      orbRef.current.rotation.x = t * 0.8;
-      const s = 1 + Math.sin(t * 3) * 0.2;
-      orbRef.current.scale.set(s, s, s);
-    }
-
-    // Staff casting gesture
-    if (isAttacking || isPracticing) {
-      const cast = Math.sin(clock.elapsedTime * 6 + animOffset);
-      if (staffRef.current) {
-        staffRef.current.rotation.x = -0.5 + cast * 0.4;
-        staffRef.current.position.z = 0.2 + cast * 0.1;
-      }
-    }
-
-    // Dynamic flight tilt on the broom
-    if (broomRef.current) {
-      const wobble = Math.sin(t * 1.5) * 0.06;
-      broomRef.current.rotation.z = -0.04 + wobble;
-      broomRef.current.rotation.x = 0.12 + Math.cos(t * 1.2) * 0.05;
+    // Entire broom flight mount physics: bobbing, banking tilt, and forward surge
+    if (flightMountRef.current) {
+      flightMountRef.current.position.y = 0.28 + Math.sin(t) * 0.06;
+      flightMountRef.current.rotation.z = Math.sin(t * 0.9) * 0.06;
+      flightMountRef.current.rotation.x = 0.08 + Math.cos(t * 0.8) * 0.04;
     }
   });
 
@@ -661,59 +728,44 @@ export const MageModel: React.FC<CharacterProps> = ({
       {/* --- ARCANE GLYPH ON GROUND --- */}
       <mesh ref={auraRef} position={[0, 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.28, 0.48, 16]} />
-        <meshBasicMaterial color={teamColor} transparent opacity={0.5} />
+        <meshBasicMaterial color={teamColor} transparent opacity={0.45} />
       </mesh>
 
-      {/* --- REALISTIC 3D WITCH'S BROOM FLYING MOUNT --- */}
-      <group ref={broomRef} position={[0, 0.22, 0]}>
-        <React.Suspense fallback={null}>
-          <WitchBroomModel scale={0.78} />
-        </React.Suspense>
-      </group>
+      {/* --- UNIFIED FLYING MOUNT: 3D WITCH RIDING ONLY HER 3D BROOM --- */}
+      <group ref={flightMountRef} position={[0, 0.28, 0]}>
+        {/* Realistic 3D Witch's Broom Mount */}
+        <group position={[0, -0.04, 0]}>
+          <React.Suspense fallback={null}>
+            <WitchBroomModel scale={0.82} />
+          </React.Suspense>
+        </group>
 
-      {/* --- REALISTIC 3D WITCH CHARACTER --- */}
-      <group position={[0, 0.28, 0]}>
-        <React.Suspense fallback={
-          <group position={[0, 0.2, 0]}>
-            <mesh castShadow receiveShadow>
-              <cylinderGeometry args={[0.18, 0.34, 0.72, 10]} />
-              <meshStandardMaterial map={ProceduralTextures.getFabricTexture(teamColor)} roughness={0.65} />
-            </mesh>
-          </group>
-        }>
-          <WitchCharacterModel scale={0.88} />
-        </React.Suspense>
-      </group>
-
-      {/* --- RIGHT HAND & GNARLED ARCANE STAFF --- */}
-      <group ref={staffRef} position={[0.26, 0.6, 0.1]}>
-        {/* Carved Wooden Staff */}
-        <mesh position={[0, 0, 0]} castShadow>
-          <cylinderGeometry args={[0.025, 0.02, 1.0, 6]} />
-          <meshStandardMaterial map={ProceduralTextures.getWoodTexture('dark')} roughness={0.8} />
-        </mesh>
-        {/* Golden Staff Head / Socket */}
-        <mesh position={[0, 0.52, 0]}>
-          <torusGeometry args={[0.06, 0.02, 6, 12]} />
-          <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.9} />
-        </mesh>
-        {/* Levitating Pulsing Crystal Orb */}
-        <mesh ref={orbRef} position={[0, 0.54, 0]}>
-          <dodecahedronGeometry args={[0.075, 0]} />
-          <meshStandardMaterial
-            color="#00f2fe"
-            emissive="#4facfe"
-            emissiveIntensity={1.2}
-            roughness={0.1}
+        {/* Realistic 3D Witch Character with full hair, hat, riding pose & animations */}
+        <React.Suspense
+          fallback={
+            <group position={[0, 0.2, 0]}>
+              <mesh castShadow receiveShadow>
+                <cylinderGeometry args={[0.18, 0.34, 0.72, 10]} />
+                <meshStandardMaterial map={ProceduralTextures.getFabricTexture(teamColor)} roughness={0.65} />
+              </mesh>
+            </group>
+          }
+        >
+          <WitchCharacterModel
+            scale={0.92}
+            isAttacking={isAttacking || isPracticing}
+            animOffset={animOffset}
           />
-        </mesh>
-      </group>
+        </React.Suspense>
 
-      {/* --- LEFT HAND CASTING SWIRL --- */}
-      <group position={[-0.24, 0.55, 0.12]}>
-        <mesh position={[0, 0.02, 0]}>
-          <sphereGeometry args={[0.035, 8, 8]} />
-          <meshStandardMaterial color="#00ffff" emissive="#00ffff" emissiveIntensity={1.5} />
+        {/* Mystical Arcane Sparkles trailing behind the broom */}
+        <mesh position={[0, 0.05, -0.75]}>
+          <sphereGeometry args={[0.04, 8, 8]} />
+          <meshBasicMaterial color="#b48cff" transparent opacity={0.7} />
+        </mesh>
+        <mesh position={[0, 0.12, 0.45]}>
+          <sphereGeometry args={[0.03, 8, 8]} />
+          <meshBasicMaterial color="#00ffff" transparent opacity={0.6} />
         </mesh>
       </group>
     </group>
