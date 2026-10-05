@@ -52,3 +52,22 @@ for all
 using (auth.uid() = user_id)
 with check (auth.uid() = user_id);
 
+-- Friendships & Social Challenges (Optional table for relational friendship records)
+create table if not exists public.friendships (
+    id text primary key,
+    sender_id text not null,
+    receiver_id text not null,
+    sender_name text not null,
+    receiver_name text not null,
+    status text not null default 'pending', -- 'pending' | 'accepted' | 'rejected'
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now()
+);
+
+create index if not exists friendships_sender_idx on public.friendships (sender_id);
+create index if not exists friendships_receiver_idx on public.friendships (receiver_id);
+
+alter table public.friendships enable row level security;
+create policy "friendships are public" on public.friendships for all using (true) with check (true);
+
+

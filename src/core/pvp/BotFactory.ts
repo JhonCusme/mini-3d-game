@@ -42,43 +42,22 @@ function overlaps(list: LayoutBuilding[], type: BuildingType, x: number, z: numb
 }
 
 /**
- * Detects if a rival snapshot belongs to the same player, an earlier test session
- * of the developer, or has an identical unedited starter base layout.
+ * Detects if a rival snapshot belongs to the same player.
+ * Allows all other real players and friend accounts to be matched properly.
  */
 export function isSameOrCloneVillage(candidate: VillageSnapshot | null | undefined, me: VillageSnapshot): boolean {
     if (!candidate || !candidate.playerId) return true;
 
-    // 1. Direct player ID match
+    // 1. Direct player ID match (cannot attack self)
     if (candidate.playerId === me.playerId) return true;
 
     // 2. Direct user ID match (when logged in with Supabase Auth)
     if (candidate.userId && me.userId && candidate.userId === me.userId) return true;
 
-    // 3. Name comparison (case-insensitive & trimmed)
+    // 3. Exact name comparison (case-insensitive & trimmed)
     const cName = (candidate.name || '').trim().toLowerCase();
     const myName = (me.name || '').trim().toLowerCase();
-    if (cName === myName) return true;
-
-    // 4. Filter known test accounts/aliases of the developer (jhon, jacc, heroe)
-    const testAliases = ['jhon', 'jacc', 'heroe', 'héroe', 'admin', 'test'];
-    if (testAliases.includes(cName) && (testAliases.includes(myName) || !me.name || me.playerId.startsWith('guest_'))) {
-        return true;
-    }
-
-    // 5. Default starter layout clone check:
-    // When a new village is created, it has townhall at [-2, -2], goldmine at [-9, -3], barracks at [6, -3].
-    // If candidate has those exact same coordinates, it is an identical starter layout from the developer testing.
-    const layout = candidate.layout;
-    if (layout && layout.length > 0) {
-        const th = layout.find(b => b.type === 'townhall');
-        const gm = layout.find(b => b.type === 'goldmine');
-        const bar = layout.find(b => b.type === 'barracks');
-        if (th && th.x === -2 && th.z === -2 &&
-            gm && gm.x === -9 && gm.z === -3 &&
-            bar && bar.x === 6 && bar.z === -3) {
-            return true;
-        }
-    }
+    if (cName && myName && cName === myName) return true;
 
     return false;
 }
@@ -206,30 +185,23 @@ export function createBotVillage(seed: number, aroundTrophies: number, avoidKing
     };
 }
 
-const SYSTEM_VILLAGE_NAMES = [
-    'Bastión Bárbaro',
-    'Fortaleza de Escarcha',
-    'Campamento Rebelde',
-    'Ciudadela de Obsidiana',
-    'Guarnición del Dragón',
-    'Fortín de los Mercenarios',
-    'Refugio de los Asaltantes',
-    'Enclave Solar',
-    'Bastión de la Guardia',
-    'Puesto Fronterizo',
-    'Ciudadela Carmesí',
-    'Nido de Sombras',
+const REALISTIC_RIVAL_NAMES = [
+    'Ragnar', 'Valeria', 'Kaelen_99', 'Isolda', 'Brom_Furia', 'Theron',
+    'ReyArturo', 'ShadowHunter', 'IronClaw', 'Tormenta99', 'Nerea_PvP',
+    'LordGonzalo', 'FuriaRoja', 'TitanX', 'ElConquistador', 'Vikingo88',
+    'SlayerKing', 'Aldric', 'Zora_Gamer', 'Garrick', 'Doran', 'Fenris_Rex',
+    'Selene_Luna', 'Borin_Muro', 'Lyra_Sky', 'Orin_Thunder', 'Aria_Flame'
 ];
 
-/** Explicit system village (NPC enemy village for when no real players are available). */
+/** Auto-generated rival village (seamlessly styled like a genuine human player). */
 export function createSystemVillage(seed: number, aroundTrophies: number, avoidKingdom?: KingdomType): VillageSnapshot {
     const v = createBotVillage(seed, aroundTrophies, avoidKingdom);
     const rng = mulberry32(seed ^ 0xa5a5a5a5);
-    const sysName = SYSTEM_VILLAGE_NAMES[Math.floor(rng() * SYSTEM_VILLAGE_NAMES.length)];
+    const rivalName = REALISTIC_RIVAL_NAMES[Math.floor(rng() * REALISTIC_RIVAL_NAMES.length)];
     return {
         ...v,
-        playerId: `system_${seed}`,
-        name: `${sysName} (Sistema)`,
+        playerId: `rival_${seed}`,
+        name: rivalName,
         isBot: true,
         isSystemVillage: true,
         lootableCoins: Math.max(400, Math.floor((400 + aroundTrophies * 6) * (0.85 + rng() * 0.5))),

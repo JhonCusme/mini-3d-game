@@ -33,6 +33,17 @@ export interface VillageSnapshot {
     underAttackUntil?: number;
     onlineUntil?: number;
     layout?: LayoutBuilding[];
+    friends?: string[];
+    pendingFriendRequests?: {
+        id: string;
+        fromId: string;
+        fromName: string;
+        fromAvatar: AvatarType;
+        fromKingdom: KingdomType;
+        fromLevel: number;
+        fromTrophies: number;
+        createdAt: number;
+    }[];
 }
 
 /** The army a player sends to attack. */

@@ -15,12 +15,15 @@ import { VillageScreen } from './components/village/VillageScreen';
 import { Hud } from './components/Hud';
 import { Sheet } from './components/ui/Sheet';
 import { DefenseLogPanel, TroopUpgradePanel } from './components/panels/Panels';
+import { FriendsModal } from './components/social/FriendsModal';
+import type { VillageSnapshot } from './core/pvp/PvpTypes';
 
-export type PanelType = 'attack' | 'multiplayer' | 'map' | 'quests' | 'store' | 'settings' | 'log' | 'build' | 'troops';
+export type PanelType = 'attack' | 'multiplayer' | 'map' | 'quests' | 'store' | 'settings' | 'log' | 'build' | 'troops' | 'friends';
 
 const GameApp: React.FC = () => {
   const { state, offlineEarnings, dismissOfflineEarnings } = useGame();
   const [panel, setPanel] = useState<PanelType | null>(null);
+  const [friendlyOpponent, setFriendlyOpponent] = useState<VillageSnapshot | null>(null);
   const [villageFocused, setVillageFocused] = useState(false);
 
   // Show character creation if setup not completed
@@ -28,7 +31,15 @@ const GameApp: React.FC = () => {
     return <CharacterCreation />;
   }
 
-  const close = () => setPanel(null);
+  const close = () => {
+    setPanel(null);
+    setFriendlyOpponent(null);
+  };
+
+  const handleStartFriendlyBattle = (opp: VillageSnapshot) => {
+    setFriendlyOpponent(opp);
+    setPanel('multiplayer');
+  };
 
   return (
     <div className="game-root">
@@ -43,7 +54,7 @@ const GameApp: React.FC = () => {
       {panel === 'attack' && (
         <Sheet title="⚔️ Atacar" onClose={close}>
           <div className="card-grid">
-            <button className="attack-mode-card multiplayer" onClick={() => setPanel('multiplayer')}>
+            <button className="attack-mode-card multiplayer" onClick={() => { setFriendlyOpponent(null); setPanel('multiplayer'); }}>
               <span className="attack-mode-icon">⚔️</span>
               <b>Multijugador</b>
               <span>Saquea aldeas de otros jugadores y gana trofeos.</span>
@@ -53,10 +64,26 @@ const GameApp: React.FC = () => {
               <b>Campaña</b>
               <span>Conquista territorios, vence a los jefes y despierta Dioses.</span>
             </button>
+            <button className="attack-mode-card" style={{ border: '2px solid #0984e3', background: 'linear-gradient(135deg, rgba(9, 132, 227, 0.2), rgba(41, 128, 185, 0.3))' }} onClick={() => setPanel('friends')}>
+              <span className="attack-mode-icon">🤝</span>
+              <b style={{ color: '#74b9ff' }}>Desafío Amistoso</b>
+              <span>Practica con amigos o prueba tu propia aldea sin perder tropas ni trofeos.</span>
+            </button>
           </div>
         </Sheet>
       )}
-      {panel === 'multiplayer' && <AttackScreen onClose={close} />}
+      {panel === 'multiplayer' && (
+        <AttackScreen
+          onClose={close}
+          customOpponent={friendlyOpponent || undefined}
+          isFriendly={!!friendlyOpponent}
+        />
+      )}
+      {panel === 'friends' && (
+        <Sheet title="👥 Amigos y Desafíos de Práctica" onClose={close} wide>
+          <FriendsModal onClose={close} onStartFriendlyBattle={handleStartFriendlyBattle} />
+        </Sheet>
+      )}
       {panel === 'map' && <Sheet title="🗺️ Campaña" onClose={close} wide><MapScreen /></Sheet>}
       {panel === 'quests' && <Sheet title="📜 Misiones" onClose={close} wide><QuestScreen /></Sheet>}
       {panel === 'store' && <Sheet title="💎 Tienda" onClose={close} wide><StoreScreen /></Sheet>}

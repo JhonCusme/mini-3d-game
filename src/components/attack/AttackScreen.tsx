@@ -69,7 +69,9 @@ const NoDeployZone: React.FC<{ visible: boolean }> = ({ visible }) => (
 export const AttackScreen: React.FC<{
   onClose: () => void;
   campaignTerritoryIndex?: number;
-}> = ({ onClose, campaignTerritoryIndex }) => {
+  customOpponent?: VillageSnapshot;
+  isFriendly?: boolean;
+}> = ({ onClose, campaignTerritoryIndex, customOpponent, isFriendly = false }) => {
   const { state, completeAttack, completeCampaignAttack, payCoins, healHeroWithGems } = useGame();
   const { user } = useAuth();
   const [opponent, setOpponent] = useState<VillageSnapshot | null>(null);
@@ -80,19 +82,31 @@ export const AttackScreen: React.FC<{
   const [burst, setBurst] = useState(false);
   const [, setTick] = useState(0);
   const [outcome, setOutcome] = useState<PvpOutcome | null>(null);
+  const [friendlyOutcome, setFriendlyOutcome] = useState<{ won: boolean; stars: number; destruction: number } | null>(null);
   const [campaignOutcome, setCampaignOutcome] = useState<{ won: boolean; coins: number; exp: number; unlockedTroop?: string } | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const seedRef = useRef(0);
   const finishedRef = useRef(false);
 
   const nextCost = 10 * Math.max(1, state.level) * 5;
-  const hasEnergy = state.energy >= GameConfig.pvp.energyCost;
+  const hasEnergy = isFriendly || state.energy >= GameConfig.pvp.energyCost;
 
-  // Load campaign village or find PvP opponent
+  // Load custom opponent, campaign village, or find PvP opponent
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setSim(null);
+
+    if (customOpponent) {
+      const seed = hashString(`${customOpponent.playerId}:${Date.now()}:${refresh}`);
+      seedRef.current = seed;
+      setOpponent(customOpponent);
+      setSim(new AttackSim(PvpManager.buildArmy(state, state.troops), customOpponent, seed));
+      const first = TROOP_IDS.find(id => state.troops[id] > 0);
+      setSelected(first ?? null);
+      setLoading(false);
+      return;
+    }
 
     if (campaignTerritoryIndex !== undefined) {
       const opp = createCampaignVillage(campaignTerritoryIndex);
@@ -113,7 +127,7 @@ export const AttackScreen: React.FC<{
         if (cancelled) return;
         let opp = list[0];
 
-        // 100% GUARANTEE: Never attack yourself, your test accounts, or clones under any circumstance!
+        // Ensure opponent is valid
         if (!opp || isSameOrCloneVillage(opp, meSnapshot)) {
           const sysSeed = hashString(`${state.playerId}:${Date.now()}:${refresh}`);
           opp = createSystemVillage(sysSeed, state.trophies, state.playerKingdom);
@@ -131,7 +145,7 @@ export const AttackScreen: React.FC<{
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refresh, campaignTerritoryIndex]);
+  }, [refresh, campaignTerritoryIndex, customOpponent]);
 
   useEffect(() => {
     if (!message) return;
@@ -148,6 +162,18 @@ export const AttackScreen: React.FC<{
       if (campaignTerritoryIndex !== undefined) {
         const cOut = completeCampaignAttack(campaignTerritoryIndex, result);
         setCampaignOutcome(cOut);
+      } else if (isFriendly) {
+        setFriendlyOutcome({
+          won: result.won,
+          stars: result.stars,
+          destruction: result.destruction,
+        });
+        if (result.stars > 0) {
+          EffectManager.fireVictoryConfetti();
+          AudioManager.playVictory();
+        } else {
+          AudioManager.playDefeat();
+        }
       } else {
         setOutcome(completeAttack(opponent, result));
         if (result.stars > 0) {
@@ -158,6 +184,12 @@ export const AttackScreen: React.FC<{
         }
       }
     }
+  };
+
+  const retryFriendly = () => {
+    finishedRef.current = false;
+    setFriendlyOutcome(null);
+    setRefresh(r => r + 1);
   };
 
   const onGroundTap = (e: ThreeEvent<MouseEvent>) => {
@@ -254,27 +286,23 @@ export const AttackScreen: React.FC<{
           <div className="attack-top-left">
             <div className="hud-profile" style={{
               padding: '8px 14px 8px 8px',
-              background: 'linear-gradient(135deg, rgba(35, 10, 20, 0.94), rgba(18, 8, 28, 0.96))',
-              border: '2px solid #ff4757',
-              boxShadow: '0 4px 16px rgba(255, 71, 87, 0.35)',
+              background: isFriendly
+                ? 'linear-gradient(135deg, rgba(10, 30, 60, 0.94), rgba(8, 18, 40, 0.96))'
+                : 'linear-gradient(135deg, rgba(35, 10, 20, 0.94), rgba(18, 8, 28, 0.96))',
+              border: `2px solid ${isFriendly ? '#0984e3' : '#ff4757'}`,
+              boxShadow: isFriendly ? '0 4px 16px rgba(9, 132, 227, 0.35)' : '0 4px 16px rgba(255, 71, 87, 0.35)',
               borderRadius: '16px',
             }}>
-              <img src={AVATAR_IMAGES[opponent.avatar]} alt="" style={{ width: '50px', height: '50px', borderRadius: '12px', border: '2px solid #ff4757' }} />
+              <img src={AVATAR_IMAGES[opponent.avatar]} alt="" style={{ width: '50px', height: '50px', borderRadius: '12px', border: `2px solid ${isFriendly ? '#0984e3' : '#ff4757'}` }} />
               <div className="flex-col" style={{ gap: '2px' }}>
-                <span style={{ fontSize: '10px', color: '#ff6b81', textTransform: 'uppercase', letterSpacing: '0.8px', fontWeight: 800 }}>
-                  ⚔️ Aldea Rival · Territorio Enemigo:
+                <span style={{ fontSize: '10px', color: isFriendly ? '#74b9ff' : '#ff6b81', textTransform: 'uppercase', letterSpacing: '0.8px', fontWeight: 800 }}>
+                  {isFriendly ? '🤝 Desafío Amistoso · Entrenamiento:' : '⚔️ Aldea Rival · Territorio Enemigo:'}
                 </span>
                 <div className="flex-row gap-1" style={{ alignItems: 'center' }}>
                   <b style={{ fontSize: '17px', color: '#fff', textShadow: '0 2px 4px #000' }}>{opponent.name}</b>
-                  {opponent.isSystemVillage ? (
-                    <span style={{ fontSize: '9px', background: '#e84118', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                      NPC SISTEMA
-                    </span>
-                  ) : (
-                    <span style={{ fontSize: '9px', background: '#ff4757', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                      JUGADOR RIVAL
-                    </span>
-                  )}
+                  <span style={{ fontSize: '9px', background: isFriendly ? '#0984e3' : '#e84118', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    {isFriendly ? '🤝 AMISTOSO' : '👑 REINO RIVAL'}
+                  </span>
                 </div>
                 <div className="flex-row gap-2" style={{ alignItems: 'center', fontSize: '11px' }}>
                   <span style={{ color: 'var(--accent-gold)' }}>
@@ -286,12 +314,20 @@ export const AttackScreen: React.FC<{
                 </div>
               </div>
             </div>
-            <div className="attack-loot" style={{ borderColor: 'rgba(255, 71, 87, 0.4)' }}>
-              Botín disponible: <b>🪙 {opponent.lootableCoins.toLocaleString()}</b>
-            </div>
-            {!sim.started && preview && (
-              <div className="attack-loot" style={{ borderColor: 'rgba(255, 215, 0, 0.3)' }}>
-                Victoria <b style={{ color: '#7bed9f' }}>+{preview.win}🏆</b> · Derrota <b style={{ color: '#ff6b6b' }}>{preview.lose}🏆</b>
+            {!isFriendly ? (
+              <>
+                <div className="attack-loot" style={{ borderColor: 'rgba(255, 71, 87, 0.4)' }}>
+                  Botín disponible: <b>🪙 {opponent.lootableCoins.toLocaleString()}</b>
+                </div>
+                {!sim.started && preview && (
+                  <div className="attack-loot" style={{ borderColor: 'rgba(255, 215, 0, 0.3)' }}>
+                    Victoria <b style={{ color: '#7bed9f' }}>+{preview.win}🏆</b> · Derrota <b style={{ color: '#ff6b6b' }}>{preview.lose}🏆</b>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="attack-loot" style={{ borderColor: 'rgba(9, 132, 227, 0.5)', background: 'rgba(9, 132, 227, 0.2)' }}>
+                🛡️ Modo Práctica: <b>Sin riesgo de trofeos ni tropas</b>
               </div>
             )}
           </div>
@@ -299,15 +335,17 @@ export const AttackScreen: React.FC<{
           <div className="attack-top-center">
             {!sim.started ? (
               <div style={{
-                background: 'linear-gradient(135deg, rgba(40, 10, 20, 0.92), rgba(20, 8, 30, 0.95))',
-                border: '1.5px solid #ff4757',
+                background: isFriendly
+                  ? 'linear-gradient(135deg, rgba(10, 30, 60, 0.92), rgba(8, 20, 45, 0.95))'
+                  : 'linear-gradient(135deg, rgba(40, 10, 20, 0.92), rgba(20, 8, 30, 0.95))',
+                border: `1.5px solid ${isFriendly ? '#0984e3' : '#ff4757'}`,
                 borderRadius: '14px',
                 padding: '6px 18px',
                 textAlign: 'center',
                 boxShadow: '0 4px 18px rgba(0,0,0,0.6)',
               }}>
-                <div style={{ fontSize: '11px', color: '#ff6b81', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-                  🚩 Asalto a la Base de {opponent.name}
+                <div style={{ fontSize: '11px', color: isFriendly ? '#74b9ff' : '#ff6b81', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                  {isFriendly ? '🤝 Batalla de Práctica contra ' + opponent.name : '🚩 Asalto a la Base de ' + opponent.name}
                 </div>
                 <div style={{ fontSize: '12px', color: '#fff', fontWeight: 600 }}>Toca fuera de la zona roja para desplegar tus tropas</div>
               </div>
@@ -323,11 +361,18 @@ export const AttackScreen: React.FC<{
           <div className="attack-top-right">
             {!sim.started ? (
               <>
-                <button className="attack-next" onClick={next}>Siguiente ⏭<span>🪙 {nextCost}</span></button>
+                {!isFriendly && (
+                  <button className="attack-next" onClick={next}>Siguiente ⏭<span>🪙 {nextCost}</span></button>
+                )}
+                {isFriendly && (
+                  <button className="attack-next" style={{ background: '#0984e3', border: '1px solid #74b9ff' }} onClick={() => setRefresh(r => r + 1)}>
+                    Reiniciar 🔄
+                  </button>
+                )}
                 <button className="attack-end" onClick={handleReturnHome}>Volver a casa</button>
               </>
             ) : (
-              <button className="attack-end" onClick={endBattle}>🏳️ Terminar batalla</button>
+              <button className="attack-end" onClick={endBattle}>{isFriendly ? '🏳️ Salir de Práctica' : '🏳️ Terminar batalla'}</button>
             )}
           </div>
 
@@ -417,42 +462,67 @@ export const AttackScreen: React.FC<{
         </>
       )}
 
-      {sim && opponent && (outcome || campaignOutcome) && (
+      {sim && opponent && (outcome || campaignOutcome || friendlyOutcome) && (
         <div className="attack-result-wrap"><div className="attack-result animate-pop">
-          <h1 className="title-clash" style={{ color: sim.stars > 0 ? 'var(--accent-gold)' : 'var(--accent-danger)' }}>
-            {sim.stars > 0 ? (campaignTerritoryIndex !== undefined ? '¡Territorio Conquistado!' : '¡Victoria!') : 'Derrota'}
+          <h1 className="title-clash" style={{ color: sim.stars > 0 ? 'var(--accent-gold)' : (isFriendly ? '#74b9ff' : 'var(--accent-danger)') }}>
+            {isFriendly
+              ? (sim.stars > 0 ? '¡Práctica Superada!' : 'Práctica Concluida')
+              : (sim.stars > 0
+                  ? (campaignTerritoryIndex !== undefined ? '¡Territorio Conquistado!' : '¡Victoria!')
+                  : 'Derrota')}
           </h1>
           <div className="attack-stars big">
             {[0, 1, 2].map(i => <span key={i} className={i < sim.stars ? 'on' : ''}>★</span>)}
           </div>
           <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-            {sim.stars > 0
-              ? (campaignTerritoryIndex !== undefined
-                  ? `Has asediado y conquistado la aldea de ${opponent.name}`
-                  : `Has saqueado la aldea de ${opponent.name}`)
-              : `Tus tropas fueron repelidas en la fortaleza de ${opponent.name}`}
+            {isFriendly
+              ? `Has puesto a prueba la fortaleza de ${opponent.name}.`
+              : (sim.stars > 0
+                  ? (campaignTerritoryIndex !== undefined
+                      ? `Has asediado y conquistado la aldea de ${opponent.name}`
+                      : `Has saqueado la aldea de ${opponent.name}`)
+                  : `Tus tropas fueron repelidas en la fortaleza de ${opponent.name}`)}
           </p>
           <p>Destrucción total: <b>{Math.round(sim.destruction * 100)}%</b></p>
           <div className="attack-result-rows">
-            <div>
-              <span>{campaignTerritoryIndex !== undefined ? 'Recompensa' : 'Botín'}</span>
-              <b style={{ color: 'var(--accent-gold)' }}>
-                +{campaignOutcome ? campaignOutcome.coins : outcome?.coinsStolen} 🪙
-                {campaignOutcome ? ` · ${campaignOutcome.exp} EXP` : ''}
-              </b>
-            </div>
-            {outcome && (
-              <div>
-                <span>Trofeos</span>
-                <b style={{ color: outcome.attackerTrophiesDelta >= 0 ? '#7bed9f' : '#ff6b6b' }}>
-                  {outcome.attackerTrophiesDelta >= 0 ? '+' : ''}{outcome.attackerTrophiesDelta} 🏆
-                </b>
-              </div>
+            {isFriendly ? (
+              <>
+                <div>
+                  <span>Modo</span>
+                  <b style={{ color: '#74b9ff' }}>🤝 Desafío Amistoso</b>
+                </div>
+                <div>
+                  <span>Tropas y Recursos</span>
+                  <b style={{ color: '#2ed573' }}>🛡️ 100% Conservados</b>
+                </div>
+                <div>
+                  <span>Trofeos</span>
+                  <b style={{ color: '#fff' }}>0 🏆 (Sin cambios)</b>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <span>{campaignTerritoryIndex !== undefined ? 'Recompensa' : 'Botín'}</span>
+                  <b style={{ color: 'var(--accent-gold)' }}>
+                    +{campaignOutcome ? campaignOutcome.coins : outcome?.coinsStolen} 🪙
+                    {campaignOutcome ? ` · ${campaignOutcome.exp} EXP` : ''}
+                  </b>
+                </div>
+                {outcome && (
+                  <div>
+                    <span>Trofeos</span>
+                    <b style={{ color: outcome.attackerTrophiesDelta >= 0 ? '#7bed9f' : '#ff6b6b' }}>
+                      {outcome.attackerTrophiesDelta >= 0 ? '+' : ''}{outcome.attackerTrophiesDelta} 🏆
+                    </b>
+                  </div>
+                )}
+                <div>
+                  <span>Tropas perdidas</span>
+                  <b>{TROOP_IDS.filter(id => sim.attackerLosses[id] > 0).map(id => `${TROOP_ICONS[id]}${sim.attackerLosses[id]}`).join(' ') || '—'}</b>
+                </div>
+              </>
             )}
-            <div>
-              <span>Tropas perdidas</span>
-              <b>{TROOP_IDS.filter(id => sim.attackerLosses[id] > 0).map(id => `${TROOP_ICONS[id]}${sim.attackerLosses[id]}`).join(' ') || '—'}</b>
-            </div>
           </div>
 
           {campaignOutcome?.unlockedTroop && (
@@ -474,7 +544,7 @@ export const AttackScreen: React.FC<{
             </div>
           )}
 
-          {sim.heroDeployed && (
+          {!isFriendly && sim.heroDeployed && (
             <div style={{
               marginTop: '10px',
               padding: '10px 14px',
@@ -501,9 +571,38 @@ export const AttackScreen: React.FC<{
               )}
             </div>
           )}
-          <button className="btn-upgrade" onClick={onClose} style={{ width: '100%', padding: '14px', fontSize: '16px', marginTop: '12px' }}>
-            {campaignTerritoryIndex !== undefined ? 'Continuar en el Mapa' : 'Volver a casa'}
-          </button>
+
+          {isFriendly ? (
+            <div className="flex-col gap-2" style={{ marginTop: '14px', width: '100%' }}>
+              <button
+                className="btn-upgrade"
+                onClick={retryFriendly}
+                style={{ width: '100%', padding: '12px', fontSize: '15px', background: '#0984e3', border: '1.5px solid #74b9ff' }}
+              >
+                🔄 Repetir Desafío
+              </button>
+              <button
+                className="btn-secondary"
+                onClick={onClose}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  fontSize: '15px',
+                  background: 'rgba(255,255,255,0.1)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  color: '#fff',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                }}
+              >
+                Volver a la Aldea
+              </button>
+            </div>
+          ) : (
+            <button className="btn-upgrade" onClick={onClose} style={{ width: '100%', padding: '14px', fontSize: '16px', marginTop: '12px' }}>
+              {campaignTerritoryIndex !== undefined ? 'Continuar en el Mapa' : 'Volver a casa'}
+            </button>
+          )}
         </div></div>
       )}
     </div>,

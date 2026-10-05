@@ -8,6 +8,7 @@ import type { PanelType } from '../App';
 
 import { getKingdomConfig } from '../config/KingdomsConfig';
 import { TroopUpgradeManager } from '../core/TroopUpgradeManager';
+import { FriendsManager } from '../core/friends/FriendsManager';
 import type { TroopId } from '../core/GameState';
 
 const Badge: React.FC<{ n: number }> = ({ n }) => (n > 0 ? <span className="hud-badge">{n}</span> : null);
@@ -22,6 +23,7 @@ export const Hud: React.FC<{ onOpen: (p: PanelType) => void; compact?: boolean }
   const claimable = GameConfig.quests.filter(q => QuestManager.canClaimQuest(state, q.id)).length;
   const unseenLog = state.defenseLog.filter(e => !e.seen).length;
   const upgradeableCount = (Object.keys(GameConfig.troops) as TroopId[]).filter(id => TroopUpgradeManager.canUpgrade(state, id)).length;
+  const pendingFriends = FriendsManager.getLocalRequests(state.playerId).length;
 
   const maxGold = VillageManager.maxGoldCapacity(state);
   const maxFood = VillageManager.maxFoodCapacity(state);
@@ -90,6 +92,7 @@ export const Hud: React.FC<{ onOpen: (p: PanelType) => void; compact?: boolean }
       </div>
 
       <div className="hud-bottom-right">
+        <button className="hud-btn" onClick={() => onOpen('friends')}>👥<Badge n={pendingFriends} /><span>Amigos</span></button>
         <button className="hud-btn" onClick={() => onOpen('troops')}>🎖️<Badge n={upgradeableCount} /><span>Mejoras</span></button>
         <button className="hud-btn" onClick={() => onOpen('log')}>🛡️<Badge n={unseenLog} /><span>Registro</span></button>
         <button className="hud-btn" onClick={() => onOpen('quests')}>📜<Badge n={claimable} /><span>Misiones</span></button>

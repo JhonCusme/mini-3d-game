@@ -92,4 +92,25 @@ export class LocalPvpService implements PvpService {
         }
         return records;
     }
+
+    async fetchVillage(playerId: string): Promise<VillageSnapshot | null> {
+        try {
+            const raw = localStorage.getItem(SNAPSHOT_KEY);
+            const snap = raw ? JSON.parse(raw) : null;
+            if (snap && snap.playerId === playerId) return snap;
+        } catch { /* ignore */ }
+        return null;
+    }
+
+    async searchPlayers(): Promise<VillageSnapshot[]> {
+        return [];
+    }
+
+    async getRecentRealPlayers(): Promise<VillageSnapshot[]> {
+        return [];
+    }
+
+    async updateVillageSnapshot(): Promise<boolean> {
+        return true;
+    }
 }

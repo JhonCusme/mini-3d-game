@@ -14,6 +14,10 @@ export interface PvpService {
     unlockVillage(defenderId: string): Promise<void>;
     reportAttack(record: AttackRecord): Promise<void>;
     fetchAttacksAgainst(playerId: string, since: number): Promise<AttackRecord[]>;
+    fetchVillage?(playerId: string): Promise<VillageSnapshot | null>;
+    searchPlayers?(query: string, excludeId: string): Promise<VillageSnapshot[]>;
+    getRecentRealPlayers?(excludeId: string, limit?: number): Promise<VillageSnapshot[]>;
+    updateVillageSnapshot?(playerId: string, patch: Partial<VillageSnapshot>): Promise<boolean>;
 }
 
 function createService(): PvpService {
