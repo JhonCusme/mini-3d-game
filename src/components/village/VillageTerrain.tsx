@@ -5,12 +5,6 @@ import { getKingdomConfig } from '../../config/KingdomsConfig';
 import { KingdomDecor } from './KingdomDecor';
 import { ProceduralTextures } from '../../core/textures/ProceduralTextures';
 
-const WALL_COLORS: Record<KingdomType, string[]> = {
-  frost: ['#8ba7bd', '#99b8d1', '#adc9e0', '#b9d5ec', '#cae3f7', '#d9ecfa', '#e5f3fc', '#82cbf5'],
-  golden: ['#b88a44', '#c99b52', '#dcae65', '#e8be78', '#f2cd8a', '#fad99b', '#ffe4ad', '#ffd700'],
-  emerald: ['#a0784a', '#a0784a', '#9a958c', '#9a958c', '#6b6b75', '#6b6b75', '#6b6b75', '#c9a227'],
-};
-
 export function wallSegments(): { x: number; z: number; horizontal: boolean }[] {
   const segs: { x: number; z: number; horizontal: boolean }[] = [];
   const edge = VILLAGE_HALF + 0.4;
@@ -63,21 +57,16 @@ export const Walls: React.FC<{
     );
   }
 
-  const colorPalette = WALL_COLORS[kingdom] || WALL_COLORS.emerald;
   const isWood = level <= 2;
   const isStone = level >= 3 && level <= 7;
   const isImperial = level >= 8;
-
-  const color = isWood
-    ? '#6a3b1a'
-    : isImperial
-      ? '#1e272e'
-      : (colorPalette[Math.min(level, colorPalette.length - 1)] || '#718093');
 
   const wallTexture = isWood
     ? ProceduralTextures.getWoodTexture('beam')
     : isImperial
     ? ProceduralTextures.getStoneBrickTexture('obsidian')
+    : kingdom === 'frost'
+    ? ProceduralTextures.getStoneBrickTexture('dark')
     : ProceduralTextures.getStoneBrickTexture('castle');
 
   const h = 0.55 + Math.min(level, 10) * 0.08;
@@ -93,7 +82,7 @@ export const Walls: React.FC<{
         broken?.has(i) ? (
           <mesh key={i} position={[s.x, 0.1, s.z]}>
             <boxGeometry args={[0.5, 0.2, 0.5]} />
-            <meshStandardMaterial map={wallTexture} color={isWood ? '#3d2110' : '#4a4b4d'} />
+            <meshStandardMaterial map={wallTexture} roughness={0.9} />
           </mesh>
         ) : (
           <group key={i} position={[s.x, 0, s.z]}>
@@ -102,7 +91,6 @@ export const Walls: React.FC<{
               <boxGeometry args={s.horizontal ? [1.02, h, 0.44] : [0.44, h, 1.02]} />
               <meshStandardMaterial
                 map={wallTexture}
-                color={color}
                 roughness={isImperial ? 0.4 : 0.8}
                 metalness={isImperial ? 0.3 : 0}
               />
@@ -111,13 +99,13 @@ export const Walls: React.FC<{
             {isWood && (
               <mesh position={[0, h + 0.08, 0]} rotation={[s.horizontal ? 0 : Math.PI / 2, 0, 0]}>
                 <coneGeometry args={[0.18, 0.2, 4]} />
-                <meshStandardMaterial map={ProceduralTextures.getWoodTexture('plank')} roughness={0.8} />
+                <meshStandardMaterial map={ProceduralTextures.getWoodTexture('beam')} roughness={0.8} />
               </mesh>
             )}
             {isStone && (
               <mesh position={[0, h + 0.04, 0]}>
                 <boxGeometry args={s.horizontal ? [1.04, 0.08, 0.48] : [0.48, 0.08, 1.04]} />
-                <meshStandardMaterial map={ProceduralTextures.getStoneBrickTexture('dark')} color="#2f3542" />
+                <meshStandardMaterial map={ProceduralTextures.getStoneBrickTexture('dark')} roughness={0.8} />
               </mesh>
             )}
             {isImperial && (

@@ -96,26 +96,26 @@ export class ProceduralTextures {
     ctx.lineWidth = 3;
     ctx.strokeRect(6, 6, 244, 244);
 
-    // Corner rivets
-    const rivets = [[16, 16], [240, 16], [16, 240], [240, 240], [128, 16], [128, 240]];
+    // Corner rivets on larger plates
+    const rivets = [[24, 24], [232, 24], [24, 232], [232, 232], [128, 24], [128, 232]];
     for (const [rx, ry] of rivets) {
       ctx.fillStyle = 'rgba(0,0,0,0.6)';
       ctx.beginPath();
-      ctx.arc(rx + 1, ry + 1, 5, 0, Math.PI * 2);
+      ctx.arc(rx + 1, ry + 1, 4, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.fillStyle = variant === 'dark' ? '#5a626a' : '#dcdde1';
       ctx.beginPath();
-      ctx.arc(rx, ry, 4, 0, Math.PI * 2);
+      ctx.arc(rx, ry, 3.5, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
-      ctx.arc(rx - 1, ry - 1, 1.5, 0, Math.PI * 2);
+      ctx.arc(rx - 1, ry - 1, 1.2, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    const tex = finalizeTexture(canvas, 1, 1);
+    const tex = finalizeTexture(canvas, 2, 2);
     textureCache.set(key, tex);
     return tex;
   }
@@ -135,21 +135,21 @@ export class ProceduralTextures {
     ctx.fillRect(0, 0, 256, 256);
 
     // Decorative filigree borders
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-    ctx.lineWidth = 4;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+    ctx.lineWidth = 3;
     ctx.strokeRect(6, 6, 244, 244);
 
-    ctx.strokeStyle = 'rgba(110, 68, 0, 0.5)';
+    ctx.strokeStyle = 'rgba(110, 68, 0, 0.55)';
     ctx.lineWidth = 2;
     ctx.strokeRect(12, 12, 232, 232);
 
     // Center emblem accent
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
     ctx.beginPath();
     ctx.arc(128, 128, 36, 0, Math.PI * 2);
     ctx.fill();
 
-    const tex = finalizeTexture(canvas, 1, 1);
+    const tex = finalizeTexture(canvas, 2, 2);
     textureCache.set(key, tex);
     return tex;
   }
@@ -168,21 +168,21 @@ export class ProceduralTextures {
     const imgData = ctx.getImageData(0, 0, 256, 256);
     const data = imgData.data;
     for (let i = 0; i < data.length; i += 4) {
-      const n = (Math.random() - 0.5) * 22;
+      const n = (Math.random() - 0.5) * 30;
       data[i] = Math.min(255, Math.max(0, data[i] + n));
       data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + n * 0.7));
       data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + n * 0.5));
     }
     ctx.putImageData(imgData, 0, 0);
 
-    // Stitching along the edges
-    ctx.strokeStyle = '#d2b48c';
+    // Stitching pattern
+    ctx.strokeStyle = '#e6c896';
     ctx.lineWidth = 2;
-    ctx.setLineDash([6, 5]);
-    ctx.strokeRect(10, 10, 236, 236);
+    ctx.setLineDash([8, 6]);
+    ctx.strokeRect(8, 8, 240, 240);
     ctx.setLineDash([]);
 
-    const tex = finalizeTexture(canvas, 1, 1);
+    const tex = finalizeTexture(canvas, 2, 2);
     textureCache.set(key, tex);
     return tex;
   }
@@ -197,16 +197,16 @@ export class ProceduralTextures {
     ctx.fillRect(0, 0, 128, 128);
 
     // Cross-weave thread pattern
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
     for (let x = 0; x < 128; x += 4) {
       ctx.fillRect(x, 0, 1.5, 128);
     }
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.14)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
     for (let y = 0; y < 128; y += 4) {
       ctx.fillRect(0, y, 128, 1.5);
     }
 
-    const tex = finalizeTexture(canvas, 2, 2);
+    const tex = finalizeTexture(canvas, 3, 3);
     textureCache.set(key, tex);
     return tex;
   }
@@ -222,9 +222,9 @@ export class ProceduralTextures {
     ctx.fillRect(0, 0, 256, 256);
 
     // Wood fiber lines
-    for (let i = 0; i < 80; i++) {
+    for (let i = 0; i < 90; i++) {
       const y = Math.random() * 256;
-      ctx.fillStyle = Math.random() > 0.5 ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.08)';
+      ctx.fillStyle = Math.random() > 0.5 ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.12)';
       ctx.fillRect(0, y, 256, Math.random() * 3 + 1);
     }
 
@@ -232,26 +232,26 @@ export class ProceduralTextures {
     const plankHeight = 64;
     for (let y = plankHeight; y < 256; y += plankHeight) {
       // Dark groove
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
       ctx.fillRect(0, y - 2, 256, 3);
       // Highlight bottom edge
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
       ctx.fillRect(0, y + 1, 256, 1.5);
 
       // Plank nail rivets
       for (const nx of [32, 128, 224]) {
-        ctx.fillStyle = 'rgba(0,0,0,0.7)';
+        ctx.fillStyle = 'rgba(0,0,0,0.75)';
         ctx.beginPath();
-        ctx.arc(nx, y - 8, 2.5, 0, Math.PI * 2);
+        ctx.arc(nx, y - 8, 3, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = '#718093';
+        ctx.fillStyle = '#8395a7';
         ctx.beginPath();
         ctx.arc(nx - 0.5, y - 8.5, 1.5, 0, Math.PI * 2);
         ctx.fill();
       }
     }
 
-    const tex = finalizeTexture(canvas, 1, 1);
+    const tex = finalizeTexture(canvas, 2, 2);
     textureCache.set(key, tex);
     return tex;
   }
@@ -298,7 +298,7 @@ export class ProceduralTextures {
       }
     }
 
-    const tex = finalizeTexture(canvas, 1, 1);
+    const tex = finalizeTexture(canvas, 2, 2);
     textureCache.set(key, tex);
     return tex;
   }
@@ -420,4 +420,101 @@ export class ProceduralTextures {
     textureCache.set(key, tex);
     return tex;
   }
+
+  /** Realistic overlapping roof tiles (clay terracotta, castle blue slate, imperial crimson, thatch). */
+  static getRoofTileTexture(variant: 'terracotta' | 'slate' | 'crimson' | 'thatch' = 'terracotta'): CanvasTexture {
+    const key = `roof_${variant}`;
+    if (textureCache.has(key)) return textureCache.get(key)!;
+
+    const { canvas, ctx } = createBaseCanvas(256, 256);
+    const colors = {
+      terracotta: { bg: '#962d1c', tile: '#c0392b', hi: '#e74c3c', sh: '#5c170d' },
+      slate: { bg: '#1c2833', tile: '#2471a3', hi: '#5499c7', sh: '#154360' },
+      crimson: { bg: '#641e16', tile: '#922b21', hi: '#c0392b', sh: '#44140e' },
+      thatch: { bg: '#8d6e3f', tile: '#c99b4a', hi: '#e0b86a', sh: '#5d401e' },
+    }[variant];
+
+    ctx.fillStyle = colors.bg;
+    ctx.fillRect(0, 0, 256, 256);
+
+    const rowH = 24;
+    const tileW = 32;
+
+    for (let y = 0; y < 256; y += rowH) {
+      const isShifted = Math.floor(y / rowH) % 2 === 1;
+      const xOffset = isShifted ? tileW / 2 : 0;
+
+      for (let x = -tileW; x < 256 + tileW; x += tileW) {
+        const curX = x + xOffset;
+
+        // Tile shadow
+        ctx.fillStyle = colors.sh;
+        ctx.beginPath();
+        ctx.roundRect(curX + 2, y + 2, tileW - 3, rowH + 6, [0, 0, 8, 8]);
+        ctx.fill();
+
+        // Tile body
+        ctx.fillStyle = colors.tile;
+        ctx.beginPath();
+        ctx.roundRect(curX, y, tileW - 4, rowH + 4, [0, 0, 7, 7]);
+        ctx.fill();
+
+        // Top highlight
+        ctx.fillStyle = colors.hi;
+        ctx.fillRect(curX + 2, y + 1, tileW - 8, 3);
+
+        // Vertical curve shade
+        const grad = ctx.createLinearGradient(curX, y, curX + tileW - 4, y);
+        grad.addColorStop(0, 'rgba(0,0,0,0.2)');
+        grad.addColorStop(0.5, 'rgba(255,255,255,0.18)');
+        grad.addColorStop(1, 'rgba(0,0,0,0.25)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(curX, y, tileW - 4, rowH + 4);
+      }
+    }
+
+    const tex = finalizeTexture(canvas, 4, 4);
+    textureCache.set(key, tex);
+    return tex;
+  }
+
+  /** Rich glistening ore texture with metallic veins and crystal facets. */
+  static getOreTexture(type: 'gold' | 'iron' | 'gem' = 'gold'): CanvasTexture {
+    const key = `ore_${type}`;
+    if (textureCache.has(key)) return textureCache.get(key)!;
+
+    const { canvas, ctx } = createBaseCanvas(128, 128);
+    // Dark rock matrix
+    ctx.fillStyle = '#2c3437';
+    ctx.fillRect(0, 0, 128, 128);
+
+    const veinColor = type === 'gold' ? '#f1c40f' : type === 'iron' ? '#bdc3c7' : '#00d2d3';
+    const hiColor = type === 'gold' ? '#fff5cc' : type === 'iron' ? '#ffffff' : '#e0ffff';
+
+    for (let i = 0; i < 35; i++) {
+      const cx = Math.random() * 128;
+      const cy = Math.random() * 128;
+      const r = Math.random() * 9 + 4;
+
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.beginPath();
+      ctx.arc(cx + 2, cy + 2, r, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = veinColor;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = hiColor;
+      ctx.beginPath();
+      ctx.arc(cx - r * 0.3, cy - r * 0.3, r * 0.35, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const tex = finalizeTexture(canvas, 2, 2);
+    textureCache.set(key, tex);
+    return tex;
+  }
 }
+

@@ -66,14 +66,14 @@ export const BarbarianModel: React.FC<CharacterProps> = ({
 
   return (
     <group ref={rootRef} scale={scale}>
-      {/* --- PELVIS & LEATHER KILT --- */}
+      {/* --- PELVIS & LEATHER KILT (Curved anatomical form) --- */}
       <mesh position={[0, 0.36, 0]} castShadow>
-        <boxGeometry args={[0.3, 0.16, 0.22]} />
+        <cylinderGeometry args={[0.16, 0.18, 0.2, 12]} />
         <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('brown')} roughness={0.7} />
       </mesh>
       {/* Belt with Gold Buckle */}
-      <mesh position={[0, 0.44, 0.01]}>
-        <boxGeometry args={[0.32, 0.06, 0.24]} />
+      <mesh position={[0, 0.44, 0]}>
+        <cylinderGeometry args={[0.17, 0.17, 0.06, 14]} />
         <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('dark')} roughness={0.6} />
       </mesh>
       <mesh position={[0, 0.44, 0.125]}>
@@ -83,14 +83,14 @@ export const BarbarianModel: React.FC<CharacterProps> = ({
 
       {/* --- TORSO & CHEST HARNESS --- */}
       <group position={[0, 0.58, 0]}>
-        {/* Muscular torso */}
+        {/* Muscular tapered torso */}
         <mesh castShadow>
-          <boxGeometry args={[0.36, 0.26, 0.24]} />
+          <cylinderGeometry args={[0.19, 0.16, 0.28, 12]} />
           <meshStandardMaterial map={ProceduralTextures.getSkinTexture('warm')} roughness={0.6} />
         </mesh>
         {/* Leather Armor Harness with Team Color Accent */}
-        <mesh position={[0, 0, 0.01]}>
-          <boxGeometry args={[0.38, 0.24, 0.25]} />
+        <mesh position={[0, 0.01, 0]}>
+          <cylinderGeometry args={[0.195, 0.165, 0.24, 12]} />
           <meshStandardMaterial map={ProceduralTextures.getFabricTexture(teamColor)} roughness={0.65} />
         </mesh>
         {/* Cross leather strap */}
@@ -174,11 +174,17 @@ export const BarbarianModel: React.FC<CharacterProps> = ({
           <cylinderGeometry args={[0.05, 0.05, 0.16, 8]} />
           <meshStandardMaterial map={ProceduralTextures.getSkinTexture('warm')} roughness={0.6} />
         </mesh>
-        {/* Leather Fur Boot */}
-        <mesh position={[0, -0.2, 0.02]} castShadow>
-          <boxGeometry args={[0.11, 0.12, 0.16]} />
-          <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('dark')} roughness={0.8} />
-        </mesh>
+        {/* Tapered Leather Boot with Curved Toe */}
+        <group position={[0, -0.2, 0]}>
+          <mesh castShadow>
+            <cylinderGeometry args={[0.055, 0.065, 0.14, 10]} />
+            <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('dark')} roughness={0.8} />
+          </mesh>
+          <mesh position={[0, -0.06, 0.04]} castShadow>
+            <sphereGeometry args={[0.06, 8, 8]} />
+            <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('dark')} roughness={0.8} />
+          </mesh>
+        </group>
       </group>
       <group ref={rightLegRef} position={[0.09, 0.28, 0]}>
         <mesh position={[0, -0.08, 0]} castShadow>
@@ -342,7 +348,7 @@ export const ArcherModel: React.FC<CharacterProps> = ({
       {/* --- TORSO & ARCHER TUNIC --- */}
       <group position={[0, 0.6, 0]}>
         <mesh castShadow>
-          <boxGeometry args={[0.26, 0.22, 0.18]} />
+          <cylinderGeometry args={[0.14, 0.12, 0.26, 12]} />
           <meshStandardMaterial map={ProceduralTextures.getFabricTexture(teamColor)} roughness={0.6} />
         </mesh>
         {/* Leather Quiver Strap across chest */}
@@ -423,20 +429,32 @@ export const ArcherModel: React.FC<CharacterProps> = ({
           <cylinderGeometry args={[0.04, 0.04, 0.16, 8]} />
           <meshStandardMaterial map={ProceduralTextures.getSkinTexture('fair')} roughness={0.5} />
         </mesh>
-        <mesh position={[0, -0.18, 0.02]} castShadow>
-          <boxGeometry args={[0.09, 0.14, 0.14]} />
-          <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('brown')} roughness={0.75} />
-        </mesh>
+        <group position={[0, -0.18, 0]}>
+          <mesh castShadow>
+            <cylinderGeometry args={[0.045, 0.052, 0.14, 10]} />
+            <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('brown')} roughness={0.75} />
+          </mesh>
+          <mesh position={[0, -0.06, 0.04]} castShadow>
+            <sphereGeometry args={[0.05, 8, 8]} />
+            <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('brown')} roughness={0.75} />
+          </mesh>
+        </group>
       </group>
       <group ref={rightLegRef} position={[0.07, 0.28, 0]}>
         <mesh position={[0, -0.08, 0]} castShadow>
           <cylinderGeometry args={[0.04, 0.04, 0.16, 8]} />
           <meshStandardMaterial map={ProceduralTextures.getSkinTexture('fair')} roughness={0.5} />
         </mesh>
-        <mesh position={[0, -0.18, 0.02]} castShadow>
-          <boxGeometry args={[0.09, 0.14, 0.14]} />
-          <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('brown')} roughness={0.75} />
-        </mesh>
+        <group position={[0, -0.18, 0]}>
+          <mesh castShadow>
+            <cylinderGeometry args={[0.045, 0.052, 0.14, 10]} />
+            <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('brown')} roughness={0.75} />
+          </mesh>
+          <mesh position={[0, -0.06, 0.04]} castShadow>
+            <sphereGeometry args={[0.05, 8, 8]} />
+            <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('brown')} roughness={0.75} />
+          </mesh>
+        </group>
       </group>
 
       {/* --- LEFT ARM & RECURVE COMPOSITE BOW --- */}
@@ -714,37 +732,56 @@ export const CavalryModel: React.FC<CharacterProps> = ({
   return (
     <group scale={scale}>
       <group ref={horseRef}>
-        {/* --- WAR HORSE BODY --- */}
-        <mesh position={[0, 0.44, 0]} castShadow>
-          <boxGeometry args={[0.36, 0.34, 0.82]} />
-          <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('tan')} roughness={0.7} />
-        </mesh>
-        {/* Horse Saddle Blanket with Team Color & Gold Fringe */}
-        <mesh position={[0, 0.46, -0.02]}>
-          <boxGeometry args={[0.38, 0.32, 0.42]} />
-          <meshStandardMaterial map={ProceduralTextures.getFabricTexture(teamColor)} roughness={0.6} />
-        </mesh>
-        <mesh position={[0, 0.33, -0.02]}>
-          <boxGeometry args={[0.39, 0.04, 0.44]} />
-          <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.9} />
-        </mesh>
+        {/* --- WAR HORSE BODY (Organic sculpted muscular horse) --- */}
+        <group position={[0, 0.44, 0]}>
+          {/* Muscular Barrel Body */}
+          <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
+            <cylinderGeometry args={[0.21, 0.23, 0.68, 14]} />
+            <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('tan')} roughness={0.7} />
+          </mesh>
+          {/* Broad Muscular Chest */}
+          <mesh position={[0, 0.01, 0.33]} castShadow>
+            <sphereGeometry args={[0.22, 12, 10]} />
+            <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('tan')} roughness={0.7} />
+          </mesh>
+          {/* Rounded Powerful Rump */}
+          <mesh position={[0, 0.02, -0.33]} castShadow>
+            <sphereGeometry args={[0.22, 12, 10]} />
+            <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('tan')} roughness={0.7} />
+          </mesh>
+          {/* Draped Saddle Blanket with Team Color & Gold Fringe */}
+          <mesh position={[0, 0.05, -0.02]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.225, 0.24, 0.44, 14, 1, false, 0, Math.PI]} />
+            <meshStandardMaterial map={ProceduralTextures.getFabricTexture(teamColor)} roughness={0.6} />
+          </mesh>
+          <mesh position={[0, -0.14, -0.02]}>
+            <cylinderGeometry args={[0.235, 0.235, 0.04, 14]} />
+            <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.9} />
+          </mesh>
+        </group>
 
         {/* Horse Neck & Head */}
         <group position={[0, 0.62, 0.38]} rotation={[-0.4, 0, 0]}>
-          {/* Neck */}
+          {/* Tapered Curved Neck */}
           <mesh castShadow>
-            <boxGeometry args={[0.2, 0.38, 0.24]} />
+            <cylinderGeometry args={[0.11, 0.17, 0.44, 12]} />
             <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('tan')} roughness={0.7} />
           </mesh>
-          {/* Mane */}
-          <mesh position={[0, 0.1, -0.13]}>
-            <boxGeometry args={[0.06, 0.4, 0.08]} />
-            <meshStandardMaterial color="#3e1f0a" roughness={0.8} />
+          {/* Flowing Mane */}
+          <mesh position={[0, 0.08, -0.1]}>
+            <cylinderGeometry args={[0.04, 0.06, 0.42, 8]} />
+            <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('dark')} roughness={0.8} />
           </mesh>
-          {/* Head & Snout */}
+          {/* Sculpted Head & Snout */}
           <group position={[0, 0.26, 0.12]} rotation={[0.6, 0, 0]}>
+            {/* Skull */}
             <mesh castShadow>
-              <boxGeometry args={[0.18, 0.2, 0.32]} />
+              <sphereGeometry args={[0.12, 10, 8]} />
+              <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('tan')} roughness={0.7} />
+            </mesh>
+            {/* Tapered Snout */}
+            <mesh position={[0, -0.04, 0.12]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+              <cylinderGeometry args={[0.07, 0.1, 0.22, 10]} />
               <meshStandardMaterial map={ProceduralTextures.getLeatherTexture('tan')} roughness={0.7} />
             </mesh>
             {/* White Face Blaze / Marking */}
@@ -1247,17 +1284,23 @@ export const HeroKingModel: React.FC<{ level?: number; scale?: number; isMoving?
             <cylinderGeometry args={[0.06, 0.055, 0.35, 8]} />
             <meshStandardMaterial map={ProceduralTextures.getMetalTexture('dark')} metalness={0.85} roughness={0.25} />
           </mesh>
-          <mesh position={[0, -0.15, 0.03]} castShadow>
-            <boxGeometry args={[0.12, 0.12, 0.18]} />
-            <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.9} roughness={0.2} />
-          </mesh>
+          <group position={[0, -0.15, 0]}>
+            <mesh castShadow>
+              <cylinderGeometry args={[0.06, 0.075, 0.14, 12]} />
+              <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.9} roughness={0.2} />
+            </mesh>
+            <mesh position={[0, -0.06, 0.04]} castShadow>
+              <sphereGeometry args={[0.07, 10, 8]} />
+              <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.9} roughness={0.2} />
+            </mesh>
+          </group>
         </group>
       ))}
 
       {/* --- TORSO & ROYAL CUIRASS --- */}
       <group position={[0, 0.62, 0]}>
         <mesh castShadow>
-          <boxGeometry args={[0.38, 0.35, 0.26]} />
+          <cylinderGeometry args={[0.21, 0.17, 0.35, 14]} />
           <meshStandardMaterial map={ProceduralTextures.getMetalTexture('steel')} metalness={0.9} roughness={0.2} />
         </mesh>
         {/* Golden Lion Crest on Chest */}
