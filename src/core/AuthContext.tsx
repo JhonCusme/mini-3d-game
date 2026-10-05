@@ -18,6 +18,7 @@ interface AuthContextType {
     login: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
     signup: (email: string, pass: string, name?: string) => Promise<{ success: boolean; error?: string }>;
     resetPasswordForEmail: (email: string) => Promise<{ success: boolean; error?: string }>;
+    verifyRecoveryOtp: (email: string, token: string) => Promise<{ success: boolean; error?: string }>;
     updatePassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>;
     playAsGuest: () => void;
     logout: () => Promise<void>;
@@ -122,6 +123,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 return { success: false, error: error.message };
             }
             return { success: true };
+        } catch (err: unknown) {
+            return { success: false, error: err instanceof Error ? err.message : 'Error desconocido' };
+        }
+    };
+
+    const verifyRecoveryOtp = async (email: string, token: string): Promise<{ success: boolean; error?: string }> => {
+        if (!supabase) {
+            return { success: false, error: 'Servidor no configurado en este entorno.' };
+        }
+        try {
+            const cleanToken = token.trim();
+            const { data, error } = await supabase.auth.verifyOtp({
+                email: email.trim(),
+                token: cleanToken,
+                type: 'recovery',
+            });
+            if (error) {
+                return { success: false, error: error.message };
+            }
+            if (data.session && data.user) {
+                setIsRecoveryMode(true);
+                setUser({
+                    id: data.user.id,
+                    email: data.user.email,
+                    name: data.user.user_metadata?.name || data.user.email?.split('@')[0],
+                    isGuest: false,
+                });
+                return { success: true };
+            }
+            return { success: false, error: 'Código de verificación no válido o caducado.' };
         } catch (err: unknown) {
             return { success: false, error: err instanceof Error ? err.message : 'Error desconocido' };
         }
@@ -293,6 +324,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             login,
             signup,
             resetPasswordForEmail,
+            verifyRecoveryOtp,
             updatePassword,
             playAsGuest,
             logout,

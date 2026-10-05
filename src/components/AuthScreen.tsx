@@ -11,6 +11,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
     login,
     signup,
     resetPasswordForEmail,
+    verifyRecoveryOtp,
     updatePassword,
     playAsGuest,
     isConfigured,
@@ -22,6 +23,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [showOtpDirect, setShowOtpDirect] = useState(false);
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -88,7 +91,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
         const res = await resetPasswordForEmail(email.trim());
         if (res.success) {
           AudioManager.playVictory();
-          setSuccessMsg('✉️ ¡Enlace enviado! Revisa tu bandeja de entrada (y spam) para restablecer tu contraseña.');
+          setShowOtpDirect(true);
+          setSuccessMsg('✉️ ¡Solicitud enviada! Revisa tu bandeja de entrada o spam. Puedes usar el enlace o ingresar el código de 6 dígitos abajo.');
         } else {
           setErrorMsg(res.error || 'No se pudo enviar el correo de recuperación.');
         }
@@ -133,6 +137,62 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
       }
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : 'Error al conectar.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Direct OTP verification and password reset (bypasses localhost redirect issue)
+  const handleVerifyOtpAndReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    AudioManager.playClick();
+
+    if (!email.trim() || !otpCode.trim() || !password || !confirmPassword) {
+      setErrorMsg('Completa tu correo, el código de 6 dígitos y la nueva contraseña.');
+      return;
+    }
+    if (password.length < 6) {
+      setErrorMsg('La nueva contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setErrorMsg('Las contraseñas no coinciden.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Allow pasting 6-digit code or URL with token
+      let token = otpCode.trim();
+      if (token.includes('token=')) {
+        const m = token.match(/token=([^&]+)/);
+        if (m) token = m[1];
+      } else if (token.includes('access_token=')) {
+        const m = token.match(/access_token=([^&]+)/);
+        if (m) token = m[1];
+      }
+
+      const verifyRes = await verifyRecoveryOtp(email.trim(), token);
+      if (!verifyRes.success) {
+        setErrorMsg(verifyRes.error || 'Código incorrecto o caducado.');
+        setLoading(false);
+        return;
+      }
+
+      const updateRes = await updatePassword(password);
+      if (updateRes.success) {
+        AudioManager.playVictory();
+        setSuccessMsg('¡Contraseña actualizada con éxito! Entrando al reino...');
+        setTimeout(() => {
+          onSuccess();
+        }, 1200);
+      } else {
+        setErrorMsg(updateRes.error || 'Error al guardar la nueva contraseña.');
+      }
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : 'Error al validar código.');
     } finally {
       setLoading(false);
     }
@@ -208,24 +268,181 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="auth-form">
-          {mode === 'signup' && (
-            <div className="auth-field">
-              <label>Nombre de Comandante</label>
-              <div className="auth-input-wrapper">
-                <span className="auth-input-icon">👑</span>
-                <input
-                  type="text"
-                  placeholder="Ej. Lord Alejandro"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  maxLength={18}
-                />
+        {/* Standard Form: Login / Signup / Request Email / Reset from Link */}
+        {(!showOtpDirect || mode !== 'forgot') && (
+          <form onSubmit={handleSubmit} className="auth-form">
+            {mode === 'signup' && (
+              <div className="auth-field">
+                <label>Nombre de Comandante</label>
+                <div className="auth-input-wrapper">
+                  <span className="auth-input-icon">👑</span>
+                  <input
+                    type="text"
+                    placeholder="Ej. Lord Alejandro"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    maxLength={18}
+                  />
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {mode !== 'reset' && (
+            {mode !== 'reset' && (
+              <div className="auth-field">
+                <label>Correo Electrónico</label>
+                <div className="auth-input-wrapper">
+                  <span className="auth-input-icon">✉️</span>
+                  <input
+                    type="email"
+                    placeholder="comandante@reino.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+            )}
+
+            {(mode === 'login' || mode === 'signup') && (
+              <div className="auth-field">
+                <label>Contraseña</label>
+                <div className="auth-input-wrapper">
+                  <span className="auth-input-icon">🔒</span>
+                  <input
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                {mode === 'login' && (
+                  <div style={{ textAlign: 'right', marginTop: '2px' }}>
+                    <button
+                      type="button"
+                      className="auth-link-btn"
+                      onClick={() => {
+                        AudioManager.playClick();
+                        setMode('forgot');
+                        setErrorMsg(null);
+                        setSuccessMsg(null);
+                      }}
+                    >
+                      ¿Olvidaste tu contraseña?
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {mode === 'reset' && (
+              <>
+                <div className="auth-field">
+                  <label>Nueva Contraseña</label>
+                  <div className="auth-input-wrapper">
+                    <span className="auth-input-icon">🔒</span>
+                    <input
+                      type="password"
+                      placeholder="Mínimo 6 caracteres"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="auth-field">
+                  <label>Confirmar Nueva Contraseña</label>
+                  <div className="auth-input-wrapper">
+                    <span className="auth-input-icon">🔐</span>
+                    <input
+                      type="password"
+                      placeholder="Repite la nueva contraseña"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
+            <button
+              type="submit"
+              className="btn-upgrade auth-submit-btn"
+              disabled={loading}
+            >
+              {loading ? (
+                <span>⏳ Procesando...</span>
+              ) : mode === 'login' ? (
+                <span>⚔️ ENTRAR AL REINO</span>
+              ) : mode === 'signup' ? (
+                <span>✨ CREAR CUENTA</span>
+              ) : mode === 'forgot' ? (
+                <span>📨 ENVIAR ENLACE O CÓDIGO</span>
+              ) : (
+                <span>💾 GUARDAR NUEVA CONTRASEÑA</span>
+              )}
+            </button>
+
+            {mode === 'forgot' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
+                <button
+                  type="button"
+                  className="auth-link-btn"
+                  onClick={() => {
+                    setShowOtpDirect(true);
+                    setErrorMsg(null);
+                  }}
+                  style={{ textAlign: 'center', fontSize: '12px' }}
+                >
+                  🔢 Ya tengo un código de 6 dígitos del correo
+                </button>
+                <button
+                  type="button"
+                  className="btn-guest"
+                  onClick={() => {
+                    AudioManager.playClick();
+                    setMode('login');
+                    setErrorMsg(null);
+                    setSuccessMsg(null);
+                  }}
+                >
+                  <span>⬅️ Volver a Iniciar Sesión</span>
+                </button>
+              </div>
+            )}
+
+            {mode === 'reset' && (
+              <button
+                type="button"
+                className="btn-guest"
+                onClick={() => {
+                  AudioManager.playClick();
+                  setIsRecoveryMode(false);
+                  setMode('login');
+                  setErrorMsg(null);
+                  setSuccessMsg(null);
+                }}
+                style={{ marginTop: '4px' }}
+              >
+                <span>⬅️ Cancelar</span>
+              </button>
+            )}
+          </form>
+        )}
+
+        {/* Direct OTP Code Form (Ideal when link redirects to localhost or on mobile) */}
+        {mode === 'forgot' && showOtpDirect && (
+          <form onSubmit={handleVerifyOtpAndReset} className="auth-form" style={{ marginTop: '4px' }}>
+            <div style={{ background: 'rgba(255, 215, 0, 0.08)', padding: '10px', borderRadius: '12px', border: '1px solid rgba(255, 215, 0, 0.25)', marginBottom: '4px' }}>
+              <span style={{ fontSize: '11px', color: 'var(--accent-gold)', fontWeight: 700 }}>
+                💡 Solución directa para pruebas / celular:
+              </span>
+              <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px', lineHeight: 1.35 }}>
+                Si el enlace te abre en localhost o estás en tu teléfono, no des clic al link: copia el <b>código numérico de 6 dígitos</b> que llegó a tu correo y ponlo aquí:
+              </p>
+            </div>
+
             <div className="auth-field">
               <label>Correo Electrónico</label>
               <div className="auth-input-wrapper">
@@ -239,122 +456,76 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
                 />
               </div>
             </div>
-          )}
 
-          {(mode === 'login' || mode === 'signup') && (
             <div className="auth-field">
-              <label>Contraseña</label>
+              <label>Código de 6 Dígitos (del correo)</label>
+              <div className="auth-input-wrapper">
+                <span className="auth-input-icon">🔢</span>
+                <input
+                  type="text"
+                  placeholder="Ej. 849201"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value)}
+                  maxLength={50}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="auth-field">
+              <label>Nueva Contraseña</label>
               <div className="auth-input-wrapper">
                 <span className="auth-input-icon">🔒</span>
                 <input
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="Mínimo 6 caracteres"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
               </div>
-              {mode === 'login' && (
-                <div style={{ textAlign: 'right', marginTop: '2px' }}>
-                  <button
-                    type="button"
-                    className="auth-link-btn"
-                    onClick={() => {
-                      AudioManager.playClick();
-                      setMode('forgot');
-                      setErrorMsg(null);
-                      setSuccessMsg(null);
-                    }}
-                  >
-                    ¿Olvidaste tu contraseña?
-                  </button>
-                </div>
-              )}
             </div>
-          )}
 
-          {mode === 'reset' && (
-            <>
-              <div className="auth-field">
-                <label>Nueva Contraseña</label>
-                <div className="auth-input-wrapper">
-                  <span className="auth-input-icon">🔒</span>
-                  <input
-                    type="password"
-                    placeholder="Mínimo 6 caracteres"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
+            <div className="auth-field">
+              <label>Confirmar Nueva Contraseña</label>
+              <div className="auth-input-wrapper">
+                <span className="auth-input-icon">🔐</span>
+                <input
+                  type="password"
+                  placeholder="Repite la nueva contraseña"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                />
               </div>
-              <div className="auth-field">
-                <label>Confirmar Nueva Contraseña</label>
-                <div className="auth-input-wrapper">
-                  <span className="auth-input-icon">🔐</span>
-                  <input
-                    type="password"
-                    placeholder="Repite la nueva contraseña"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-            </>
-          )}
+            </div>
 
-          <button
-            type="submit"
-            className="btn-upgrade auth-submit-btn"
-            disabled={loading}
-          >
-            {loading ? (
-              <span>⏳ Procesando...</span>
-            ) : mode === 'login' ? (
-              <span>⚔️ ENTRAR AL REINO</span>
-            ) : mode === 'signup' ? (
-              <span>✨ CREAR CUENTA</span>
-            ) : mode === 'forgot' ? (
-              <span>📨 ENVIAR RECUPERACIÓN</span>
-            ) : (
-              <span>💾 GUARDAR NUEVA CONTRASEÑA</span>
-            )}
-          </button>
+            <button
+              type="submit"
+              className="btn-upgrade auth-submit-btn"
+              disabled={loading}
+              style={{ marginTop: '4px' }}
+            >
+              {loading ? (
+                <span>⏳ Verificando...</span>
+              ) : (
+                <span>🚀 VALIDAR Y CAMBIAR CONTRASEÑA</span>
+              )}
+            </button>
 
-          {mode === 'forgot' && (
             <button
               type="button"
               className="btn-guest"
               onClick={() => {
-                AudioManager.playClick();
-                setMode('login');
+                setShowOtpDirect(false);
                 setErrorMsg(null);
-                setSuccessMsg(null);
               }}
-              style={{ marginTop: '4px' }}
+              style={{ marginTop: '2px' }}
             >
-              <span>⬅️ Volver a Iniciar Sesión</span>
+              <span>⬅️ Volver a Enviar Correo</span>
             </button>
-          )}
-
-          {mode === 'reset' && (
-            <button
-              type="button"
-              className="btn-guest"
-              onClick={() => {
-                AudioManager.playClick();
-                setIsRecoveryMode(false);
-                setMode('login');
-                setErrorMsg(null);
-                setSuccessMsg(null);
-              }}
-              style={{ marginTop: '4px' }}
-            >
-              <span>⬅️ Cancelar</span>
-            </button>
-          )}
-        </form>
+          </form>
+        )}
 
         {(mode === 'login' || mode === 'signup') && (
           <>
