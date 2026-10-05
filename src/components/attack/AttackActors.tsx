@@ -6,6 +6,7 @@ import type { SimBuilding, SimEffect, SimProjectile, SimUnit, SimWall } from '..
 import { UNIT_STATS } from '../../core/pvp/AttackSim';
 import { BuildingModel, WallModel } from '../village/BuildingModels';
 import { HeroKingModel, StylizedTroop } from '../common/StylizedCharacters';
+import { ProceduralTextures } from '../../core/textures/ProceduralTextures';
 
 const TEAM = { attacker: '#3a7bd5', defender: '#d63a3a' };
 
@@ -40,18 +41,18 @@ const EnemyFlag: React.FC<{ y: number }> = ({ y }) => (
   <group position={[0, y, 0]}>
     {/* Flag pole */}
     <mesh position={[0, 0.7, 0]} castShadow>
-      <cylinderGeometry args={[0.04, 0.04, 1.4, 6]} />
-      <meshStandardMaterial color="#2d3436" metalness={0.7} roughness={0.3} />
+      <cylinderGeometry args={[0.04, 0.04, 1.4, 8]} />
+      <meshStandardMaterial map={ProceduralTextures.getMetalTexture('dark')} metalness={0.7} roughness={0.3} />
     </mesh>
     {/* Crimson battle pennant */}
     <mesh position={[0.3, 1.15, 0]} rotation={[0, 0, -0.05]} castShadow>
       <boxGeometry args={[0.6, 0.35, 0.02]} />
-      <meshStandardMaterial color="#d63031" roughness={0.6} />
+      <meshStandardMaterial map={ProceduralTextures.getFabricTexture('#d63031')} roughness={0.6} />
     </mesh>
     {/* Golden skull / enemy emblem */}
     <mesh position={[0.3, 1.15, 0.015]}>
-      <circleGeometry args={[0.09, 8]} />
-      <meshBasicMaterial color="#f1c40f" />
+      <circleGeometry args={[0.09, 12]} />
+      <meshStandardMaterial map={ProceduralTextures.getGoldTexture()} metalness={0.9} />
     </mesh>
   </group>
 );
@@ -183,24 +184,83 @@ const PROJECTILE_STYLE: Record<SimProjectile['kind'], { color: string; size: num
 };
 
 export const ProjectileActor: React.FC<{ p: SimProjectile }> = ({ p }) => {
-  const ref = useRef<Mesh>(null);
+  const group = useRef<Group>(null);
   const style = PROJECTILE_STYLE[p.kind];
+
   useFrame(() => {
-    const m = ref.current;
-    if (!m) return;
+    const g = group.current;
+    if (!g) return;
     const k = Math.min(1, p.t / p.duration);
-    m.visible = p.t < p.duration;
-    m.position.set(
-      p.fromX + (p.toX - p.fromX) * k,
-      p.fromY + (0.4 - p.fromY) * k + Math.sin(Math.PI * k) * style.arc,
-      p.fromZ + (p.toZ - p.fromZ) * k,
-    );
+    g.visible = p.t < p.duration;
+
+    const curX = p.fromX + (p.toX - p.fromX) * k;
+    const curY = p.fromY + (0.4 - p.fromY) * k + Math.sin(Math.PI * k) * style.arc;
+    const curZ = p.fromZ + (p.toZ - p.fromZ) * k;
+    g.position.set(curX, curY, curZ);
+
+    // Tangent flight orientation
+    const nextK = Math.min(1, k + 0.04);
+    const nX = p.fromX + (p.toX - p.fromX) * nextK;
+    const nY = p.fromY + (0.4 - p.fromY) * nextK + Math.sin(Math.PI * nextK) * style.arc;
+    const nZ = p.fromZ + (p.toZ - p.fromZ) * nextK;
+    if (Math.abs(nX - curX) > 0.001 || Math.abs(nZ - curZ) > 0.001 || Math.abs(nY - curY) > 0.001) {
+      g.lookAt(nX, nY, nZ);
+    }
   });
+
+  if (p.kind === 'arrow') {
+    return (
+      <group ref={group}>
+        {/* Real 3D Arrow: Shaft, steel tip & feathers */}
+        <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
+          <cylinderGeometry args={[0.018, 0.018, 0.45, 6]} />
+          <meshStandardMaterial map={ProceduralTextures.getWoodTexture('beam')} />
+        </mesh>
+        <mesh position={[0, 0, 0.25]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+          <coneGeometry args={[0.045, 0.1, 5]} />
+          <meshStandardMaterial map={ProceduralTextures.getMetalTexture('steel')} metalness={0.9} roughness={0.2} />
+        </mesh>
+        <mesh position={[0, 0, -0.2]} rotation={[Math.PI / 2, 0, 0]}>
+          <boxGeometry args={[0.08, 0.08, 0.01]} />
+          <meshStandardMaterial map={ProceduralTextures.getFabricTexture('#e84393')} />
+        </mesh>
+      </group>
+    );
+  }
+
+  if (p.kind === 'cannonball') {
+    return (
+      <group ref={group}>
+        <mesh castShadow>
+          <sphereGeometry args={[0.18, 12, 10]} />
+          <meshStandardMaterial map={ProceduralTextures.getMetalTexture('dark')} metalness={0.85} roughness={0.3} />
+        </mesh>
+      </group>
+    );
+  }
+
+  if (p.kind === 'boulder') {
+    return (
+      <group ref={group}>
+        <mesh castShadow>
+          <dodecahedronGeometry args={[0.26, 1]} />
+          <meshStandardMaterial map={ProceduralTextures.getStoneBrickTexture('dark')} roughness={0.9} />
+        </mesh>
+      </group>
+    );
+  }
+
   return (
-    <mesh ref={ref}>
-      <sphereGeometry args={[style.size, 8, 6]} />
-      <meshStandardMaterial color={style.color} emissive={p.kind === 'magic' ? '#7a4dff' : '#000'} emissiveIntensity={0.8} />
-    </mesh>
+    <group ref={group}>
+      <mesh>
+        <sphereGeometry args={[style.size, 10, 8]} />
+        <meshStandardMaterial color={style.color} emissive={style.color} emissiveIntensity={1.2} />
+      </mesh>
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[style.size * 1.1, style.size * 1.5, 12]} />
+        <meshBasicMaterial color={style.color} transparent opacity={0.65} side={2} />
+      </mesh>
+    </group>
   );
 };
 
