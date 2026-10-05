@@ -32,6 +32,7 @@ alter table public.attacks enable row level security;
 create policy "villages are public" on public.villages for select using (true);
 create policy "players publish their village" on public.villages for insert with check (true);
 create policy "players update their village" on public.villages for update using (true);
+create policy "players delete their village" on public.villages for delete using (true);
 
 create policy "defenders read attacks" on public.attacks for select using (true);
 create policy "attackers report attacks" on public.attacks for insert with check (true);

@@ -221,8 +221,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return { success: false, error: 'Servidor no configurado en este entorno.' };
         }
         try {
+            const cleanEmail = email.trim().toLowerCase();
             const { data, error } = await supabase.auth.signUp({
-                email: email.trim(),
+                email: cleanEmail,
                 password: pass,
                 options: {
                     data: { name: name?.trim() || 'Comandante' }
@@ -230,6 +231,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             });
             if (error) {
                 return { success: false, error: error.message };
+            }
+            // Supabase returns an empty identities array if an account with this email already exists
+            if (data.user && data.user.identities && data.user.identities.length === 0) {
+                return { success: false, error: 'Ya existe una cuenta registrada con este correo electrónico. Por favor inicia sesión.' };
             }
             if (data.user) {
                 localStorage.removeItem(GUEST_STORAGE_KEY);

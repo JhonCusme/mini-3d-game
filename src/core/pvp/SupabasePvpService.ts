@@ -55,6 +55,7 @@ export class SupabasePvpService implements PvpService {
     /**
      * Publishes village state.
      * Keeps village available for asynchronous defense while saving current session timestamp.
+     * Automatically cleans up any lower-level duplicate accounts from the same user/name.
      */
     async publishVillage(snapshot: VillageSnapshot, isOnline = true): Promise<void> {
         const now = Date.now();
@@ -68,6 +69,7 @@ export class SupabasePvpService implements PvpService {
             updatedAt: now,
         };
 
+        // 1. Publish or update current village
         await this.request('/villages?on_conflict=id', {
             method: 'POST',
             headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
@@ -80,6 +82,39 @@ export class SupabasePvpService implements PvpService {
                 updated_at: new Date(now).toISOString(),
             }),
         });
+
+        // 2. Automatic duplicate cleanup: If any older village shares the same name or user,
+        // keep only the one with the highest town hall level!
+        try {
+            const cleanName = (snapshot.name || '').trim().toLowerCase();
+            if (cleanName) {
+                const existing = await this.request<{ id: string; snapshot: VillageSnapshot; name: string }[]>(
+                    `/villages?id=neq.${encodeURIComponent(snapshot.playerId)}&name=ilike.*${encodeURIComponent(cleanName)}*&select=id,snapshot,name&limit=5`
+                );
+                for (const row of existing || []) {
+                    const snap = row.snapshot;
+                    if (snap && !snap.isDeleted) {
+                        const oldLvl = snap.level || 1;
+                        const newLvl = snapshot.level || 1;
+                        if (newLvl >= oldLvl) {
+                            // Deactivate duplicate so only the highest level village remains active
+                            await this.request(`/villages?id=eq.${encodeURIComponent(row.id)}`, {
+                                method: 'PATCH',
+                                headers: { Prefer: 'return=minimal' },
+                                body: JSON.stringify({
+                                    name: `[BORRADO_DUPLICADO_${row.id.slice(0, 6)}]`,
+                                    shield_until: '3000-01-01T00:00:00.000Z',
+                                    snapshot: { ...snap, isDeleted: true, level: 0 },
+                                    updated_at: new Date().toISOString(),
+                                }),
+                            });
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('PvP: duplicate cleanup check error', e);
+        }
     }
 
     /**
@@ -110,10 +145,12 @@ export class SupabasePvpService implements PvpService {
 
         // 2. Strict filters:
         // - Cannot be self or identical user
+        // - Cannot be deleted or deactivated duplicates
         // - Cannot be locked in battle by another player right now (3-minute lock)
         // - Cannot have active post-defeat defense shield (> 60s in future)
         const validPlayers = players.filter(p => {
             if (!p || !p.playerId) return false;
+            if (p.isDeleted || (p.name && p.name.startsWith('[BORRADO'))) return false;
             if (isSameOrCloneVillage(p, me)) return false;
             if (p.underAttackUntil && p.underAttackUntil > nowMs) return false;
             if (p.shieldUntil && p.shieldUntil > nowMs + 60_000) return false;
@@ -215,13 +252,13 @@ export class SupabasePvpService implements PvpService {
             const byName = await this.request<{ snapshot: VillageSnapshot }[]>(
                 `/villages?id=neq.${encodeURIComponent(excludeId)}&name=ilike.*${encodeURIComponent(clean)}*&select=snapshot&limit=15`
             );
-            const list = (byName || []).map(r => r.snapshot).filter(s => Boolean(s && s.playerId && s.playerId !== excludeId));
+            const list = (byName || []).map(r => r.snapshot).filter(s => Boolean(s && s.playerId && s.playerId !== excludeId && !s.isDeleted && !s.name?.startsWith('[BORRADO')));
             if (list.length > 0) return list;
 
             const byId = await this.request<{ snapshot: VillageSnapshot }[]>(
                 `/villages?id=eq.${encodeURIComponent(clean)}&select=snapshot&limit=1`
             );
-            return (byId || []).map(r => r.snapshot).filter(s => Boolean(s && s.playerId && s.playerId !== excludeId));
+            return (byId || []).map(r => r.snapshot).filter(s => Boolean(s && s.playerId && s.playerId !== excludeId && !s.isDeleted && !s.name?.startsWith('[BORRADO')));
         } catch (e) {
             console.warn('PvP: player search failed', e);
             return [];
@@ -233,7 +270,7 @@ export class SupabasePvpService implements PvpService {
             const rows = await this.request<{ snapshot: VillageSnapshot }[]>(
                 `/villages?id=neq.${encodeURIComponent(excludeId)}&order=updated_at.desc&select=snapshot&limit=${limit}`
             );
-            return (rows || []).map(r => r.snapshot).filter(s => Boolean(s && !s.isBot && s.playerId !== excludeId));
+            return (rows || []).map(r => r.snapshot).filter(s => Boolean(s && !s.isBot && s.playerId !== excludeId && !s.isDeleted && !s.name?.startsWith('[BORRADO')));
         } catch (e) {
             console.warn('PvP: could not load recent players', e);
             return [];

@@ -30,6 +30,7 @@ export interface VillageSnapshot {
     userId?: string;
     isBot?: boolean;
     isSystemVillage?: boolean;
+    isDeleted?: boolean;
     underAttackUntil?: number;
     onlineUntil?: number;
     layout?: LayoutBuilding[];
