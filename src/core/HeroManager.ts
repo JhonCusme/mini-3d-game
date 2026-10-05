@@ -36,6 +36,20 @@ export class HeroManager {
         };
     }
 
+    /** Active combat ability details for the King Champion. */
+    static heroAbilityStats(level: number) {
+        const lvl = Math.max(1, level);
+        return {
+            name: '¡Furia Real!',
+            healPercent: 0.35,
+            dpsBonusPercent: 0.80 + (lvl - 1) * 0.05,
+            speedBonusPercent: 0.45,
+            duration: 8,
+            guardsCount: Math.min(5, 3 + Math.floor((lvl - 1) / 3)),
+            description: `Restaura 35% de Vida, aumenta DPS (+${Math.round(80 + (lvl - 1) * 5)}%) y velocidad (+45%) por 8s, e invoca ${Math.min(5, 3 + Math.floor((lvl - 1) / 3))} Guardias Reales.`,
+        };
+    }
+
     /** Seconds required for the Hero to recover from defeat in battle (scales with level). */
     static heroRecoveryDuration(level: number): number {
         const lvl = Math.max(1, level);

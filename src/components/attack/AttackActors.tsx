@@ -1,8 +1,8 @@
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Billboard } from '@react-three/drei';
-import type { Group, Mesh, MeshBasicMaterial } from 'three';
-import type { SimBuilding, SimEffect, SimProjectile, SimUnit, SimWall } from '../../core/pvp/AttackSim';
+import { CanvasTexture, type Group, type Mesh, type MeshBasicMaterial } from 'three';
+import type { SimBuilding, SimEffect, SimFloatingText, SimProjectile, SimUnit, SimWall } from '../../core/pvp/AttackSim';
 import { UNIT_STATS } from '../../core/pvp/AttackSim';
 import { BuildingModel, WallModel } from '../village/BuildingModels';
 import { HeroKingModel, StylizedTroop } from '../common/StylizedCharacters';
@@ -122,6 +122,8 @@ export const UnitActor: React.FC<{ u: SimUnit }> = ({ u }) => {
   const ref = useRef<Group>(null);
   const body = useRef<Group>(null);
 
+  const auraRef = useRef<Mesh>(null);
+
   useFrame(({ clock }) => {
     const g = ref.current;
     if (!g) return;
@@ -134,6 +136,15 @@ export const UnitActor: React.FC<{ u: SimUnit }> = ({ u }) => {
         body.current.position.y = 0.2 + Math.sin(clock.elapsedTime * 3 + u.id) * 0.12;
       } else {
         body.current.position.y = 0;
+      }
+    }
+    if (auraRef.current) {
+      const isBuffed = Boolean(u.isHero && u.buffUntil > 0);
+      auraRef.current.visible = isBuffed && !u.dead;
+      if (isBuffed) {
+        auraRef.current.rotation.z += 0.04;
+        const pulse = 1 + Math.sin(clock.elapsedTime * 10) * 0.14;
+        auraRef.current.scale.set(pulse, pulse, 1);
       }
     }
   });
@@ -165,6 +176,13 @@ export const UnitActor: React.FC<{ u: SimUnit }> = ({ u }) => {
         <ringGeometry args={u.isHero ? [0.45, 0.65, 24] : [0.3, 0.44, 16]} />
         <meshBasicMaterial color={u.isHero ? '#ffd700' : TEAM[u.side]} transparent opacity={u.isHero ? 0.85 : 0.7} />
       </mesh>
+      {/* Hero Iron Fist Rage Aura */}
+      {u.isHero && (
+        <mesh ref={auraRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, 0]} visible={false}>
+          <ringGeometry args={[0.65, 1.25, 32]} />
+          <meshBasicMaterial color="#ff9f43" transparent opacity={0.75} side={2} depthWrite={false} />
+        </mesh>
+      )}
       <HpBar
         y={u.isHero ? 2.3 : UNIT_STATS[u.type].flying ? 2.2 : 1.65}
         width={u.isHero ? 1.2 : 0.75}
@@ -300,5 +318,61 @@ export const EffectActor: React.FC<{ e: SimEffect }> = ({ e }) => {
         </mesh>
       )}
     </group>
+  );
+};
+
+const textTextureCache = new Map<string, CanvasTexture>();
+
+function getFloatingTextTexture(text: string, color: string): CanvasTexture {
+  const key = `${text}_${color}`;
+  let tex = textTextureCache.get(key);
+  if (!tex) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d')!;
+    ctx.font = '900 32px "Inter", "Arial Black", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = '#000000';
+    ctx.strokeText(text, 128, 32);
+    ctx.fillStyle = color;
+    ctx.fillText(text, 128, 32);
+
+    tex = new CanvasTexture(canvas);
+    tex.generateMipmaps = false;
+    tex.needsUpdate = true;
+    textTextureCache.set(key, tex);
+  }
+  return tex;
+}
+
+export const FloatingTextActor: React.FC<{ f: SimFloatingText }> = ({ f }) => {
+  const group = useRef<Group>(null);
+  const meshRef = useRef<Mesh>(null);
+  const tex = useMemo(() => getFloatingTextTexture(f.text, f.color), [f.text, f.color]);
+
+  useFrame(() => {
+    if (!group.current || !meshRef.current) return;
+    const progress = Math.min(1, f.t / f.duration);
+    const yOffset = Math.sin(progress * Math.PI * 0.5) * 1.15;
+    group.current.position.set(f.x, f.y + yOffset, f.z);
+
+    const mat = meshRef.current.material as MeshBasicMaterial;
+    if (mat) {
+      mat.opacity = progress > 0.55 ? Math.max(0, 1 - (progress - 0.55) / 0.45) : 1;
+    }
+  });
+
+  const scale = f.scale || 1;
+
+  return (
+    <Billboard ref={group} position={[f.x, f.y, f.z]}>
+      <mesh ref={meshRef}>
+        <planeGeometry args={[1.5 * scale, 0.38 * scale]} />
+        <meshBasicMaterial map={tex} transparent depthWrite={false} />
+      </mesh>
+    </Billboard>
   );
 };

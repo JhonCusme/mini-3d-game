@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useGame } from '../../core/GameContext';
 import { GameConfig } from '../../config/GameConfig';
-import type { GodId, TroopCounts, TroopId } from '../../core/GameState';
+import type { DefenseLogEntry, GodId, TroopCounts, TroopId } from '../../core/GameState';
 import { GodManager } from '../../core/GodManager';
 import { UpgradeManager } from '../../core/UpgradeManager';
 import { EconomyManager } from '../../core/EconomyManager';
@@ -164,7 +164,7 @@ export const GodsPanel: React.FC = () => {
 };
 
 /** Attacks received while away. */
-export const DefenseLogPanel: React.FC = () => {
+export const DefenseLogPanel: React.FC<{ onRevenge?: (entry: DefenseLogEntry) => void }> = ({ onRevenge }) => {
   const { state, markDefenseLogSeen } = useGame();
   useEffect(() => { markDefenseLogSeen(); }, [state.defenseLog.length]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
@@ -173,15 +173,43 @@ export const DefenseLogPanel: React.FC = () => {
         <p style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '13px' }}>Nadie ha atacado tu aldea todavía.</p>
       )}
       {state.defenseLog.map(e => (
-        <div key={e.id} style={{ ...panel, borderColor: e.won ? 'rgba(46,213,115,0.4)' : 'rgba(255,71,87,0.4)' }} className="flex-col gap-1">
-          <div className="flex-row justify-between">
-            <b style={{ color: e.won ? 'var(--accent-success)' : 'var(--accent-danger)' }}>
+        <div key={e.id} style={{ ...panel, borderColor: e.won ? 'rgba(46,213,115,0.4)' : 'rgba(255,71,87,0.4)', padding: '12px' }} className="flex-col gap-2">
+          <div className="flex-row justify-between" style={{ alignItems: 'center' }}>
+            <b style={{ color: e.won ? 'var(--accent-success)' : 'var(--accent-danger)', fontSize: '13px' }}>
               {e.won ? '🛡️ Defensa exitosa' : '🔥 Aldea saqueada'}
             </b>
             <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{timeAgo(e.timestamp)}</span>
           </div>
-          <span style={{ fontSize: '12px' }}>{e.attackerName} (🏆 {e.attackerTrophies})</span>
-          <div className="flex-row gap-3" style={{ fontSize: '12px' }}>
+
+          <div className="flex-row justify-between" style={{ alignItems: 'center' }}>
+            <div className="flex-col" style={{ gap: '2px' }}>
+              <span style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>{e.attackerName}</span>
+              <span style={{ fontSize: '11px', color: 'var(--accent-gold)' }}>🏆 {e.attackerTrophies} trofeos</span>
+            </div>
+
+            {/* Revenge Button / Status */}
+            <div>
+              {e.won ? (
+                <span style={{ fontSize: '11px', color: 'var(--accent-success)', background: 'rgba(46,213,115,0.15)', padding: '4px 8px', borderRadius: '6px', fontWeight: 700 }}>
+                  🛡️ Repelido
+                </span>
+              ) : e.revenged ? (
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.08)', padding: '4px 8px', borderRadius: '6px', fontWeight: 700 }}>
+                  ⚔️ Vengado
+                </span>
+              ) : (
+                <button
+                  className="btn-revenge animate-pulse"
+                  onClick={() => onRevenge?.(e)}
+                  title="¡Asalta la aldea de este rival para recuperar tu honor y botín!"
+                >
+                  ⚔️ Venganza
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="flex-row gap-3" style={{ fontSize: '12px', background: 'rgba(0,0,0,0.2)', padding: '6px 10px', borderRadius: '8px' }}>
             {e.coinsLost > 0 && <span style={{ color: 'var(--accent-danger)' }}>-{e.coinsLost} 🪙</span>}
             <span style={{ color: e.trophiesDelta >= 0 ? 'var(--accent-success)' : 'var(--accent-danger)' }}>
               {e.trophiesDelta >= 0 ? '+' : ''}{e.trophiesDelta} 🏆

@@ -54,6 +54,7 @@ interface GameContextType {
     completeCampaignAttack: (territoryIndex: number, result: PvpBattleResult) => { won: boolean; coins: number; exp: number; unlockedTroop?: string };
     payCoins: (amount: number) => boolean;
     markDefenseLogSeen: () => void;
+    markRevengeTaken: (logId: string) => void;
     startBuildingUpgrade: (uid: string) => void;
     finishBuildingUpgrade: (uid: string) => void;
     moveBuilding: (uid: string, x: number, z: number) => void;
@@ -590,6 +591,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const markDefenseLogSeen = () => updateAndSave((prev) => PvpManager.markLogSeen(prev));
+    const markRevengeTaken = (logId: string) => updateAndSave((prev) => ({
+        ...prev,
+        defenseLog: prev.defenseLog.map(e => e.id === logId ? { ...e, revenged: true } : e),
+    }));
 
     const toggleMute = () => {
         return AudioManager.toggleMute();
@@ -631,7 +636,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             completeSetup, purchaseUpgrade, trainTroop, upgradeTroop, finishTroopUpgradeWithGems, fightTerritory, 
             claimQuest, openChest, claimDailyReward, watchAdForReward, buyIAP,
             upgradeHero, healHeroWithGems, prestigeAscension, toggleMute, resetGame,
-            pvpMode: pvpService.mode, moveTroops, unlockGod, levelUpGod, equipGod, completeAttack, completeCampaignAttack, payCoins, markDefenseLogSeen,
+            pvpMode: pvpService.mode, moveTroops, unlockGod, levelUpGod, equipGod, completeAttack, completeCampaignAttack, payCoins, markDefenseLogSeen, markRevengeTaken,
             startBuildingUpgrade, finishBuildingUpgrade, moveBuilding, buildBuilding, collectMine, feedMiners, buyBuilder 
         }}>
             {children}

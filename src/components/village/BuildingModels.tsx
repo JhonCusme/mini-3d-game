@@ -55,16 +55,28 @@ const Torch: React.FC<{ position: [number, number, number]; scale?: number }> = 
   );
 };
 
-/** Chimney with Animated Smoke Puff */
+/** Chimney with Animated Rising Smoke Plume */
 const Chimney: React.FC<{ position: [number, number, number]; height?: number }> = ({ position, height = 1.2 }) => {
-  const smokeRef = useRef<Mesh>(null);
+  const p1 = useRef<Mesh>(null);
+  const p2 = useRef<Mesh>(null);
+  const p3 = useRef<Mesh>(null);
+
   useFrame(({ clock }) => {
-    if (smokeRef.current) {
-      const t = clock.elapsedTime * 2;
-      const s = 1 + Math.sin(t) * 0.2;
-      smokeRef.current.scale.set(s, s, s);
-      smokeRef.current.position.y = height + 0.15 + Math.sin(t * 0.7) * 0.05;
-    }
+    const t = clock.elapsedTime * 1.6;
+    const animatePuff = (mesh: Mesh | null, offset: number) => {
+      if (!mesh) return;
+      const progress = ((t + offset) % 2.4) / 2.4; // 0 to 1
+      mesh.position.y = height + 0.15 + progress * 0.95;
+      mesh.position.x = Math.sin(t * 1.2 + offset) * 0.09 + progress * 0.18;
+      mesh.position.z = Math.cos(t * 0.9 + offset) * 0.09;
+      const scale = 0.18 + progress * 0.28;
+      mesh.scale.set(scale, scale * 0.85, scale);
+      const mat = mesh.material as any;
+      if (mat) mat.opacity = Math.max(0, (1 - progress) * 0.65);
+    };
+    animatePuff(p1.current, 0);
+    animatePuff(p2.current, 0.8);
+    animatePuff(p3.current, 1.6);
   });
 
   return (
@@ -79,10 +91,18 @@ const Chimney: React.FC<{ position: [number, number, number]; height?: number }>
         <boxGeometry args={[0.5, 0.08, 0.5]} />
         <meshStandardMaterial color="#2f3542" />
       </mesh>
-      {/* Animated Smoke Puff */}
-      <mesh ref={smokeRef} position={[0, height + 0.15, 0]}>
-        <sphereGeometry args={[0.16, 6, 6]} />
-        <meshStandardMaterial color="#dcdde1" transparent opacity={0.65} roughness={1} />
+      {/* Dynamic Rising Smoke Puffs */}
+      <mesh ref={p1}>
+        <sphereGeometry args={[1, 6, 6]} />
+        <meshStandardMaterial color="#dfe4ea" transparent opacity={0.6} roughness={1} depthWrite={false} />
+      </mesh>
+      <mesh ref={p2}>
+        <sphereGeometry args={[1, 6, 6]} />
+        <meshStandardMaterial color="#ced6e0" transparent opacity={0.6} roughness={1} depthWrite={false} />
+      </mesh>
+      <mesh ref={p3}>
+        <sphereGeometry args={[1, 6, 6]} />
+        <meshStandardMaterial color="#b2bec3" transparent opacity={0.6} roughness={1} depthWrite={false} />
       </mesh>
     </group>
   );

@@ -17,13 +17,17 @@ import { Sheet } from './components/ui/Sheet';
 import { DefenseLogPanel, TroopUpgradePanel } from './components/panels/Panels';
 import { FriendsModal } from './components/social/FriendsModal';
 import type { VillageSnapshot } from './core/pvp/PvpTypes';
+import type { DefenseLogEntry } from './core/GameState';
+import { pvpService } from './core/pvp/PvpService';
+import { createSystemVillage, hashString } from './core/pvp/BotFactory';
 
 export type PanelType = 'attack' | 'multiplayer' | 'map' | 'quests' | 'store' | 'settings' | 'log' | 'build' | 'troops' | 'friends';
 
 const GameApp: React.FC = () => {
-  const { state, offlineEarnings, dismissOfflineEarnings } = useGame();
+  const { state, offlineEarnings, dismissOfflineEarnings, markRevengeTaken } = useGame();
   const [panel, setPanel] = useState<PanelType | null>(null);
-  const [friendlyOpponent, setFriendlyOpponent] = useState<VillageSnapshot | null>(null);
+  const [customOpponent, setCustomOpponent] = useState<VillageSnapshot | null>(null);
+  const [isFriendlyBattle, setIsFriendlyBattle] = useState(false);
   const [villageFocused, setVillageFocused] = useState(false);
 
   // Show character creation if setup not completed
@@ -33,11 +37,39 @@ const GameApp: React.FC = () => {
 
   const close = () => {
     setPanel(null);
-    setFriendlyOpponent(null);
+    setCustomOpponent(null);
+    setIsFriendlyBattle(false);
   };
 
   const handleStartFriendlyBattle = (opp: VillageSnapshot) => {
-    setFriendlyOpponent(opp);
+    setCustomOpponent(opp);
+    setIsFriendlyBattle(true);
+    setPanel('multiplayer');
+  };
+
+  const handleStartRevenge = async (entry: DefenseLogEntry) => {
+    let opp: VillageSnapshot | null = null;
+    if (entry.attackerId) {
+      if (entry.attackerId.startsWith('bot_') || entry.attackerId.startsWith('system_')) {
+        const seed = hashString(entry.attackerId);
+        opp = createSystemVillage(seed, entry.attackerTrophies);
+      } else if (pvpService.fetchVillage) {
+        opp = await pvpService.fetchVillage(entry.attackerId);
+      }
+    }
+    if (!opp) {
+      const seed = hashString((entry.attackerName || 'Rival') + entry.attackerTrophies);
+      opp = createSystemVillage(seed, entry.attackerTrophies);
+    }
+
+    if (opp.shieldUntil && opp.shieldUntil > Date.now()) {
+      alert(`🛡️ ${opp.name} tiene un escudo de protección activo actualmente. ¡Inténtalo más tarde!`);
+      return;
+    }
+
+    markRevengeTaken(entry.id);
+    setCustomOpponent(opp);
+    setIsFriendlyBattle(false);
     setPanel('multiplayer');
   };
 
@@ -54,7 +86,7 @@ const GameApp: React.FC = () => {
       {panel === 'attack' && (
         <Sheet title="⚔️ Atacar" onClose={close}>
           <div className="card-grid">
-            <button className="attack-mode-card multiplayer" onClick={() => { setFriendlyOpponent(null); setPanel('multiplayer'); }}>
+            <button className="attack-mode-card multiplayer" onClick={() => { setCustomOpponent(null); setIsFriendlyBattle(false); setPanel('multiplayer'); }}>
               <span className="attack-mode-icon">⚔️</span>
               <b>Multijugador</b>
               <span>Saquea aldeas de otros jugadores y gana trofeos.</span>
@@ -75,8 +107,8 @@ const GameApp: React.FC = () => {
       {panel === 'multiplayer' && (
         <AttackScreen
           onClose={close}
-          customOpponent={friendlyOpponent || undefined}
-          isFriendly={!!friendlyOpponent}
+          customOpponent={customOpponent || undefined}
+          isFriendly={isFriendlyBattle}
         />
       )}
       {panel === 'friends' && (
@@ -88,7 +120,11 @@ const GameApp: React.FC = () => {
       {panel === 'quests' && <Sheet title="📜 Misiones" onClose={close} wide><QuestScreen /></Sheet>}
       {panel === 'store' && <Sheet title="💎 Tienda" onClose={close} wide><StoreScreen /></Sheet>}
       {panel === 'settings' && <Sheet title="⚙️ Ajustes" onClose={close}><SettingsScreen /></Sheet>}
-      {panel === 'log' && <Sheet title="🛡️ Registro de defensa" onClose={close} wide><DefenseLogPanel /></Sheet>}
+      {panel === 'log' && (
+        <Sheet title="🛡️ Registro de defensa" onClose={close} wide>
+          <DefenseLogPanel onRevenge={handleStartRevenge} />
+        </Sheet>
+      )}
       {panel === 'troops' && (
         <Sheet title="⚒️ Personajes: Tropas y Héroe" onClose={close} wide>
           <TroopUpgradePanel />

@@ -67,6 +67,18 @@ export interface SimProjectile {
 
 export interface SimEffect { id: number; kind: 'lightning' | 'heal' | 'quake' | 'shadow' | 'explosion'; x: number; z: number; t: number; radius: number }
 
+export interface SimFloatingText {
+    id: number;
+    text: string;
+    x: number;
+    y: number;
+    z: number;
+    color: string;
+    t: number;
+    duration: number;
+    scale?: number;
+}
+
 interface PendingHit { projectileId: number; delay: number; apply: () => void }
 
 /** Deterministic, fixed-step real-time battle between deployed troops and a village snapshot. */
@@ -76,6 +88,7 @@ export class AttackSim {
     readonly units: SimUnit[] = [];
     projectiles: SimProjectile[] = [];
     effects: SimEffect[] = [];
+    floatingTexts: SimFloatingText[] = [];
     time = 0;
     started = false;
     finished = false;
@@ -87,6 +100,7 @@ export class AttackSim {
     readonly attackerLosses: TroopCounts = emptyTroops();
     readonly defenderLosses: TroopCounts = emptyTroops();
     godSpellUsed = false;
+    heroAbilityUsed = false;
     readonly heroAvailable: boolean;
     heroDeployed = false;
     heroDied = false;
@@ -248,6 +262,35 @@ export class AttackSim {
         return true;
     }
 
+    /** Activates the King's signature "¡Furia Real!" ability: heals, enrages, and summons elite guards. */
+    activateHeroAbility(): boolean {
+        if (this.finished || !this.heroDeployed || this.heroDied || this.heroAbilityUsed) return false;
+        const hero = this.units.find(u => u.isHero && !u.dead);
+        if (!hero) return false;
+
+        this.heroAbilityUsed = true;
+        const heroLvl = hero.heroLevel || 1;
+        const info = HeroManager.heroAbilityStats(heroLvl);
+        const healAmt = Math.round(hero.maxHp * info.healPercent);
+        hero.hp = Math.min(hero.maxHp, hero.hp + healAmt);
+        this.heroHp = hero.hp;
+        hero.buffUntil = this.time + info.duration;
+
+        // Summon Royal Guards around the King
+        for (let i = 0; i < info.guardsCount; i++) {
+            const a = (i / info.guardsCount) * Math.PI * 2 + this.rng() * 0.2;
+            this.spawn('attacker', 'infantry', hero.x + Math.cos(a) * 0.9, hero.z + Math.sin(a) * 0.9);
+        }
+
+        this.addFloatingText('¡FURIA REAL! 👑', hero.x, hero.z, '#ffd700', 1.35, 2.5);
+        this.addFloatingText(`+${healAmt} 💚`, hero.x, hero.z, '#2ed573', 1.2, 2.1);
+        this.addEffect('explosion', hero.x, hero.z, 2.2);
+        this.addEffect('heal', hero.x, hero.z, 1.8);
+        AudioManager.playVictory();
+        this.version++;
+        return true;
+    }
+
     /** Active power of the attacking god, cast at a point. */
     castGodSpell(x: number, z: number): boolean {
         const god = this.army.god;
@@ -260,18 +303,32 @@ export class AttackSim {
         switch (god as GodId) {
             case 'tharok': {
                 const dmg = 120 + 60 * lvl;
-                inRange(this.buildings.filter(b => !b.destroyed)).forEach(b => this.damageBuilding(b, dmg));
-                inRange(this.units.filter(u => u.side === 'defender' && !u.dead)).forEach(u => this.damageUnit(u, dmg));
+                inRange(this.buildings.filter(b => !b.destroyed)).forEach(b => {
+                    this.damageBuilding(b, dmg);
+                    this.addFloatingText(`-${Math.round(dmg)} ⚡`, b.x, b.z, '#00d2d3', 1.25, b.size * 0.5 + 0.8);
+                });
+                inRange(this.units.filter(u => u.side === 'defender' && !u.dead)).forEach(u => {
+                    this.damageUnit(u, dmg);
+                    this.addFloatingText(`-${Math.round(dmg)} ⚡`, u.x, u.z, '#00d2d3', 1.25, 1.8);
+                });
                 this.addEffect('lightning', x, z, radius);
                 break;
             }
             case 'aurelia':
-                inRange(this.aliveAttackers(), radius + 1).forEach(u => { u.hp = Math.min(u.maxHp, u.hp + u.maxHp * (0.5 + 0.05 * lvl)); });
+                inRange(this.aliveAttackers(), radius + 1).forEach(u => {
+                    const healAmt = Math.round(u.maxHp * (0.5 + 0.05 * lvl));
+                    u.hp = Math.min(u.maxHp, u.hp + healAmt);
+                    this.addFloatingText(`+${healAmt} 💚`, u.x, u.z, '#2ed573', 1.15, 1.5);
+                });
                 this.addEffect('heal', x, z, radius + 1);
                 break;
             case 'morvath': {
                 const pct = 0.2 + 0.03 * lvl;
-                inRange(this.buildings.filter(b => !b.destroyed), radius + 1).forEach(b => this.damageBuilding(b, b.maxHp * pct));
+                inRange(this.buildings.filter(b => !b.destroyed), radius + 1).forEach(b => {
+                    const dmg = b.maxHp * pct;
+                    this.damageBuilding(b, dmg);
+                    this.addFloatingText(`-${Math.round(dmg)} 💥`, b.x, b.z, '#ff9f43', 1.2, b.size * 0.5 + 0.8);
+                });
                 inRange(this.walls.filter(w => !w.destroyed), radius + 1).forEach(w => this.damageWall(w, w.maxHp * 0.8));
                 this.addEffect('quake', x, z, radius + 1);
                 break;
@@ -315,6 +372,8 @@ export class AttackSim {
         due.forEach(h => h.apply());
         for (const e of this.effects) e.t += dt;
         this.effects = this.effects.filter(e => e.t < 1.2);
+        for (const f of this.floatingTexts) f.t += dt;
+        this.floatingTexts = this.floatingTexts.filter(f => f.t < f.duration);
         if (this.projectiles.length !== before) this.version++;
 
         this.releaseGarrison();
@@ -420,9 +479,27 @@ export class AttackSim {
         this.version++;
     }
 
+    addFloatingText(text: string, x: number, z: number, color = '#ffffff', scale = 1, y = 1.3) {
+        if (this.floatingTexts.length > 35) this.floatingTexts.shift();
+        this.floatingTexts.push({
+            id: this.nextId++,
+            text,
+            x: x + (this.rng() - 0.5) * 0.35,
+            y,
+            z: z + (this.rng() - 0.5) * 0.35,
+            color,
+            t: 0,
+            duration: 0.85,
+            scale,
+        });
+        this.version++;
+    }
+
     private damageBuilding(b: SimBuilding, dmg: number) {
         if (b.destroyed) return;
+        const d = Math.round(dmg);
         b.hp -= dmg;
+        if (d > 0) this.addFloatingText(`-${d}`, b.x, b.z, '#ff4757', 1.05, b.size * 0.5 + 0.8);
         if (b.hp <= 0) {
             b.hp = 0;
             b.destroyed = true;
@@ -436,7 +513,9 @@ export class AttackSim {
 
     private damageWall(w: SimWall, dmg: number) {
         if (w.destroyed) return;
+        const d = Math.round(dmg);
         w.hp -= dmg;
+        if (d > 0 && this.rng() < 0.4) this.addFloatingText(`-${d}`, w.x, w.z, '#e55039', 0.85, 1.1);
         if (w.hp <= 0) {
             w.hp = 0;
             w.destroyed = true;
@@ -445,9 +524,15 @@ export class AttackSim {
         }
     }
 
-    private damageUnit(u: SimUnit, dmg: number) {
+    private damageUnit(u: SimUnit, dmg: number, isCrit = false) {
         if (u.dead) return;
+        const d = Math.round(dmg);
         u.hp -= dmg;
+        if (d > 0) {
+            const text = isCrit ? `-${d} 💥` : `-${d}`;
+            const color = isCrit ? '#ffd32a' : (u.side === 'attacker' ? '#ff4757' : '#ffa801');
+            this.addFloatingText(text, u.x, u.z, color, isCrit ? 1.25 : 0.95, u.isHero ? 2.1 : 1.4);
+        }
         if (u.isHero) this.heroHp = Math.max(0, u.hp);
         if (u.hp <= 0) {
             u.dead = true;
@@ -555,7 +640,9 @@ export class AttackSim {
             }
             if (hurt && u.cooldown <= 0) {
                 u.cooldown = 1 * cooldownMult;
-                hurt.hp = Math.min(hurt.maxHp, hurt.hp + 25 * (u.side === 'attacker' ? this.atkHpMult : 1));
+                const healAmt = Math.round(25 * (u.side === 'attacker' ? this.atkHpMult : 1));
+                hurt.hp = Math.min(hurt.maxHp, hurt.hp + healAmt);
+                this.addFloatingText(`+${healAmt} 💚`, hurt.x, hurt.z, '#2ed573', 1.0, 1.4);
                 this.addEffect('heal', hurt.x, hurt.z, 0.6);
             }
             // follow closest ally
@@ -563,6 +650,12 @@ export class AttackSim {
             for (const a of allies) { const d = Math.hypot(a.x - u.x, a.z - u.z); if (d < ld) { lead = a; ld = d; } }
             if (lead && ld > 2) this.moveTowards(u, lead.x, lead.z, stats.speed * dt * speedMult);
             return;
+        }
+
+        const isHeroEnraged = Boolean(u.isHero && u.buffUntil > this.time);
+        if (isHeroEnraged) {
+            speedMult *= 1.45;
+            cooldownMult *= 0.55;
         }
 
         // Validate current target
@@ -584,11 +677,12 @@ export class AttackSim {
         const mult = u.side === 'attacker' ? this.atkDmgMult : this.defUnitDmgMult;
         const crit = u.side === 'attacker' && (this.rng() < this.atkCrit || u.buffUntil > this.time) ? 2 : 1;
         const troopLevel = u.side === 'attacker' ? (this.army.troopLevels?.[u.type] || 1) : 1;
-        const levelDmgMult = u.isHero ? 1.0 : (1 + (troopLevel - 1) * 0.22);
+        const levelDmgMult = u.isHero ? (isHeroEnraged ? 1.85 : 1.0) : (1 + (troopLevel - 1) * 0.22);
         let dmg = stats.dps * mult * crit * levelDmgMult;
         if (stats.siege && u.targetKind === 'wall') dmg *= 3;
         const kind: SimProjectile['kind'] | null = u.type === 'archers' ? 'arrow' : u.type === 'mages' ? 'magic' : u.type === 'catapults' ? 'boulder' : null;
 
+        const isCritHit = crit > 1;
         const apply = () => {
             if (u.targetKind === 'building') {
                 this.damageBuilding(t as SimBuilding, dmg);
@@ -604,9 +698,9 @@ export class AttackSim {
                     this.addEffect('explosion', t.x, t.z, 0.4);
                 }
             } else if (u.targetKind === 'unit') {
-                this.damageUnit(t as SimUnit, dmg);
+                this.damageUnit(t as SimUnit, dmg, isCritHit);
                 if (u.isHero) {
-                    this.units.filter(other => !other.dead && other.side !== u.side && other.id !== (t as SimUnit).id && Math.hypot(other.x - t.x, other.z - t.z) <= 1.4).forEach(other => this.damageUnit(other, dmg * 0.4));
+                    this.units.filter(other => !other.dead && other.side !== u.side && other.id !== (t as SimUnit).id && Math.hypot(other.x - t.x, other.z - t.z) <= 1.4).forEach(other => this.damageUnit(other, dmg * 0.4, false));
                     this.addEffect('explosion', t.x, t.z, 0.4);
                 }
             }
@@ -616,7 +710,7 @@ export class AttackSim {
             this.fire(u.x, 0.6, u.z, t.x, t.z, kind === 'boulder' ? 0.7 : 0.3, kind, () => {
                 if (kindAtFire === 'building') this.damageBuilding(t as SimBuilding, dmg);
                 else if (kindAtFire === 'wall') this.damageWall(t as SimWall, dmg);
-                else if (kindAtFire === 'unit') this.damageUnit(t as SimUnit, dmg);
+                else if (kindAtFire === 'unit') this.damageUnit(t as SimUnit, dmg, isCritHit);
             });
         } else apply();
     }

@@ -18,7 +18,7 @@ import { HeroManager } from '../../core/HeroManager';
 import { createCampaignVillage } from '../../core/campaign/CampaignVillages';
 import { RtsControls, SceneLights } from '../village/VillageScene';
 import { VillageTerrain, Walls } from '../village/VillageTerrain';
-import { BuildingActor, EffectActor, ProjectileActor, UnitActor, WallActor } from './AttackActors';
+import { BuildingActor, EffectActor, FloatingTextActor, ProjectileActor, UnitActor, WallActor } from './AttackActors';
 import { AVATAR_IMAGES, TROOP_ICONS } from '../troopIcons';
 import { AudioManager } from '../../core/AudioManager';
 
@@ -54,6 +54,7 @@ const SimWorld: React.FC<{ sim: AttackSim; running: boolean; onTick: () => void 
       {sim.units.filter(u => !u.dead).map(u => <UnitActor key={u.id} u={u} />)}
       {sim.projectiles.map(p => <ProjectileActor key={p.id} p={p} />)}
       {sim.effects.map(e => <EffectActor key={e.id} e={e} />)}
+      {sim.floatingTexts.map(f => <FloatingTextActor key={f.id} f={f} />)}
     </>
   );
 };
@@ -414,13 +415,33 @@ export const AttackScreen: React.FC<{
 
               if (sim.heroDeployed) {
                 const pct = sim.heroMaxHp > 0 ? Math.round((sim.heroHp / sim.heroMaxHp) * 100) : 0;
+                const canUseAbility = !sim.heroDied && !sim.heroAbilityUsed;
                 return (
-                  <button className="troop-card hero deployed" disabled style={{ borderColor: '#ffd700', opacity: 0.85 }}>
-                    <span className="troop-card-count" style={{ color: sim.heroDied ? '#ff4757' : '#2ed573' }}>
-                      {sim.heroDied ? '💀' : `${pct}%`}
+                  <button
+                    className={`troop-card hero deployed ${canUseAbility ? 'active-ability animate-pulse' : ''}`}
+                    disabled={sim.heroDied || (!canUseAbility)}
+                    onClick={() => {
+                      if (canUseAbility) {
+                        sim.activateHeroAbility();
+                        setMessage('⚡ ¡FURIA REAL ACTIVADA!');
+                      }
+                    }}
+                    style={{
+                      borderColor: canUseAbility ? '#ff9f43' : '#ffd700',
+                      background: canUseAbility ? 'linear-gradient(135deg, rgba(255, 159, 67, 0.4), rgba(238, 82, 83, 0.5))' : undefined,
+                      boxShadow: canUseAbility ? '0 0 16px rgba(255, 159, 67, 0.85), inset 0 0 10px #ff9f43' : undefined,
+                      cursor: canUseAbility ? 'pointer' : 'default',
+                      animation: canUseAbility ? 'pulse 1.2s infinite' : undefined,
+                    }}
+                    title={canUseAbility ? '¡Toca para activar FURIA REAL! Restaura vida e invoca Guardias Reales' : undefined}
+                  >
+                    <span className="troop-card-count" style={{ color: sim.heroDied ? '#ff4757' : (canUseAbility ? '#ffd700' : '#2ed573'), fontWeight: 800 }}>
+                      {sim.heroDied ? '💀' : (canUseAbility ? '⚡ ¡FURIA!' : `${pct}%`)}
                     </span>
-                    <span className="troop-card-icon">👑</span>
-                    <span className="troop-card-name">{sim.heroDied ? 'Caído' : 'Luchando'}</span>
+                    <span className="troop-card-icon">{canUseAbility ? '💥' : '👑'}</span>
+                    <span className="troop-card-name" style={{ color: canUseAbility ? '#fff' : undefined, fontWeight: canUseAbility ? 800 : undefined }}>
+                      {sim.heroDied ? 'Caído' : (canUseAbility ? 'ACTIVAR' : 'Luchando')}
+                    </span>
                   </button>
                 );
               }

@@ -21,6 +21,7 @@ export interface PlacedBuilding {
 
 export interface DefenseLogEntry {
     id: string;
+    attackerId?: string;
     attackerName: string;
     attackerTrophies: number;
     won: boolean;          // true = the defender (you) won
@@ -29,6 +30,7 @@ export interface DefenseLogEntry {
     garrisonLost: Partial<TroopCounts>;
     timestamp: number;
     seen: boolean;
+    revenged?: boolean;
 }
 
 export interface GameState {

@@ -2596,3 +2596,48 @@ button:disabled {
   .btn-guest { padding: 8px; font-size: 12px; }
 }
 
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 4px rgba(255, 159, 67, 0.6));
+  }
+  50% {
+    transform: scale(1.08);
+    filter: drop-shadow(0 0 16px rgba(255, 159, 67, 0.95));
+  }
+}
+
+.animate-pulse {
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.btn-revenge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: linear-gradient(135deg, #d63031, #b71540);
+  border: 1.5px solid #ff7675;
+  color: #fff;
+  font-weight: 800;
+  font-size: 11px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px rgba(214, 48, 49, 0.4);
+  transition: all 0.15s ease;
+}
+
+.btn-revenge:hover {
+  transform: translateY(-1px) scale(1.03);
+  box-shadow: 0 4px 14px rgba(214, 48, 49, 0.6);
+  border-color: #fab1a0;
+}
+
+.btn-revenge:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+

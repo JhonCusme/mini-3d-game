@@ -134,6 +134,7 @@ export class PvpManager {
             };
             entries.push({
                 id: r.id,
+                attackerId: r.attackerId,
                 attackerName: r.attackerName,
                 attackerTrophies: r.attackerTrophies,
                 won: !r.attackerWon,
@@ -142,6 +143,7 @@ export class PvpManager {
                 garrisonLost: lost,
                 timestamp: r.createdAt,
                 seen: false,
+                revenged: false,
             });
         }
         return { ...next, defenseLog: [...entries.reverse(), ...state.defenseLog].slice(0, MAX_LOG) };
