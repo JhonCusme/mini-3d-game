@@ -548,8 +548,8 @@ export const WitchBroomModel: React.FC<{ scale?: number }> = ({ scale = 1 }) => 
     const pivot = new Group();
     pivot.add(cloned);
     // Rotate so handle points forward (+Z) and bristles point backward (-Z)
-    // Dynamic flight pitch: tilt broom up in front (10 degrees), matching the classic witch riding reference
-    pivot.rotation.x = Math.PI / 2 - 0.16;
+    // Dynamic flight pitch: tilt broom up in front (~26 degrees), matching the classic witch riding reference
+    pivot.rotation.x = Math.PI / 2 - 0.45;
 
     const wrapper = new Group();
     wrapper.add(pivot);
@@ -783,8 +783,8 @@ export const MageModel: React.FC<CharacterProps> = ({
 
       {/* --- UNIFIED FLYING MOUNT: 3D WITCH SITTING COMFORTABLY ON HER 3D BROOM --- */}
       <group ref={flightMountRef} position={[0, 0.62, 0]}>
-        {/* Realistic 3D Witch's Broom Mount: positioned right at her hands and seat */}
-        <group position={[0, -0.015, 0]}>
+        {/* Realistic 3D Witch's Broom Mount: positioned right through her hands and under her seat */}
+        <group position={[0, 0.13, -0.02]}>
           <React.Suspense fallback={null}>
             <WitchBroomModel scale={0.92} />
           </React.Suspense>
