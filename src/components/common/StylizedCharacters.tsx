@@ -779,8 +779,8 @@ export const MageModel: React.FC<CharacterProps> = ({
 
       {/* --- UNIFIED FLYING MOUNT: 3D WITCH SITTING COMFORTABLY ON HER 3D BROOM --- */}
       <group ref={flightMountRef} position={[0, 0.62, 0]}>
-        {/* Realistic 3D Witch's Broom Mount: lowered slightly so shaft runs comfortably beneath thighs and seat */}
-        <group position={[0, -0.06, 0]}>
+        {/* Realistic 3D Witch's Broom Mount: positioned right at her hands and seat */}
+        <group position={[0, -0.015, 0]}>
           <React.Suspense fallback={null}>
             <WitchBroomModel scale={0.92} />
           </React.Suspense>
