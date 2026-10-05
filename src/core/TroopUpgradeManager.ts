@@ -1,5 +1,6 @@
 import type { GameState, TroopId } from './GameState';
 import { GameConfig } from '../config/GameConfig';
+import { UpgradeManager } from './UpgradeManager';
 
 export interface TroopDetails {
     id: TroopId;
@@ -15,6 +16,8 @@ export interface TroopDetails {
     upgradeCost: number;
     canAfford: boolean;
     canUpgrade: boolean;
+    isUnlocked: boolean;
+    unlockRequirementText: string;
     blockerReason: string | null;
     rankTitle: string;
 }
@@ -70,9 +73,13 @@ export class TroopUpgradeManager {
         const cost = this.getUpgradeCost(troopId, currentLevel);
         const canAfford = state.coins >= cost;
         const isMax = currentLevel >= maxLevel;
+        const isUnlocked = UpgradeManager.isTroopUnlocked(state, troopId);
+        const unlockRequirementText = UpgradeManager.getUnlockRequirementText(troopId);
 
         let blockerReason: string | null = null;
-        if (isMax) {
+        if (!isUnlocked) {
+            blockerReason = `🔒 ${unlockRequirementText}`;
+        } else if (isMax) {
             blockerReason = currentLevel >= 10 ? 'Nivel máximo alcanzado' : 'Mejora la Herrería o el Ayuntamiento';
         } else if (!canAfford) {
             blockerReason = `Faltan 🪙 ${(cost - state.coins).toLocaleString()} de oro`;
@@ -91,7 +98,9 @@ export class TroopUpgradeManager {
             nextDps,
             upgradeCost: cost,
             canAfford,
-            canUpgrade: !isMax && canAfford,
+            canUpgrade: isUnlocked && !isMax && canAfford,
+            isUnlocked,
+            unlockRequirementText,
             blockerReason,
             rankTitle: this.getRankTitle(currentLevel),
         };
@@ -103,12 +112,14 @@ export class TroopUpgradeManager {
     }
 
     static canUpgrade(state: GameState, troopId: TroopId): boolean {
+        if (!UpgradeManager.isTroopUnlocked(state, troopId)) return false;
         if (state.troopUpgradesUntil?.[troopId]) return false;
         const details = this.getTroopDetails(state, troopId);
         return details.canUpgrade;
     }
 
     static upgradeTroop(state: GameState, troopId: TroopId, now = Date.now()): GameState {
+        if (!UpgradeManager.isTroopUnlocked(state, troopId)) return state;
         const details = this.getTroopDetails(state, troopId);
         if (!details.canUpgrade || state.troopUpgradesUntil?.[troopId]) return state;
 

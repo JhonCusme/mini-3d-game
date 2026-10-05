@@ -135,6 +135,50 @@ const CollectResource: React.FC<{ type: 'goldmine' | 'farm'; onCollect: () => vo
   );
 };
 
+/** Floating worker fatigue badge above tired miners: tap to select and feed */
+const WorkerFatigueBadge: React.FC<{ stamina: number; onClick: () => void }> = ({ stamina, onClick }) => {
+  const ref = useRef<Group>(null);
+  useFrame(({ clock }) => {
+    if (!ref.current) return;
+    ref.current.position.y = 2.8 + Math.sin(clock.elapsedTime * 2.8) * 0.15;
+  });
+  return (
+    <group
+      ref={ref}
+      position={[0, 2.8, 0]}
+      onClick={e => { e.stopPropagation(); if (e.delta <= TAP_TOLERANCE) onClick(); }}
+    >
+      <Html center style={{ pointerEvents: 'auto', cursor: 'pointer' }}>
+        <div 
+          onClick={onClick}
+          className="animate-pop pulse-glow"
+          style={{
+            background: stamina < 15 
+              ? 'linear-gradient(135deg, rgba(235, 77, 75, 0.95), rgba(192, 57, 43, 0.95))'
+              : 'linear-gradient(135deg, rgba(243, 156, 18, 0.95), rgba(211, 84, 0, 0.95))',
+            color: '#fff',
+            padding: '3px 8px',
+            borderRadius: '12px',
+            border: '1.5px solid rgba(255,255,255,0.85)',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.6)',
+            fontSize: '11px',
+            fontWeight: 800,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            whiteSpace: 'nowrap',
+            fontFamily: 'Outfit, sans-serif',
+            userSelect: 'none'
+          }}
+        >
+          <span>{stamina < 15 ? '😴' : '🥖'}</span>
+          <span>{stamina < 15 ? '¡Agotados!' : 'Alimentar'}</span>
+        </div>
+      </Html>
+    </group>
+  );
+};
+
 const BuildingNode: React.FC<{
   b: PlacedBuilding; now: number; selected: boolean; ghost?: { x: number; z: number; valid: boolean };
   heroRecoveringUntil?: number;
@@ -146,6 +190,7 @@ const BuildingNode: React.FC<{
   const isHeroRecovering = b.type === 'altar' && !!heroRecoveringUntil && heroRecoveringUntil > now;
   const cap = b.type === 'goldmine' ? mineCapacity(b.level) : b.type === 'farm' ? farmCapacity(b.level) : 0;
   const showCollect = (b.type === 'goldmine' || b.type === 'farm') && b.stored >= Math.min(5, cap * 0.05) && !ghost;
+  const isFatigued = b.type === 'goldmine' && (b.minerStamina ?? 100) < 35 && !showCollect && !upgrading;
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
@@ -191,6 +236,10 @@ const BuildingNode: React.FC<{
 
       {showCollect && (b.type === 'goldmine' || b.type === 'farm') && (
         <CollectResource type={b.type} onCollect={() => onCollect(b.uid)} />
+      )}
+
+      {isFatigued && (
+        <WorkerFatigueBadge stamina={b.minerStamina ?? 100} onClick={() => onSelect(b.uid)} />
       )}
     </group>
   );

@@ -154,6 +154,51 @@ export const CAMPAIGN_MISSIONS: CampaignMissionInfo[] = [
     rewardCoins: 15000,
     rewardExp: 2500,
   },
+  {
+    index: 15,
+    name: 'Valle de las Sombras',
+    subtitle: 'Nivel 16 · Emboscada Nocturna',
+    description: 'Defensas con fuegos cruzados y torres camufladas. Mantén la formación con guerreros y arqueras coordinados.',
+    isBoss: false,
+    rewardCoins: 18000,
+    rewardExp: 2800,
+  },
+  {
+    index: 16,
+    name: 'Muralla Carmesí',
+    subtitle: 'Nivel 17 · Doble Anillo Defensivo',
+    description: 'Muros de piedra ígnea y cañones triples de alto calibre. Las catapultas son cruciales para abrir brechas.',
+    isBoss: false,
+    rewardCoins: 21000,
+    rewardExp: 3200,
+  },
+  {
+    index: 17,
+    name: 'Fortaleza Celestial',
+    subtitle: 'Nivel 18 · Asedio en las Cumbres',
+    description: 'Una plaza fuerte protegida por torres de arqueros imperiales y magos que bombardean desde las alturas.',
+    isBoss: false,
+    rewardCoins: 25000,
+    rewardExp: 3800,
+  },
+  {
+    index: 18,
+    name: 'Puerta del Abismo',
+    subtitle: 'Nivel 19 · Antesala de la Gran Guerra',
+    description: 'La vanguardia de la guardia imperial. Murallas reforzadas con obsidiana y una guarnición de élite inquebrantable.',
+    isBoss: false,
+    rewardCoins: 30000,
+    rewardExp: 4500,
+  },
+  {
+    index: 19,
+    name: 'El Trono del Tirano Inmortal',
+    subtitle: 'Nivel 20 · JEFE FINAL: Señor Supremo',
+    description: 'La máxima fortificación de todo el continente. El Rey Dragón defiende su santuario con cañones supremos y la guardia imperial completa. ¡Conquístalo para consagrar tu reinado y ascender en prestigio!',
+    isBoss: true,
+    rewardCoins: 45000,
+    rewardExp: 6000,
+  },
 ];
 
 /** Creates a predetermined layout for a given campaign territory index. */
@@ -166,9 +211,11 @@ function buildCampaignLayout(index: number): LayoutBuilding[] {
   // 1. Central Townhall
   layout.push({ type: 'townhall', level: thLvl, x: -1, z: -1 });
 
-  // 2. Gold mines and storage
+  // 2. Gold mines and storages
   layout.push({ type: 'goldmine', level: defLvl, x: -5, z: 2 });
   if (index >= 2) layout.push({ type: 'goldmine', level: defLvl, x: 4, z: 2 });
+  if (index >= 8) layout.push({ type: 'goldstorage', level: defLvl, x: -2, z: 3 });
+  if (index >= 12) layout.push({ type: 'foodstorage', level: defLvl, x: 2, z: -3 });
 
   // 3. Defenses according to difficulty
   if (index === 0) {
@@ -205,6 +252,12 @@ function buildCampaignLayout(index: number): LayoutBuilding[] {
     layout.push({ type: 'archertower', level: Math.max(1, defLvl - 1), x: -4, z: 3 });
     layout.push({ type: 'barracks', level: defLvl, x: 0, z: -5 });
   }
+  if (index >= 10) {
+    layout.push({ type: 'cannon', level: Math.max(1, defLvl - 1), x: 0, z: 4 });
+  }
+  if (index >= 13) {
+    layout.push({ type: 'archertower', level: Math.max(1, defLvl - 1), x: 0, z: -4 });
+  }
 
   // Fortress Wall Ring around Townhall & Defenses
   const r = index >= 4 ? 5 : 4;
@@ -217,11 +270,19 @@ function buildCampaignLayout(index: number): LayoutBuilding[] {
     layout.push({ type: 'wall', level: wallLvl, x: r, z });
   }
 
-  // Boss territories: Inner citadel wall ring
+  // Boss & High-tier territories: Inner citadel wall ring
   if (index === 4 || index === 9 || index >= 14) {
     for (let x = -2; x <= 2; x++) {
       layout.push({ type: 'wall', level: wallLvl + 1, x, z: -2 });
       layout.push({ type: 'wall', level: wallLvl + 1, x, z: 2 });
+    }
+  }
+
+  // Final Boss (territory 20): outer barrier horns
+  if (index === 19) {
+    for (let x = -7; x <= 7; x += 2) {
+      layout.push({ type: 'wall', level: wallLvl, x, z: -7 });
+      layout.push({ type: 'wall', level: wallLvl, x, z: 7 });
     }
   }
 
@@ -248,6 +309,8 @@ export function createCampaignVillage(index: number): VillageSnapshot {
   if (index >= 1) garrison.archers = 2 + index;
   if (index >= 3) garrison.cavalry = 1 + Math.floor(index / 2);
   if (index >= 5) garrison.mages = 1 + Math.floor(index / 3);
+  if (index >= 7) garrison.catapults = 1 + Math.floor((index - 6) / 2);
+  if (index >= 9) garrison.healers = 1 + Math.floor((index - 8) / 2);
 
   return {
     playerId: `campaign_t_${index}`,

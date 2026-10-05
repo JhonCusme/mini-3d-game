@@ -132,12 +132,15 @@ export const TroopUpgradePanel: React.FC<{ initialTab?: 'troops' | 'hero' }> = (
                         width: '44px',
                         height: '44px',
                         borderRadius: '12px',
-                        background: 'linear-gradient(135deg, rgba(255,255,255,0.1), rgba(0,0,0,0.3))',
-                        border: '1px solid rgba(255,255,255,0.15)',
+                        background: details.isUnlocked
+                          ? 'linear-gradient(135deg, rgba(255,255,255,0.1), rgba(0,0,0,0.3))'
+                          : 'rgba(0,0,0,0.4)',
+                        border: `1px solid ${details.isUnlocked ? 'rgba(255,255,255,0.15)' : 'rgba(255, 71, 87, 0.3)'}`,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         fontSize: '24px',
+                        filter: details.isUnlocked ? 'none' : 'grayscale(1) opacity(0.65)',
                       }}
                     >
                       {TROOP_ICONS[id]}
@@ -148,21 +151,37 @@ export const TroopUpgradePanel: React.FC<{ initialTab?: 'troops' | 'hero' }> = (
                         <b style={{ fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {details.name}
                         </b>
-                        <span
-                          style={{
-                            fontSize: '11px',
-                            fontWeight: 800,
-                            padding: '2px 6px',
-                            borderRadius: '6px',
-                            background: 'var(--accent-gold)',
-                            color: '#1a1100',
-                          }}
-                        >
-                          Nv. {details.level}
-                        </span>
+                        {details.isUnlocked ? (
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: 800,
+                              padding: '2px 6px',
+                              borderRadius: '6px',
+                              background: 'var(--accent-gold)',
+                              color: '#1a1100',
+                            }}
+                          >
+                            Nv. {details.level}
+                          </span>
+                        ) : (
+                          <span
+                            style={{
+                              fontSize: '10px',
+                              fontWeight: 800,
+                              padding: '2px 6px',
+                              borderRadius: '6px',
+                              background: 'rgba(255, 71, 87, 0.2)',
+                              border: '1px solid rgba(255, 71, 87, 0.4)',
+                              color: '#ff6b81',
+                            }}
+                          >
+                            🔒 Bloqueada
+                          </span>
+                        )}
                       </div>
                       <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                        {details.rankTitle} · <span style={{ opacity: 0.8 }}>{details.role}</span>
+                        {details.isUnlocked ? `${details.rankTitle} · ` : ''}<span style={{ opacity: 0.8 }}>{details.role}</span>
                       </span>
                     </div>
                   </div>
@@ -240,7 +259,36 @@ export const TroopUpgradePanel: React.FC<{ initialTab?: 'troops' | 'hero' }> = (
                   </div>
 
                   {/* Upgrade Button / Research Timer */}
-                  {isMax ? (
+                  {!details.isUnlocked ? (
+                    <div className="flex-col gap-1" style={{ width: '100%' }}>
+                      <div
+                        style={{
+                          padding: '8px 10px',
+                          borderRadius: '8px',
+                          background: 'rgba(255, 71, 87, 0.1)',
+                          border: '1px solid rgba(255, 71, 87, 0.25)',
+                          fontSize: '11px',
+                          color: '#ff6b81',
+                          fontWeight: 700,
+                          textAlign: 'center',
+                        }}
+                      >
+                        🔒 {details.unlockRequirementText}
+                      </div>
+                      <button
+                        className="btn-primary"
+                        disabled
+                        style={{
+                          padding: '9px',
+                          fontSize: '12px',
+                          opacity: 0.55,
+                          cursor: 'not-allowed',
+                        }}
+                      >
+                        🔒 Tropa Bloqueada
+                      </button>
+                    </div>
+                  ) : isMax ? (
                     <button
                       className="btn-primary"
                       disabled
