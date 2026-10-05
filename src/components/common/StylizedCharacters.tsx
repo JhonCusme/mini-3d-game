@@ -620,28 +620,32 @@ export const WitchCharacterModel: React.FC<{
       boneMap['DEF-spine003'].rotation.x += 0.22;
     }
 
-    // Left Arm: reaches forward and in to grip the broom handle
+    // Left Arm: reaches around the chest with wide elbow and forward to grip broom
     if (boneMap['DEF-upper_armL']) {
-      boneMap['DEF-upper_armL'].rotation.x -= 0.70;
-      boneMap['DEF-upper_armL'].rotation.y -= 0.50;
-      boneMap['DEF-upper_armL'].rotation.z -= 0.70;
+      boneMap['DEF-upper_armL'].rotation.x -= 0.20;
+      boneMap['DEF-upper_armL'].rotation.y -= 0.58;
+      boneMap['DEF-upper_armL'].rotation.z -= 0.71;
     }
     if (boneMap['DEF-forearmL']) {
-      boneMap['DEF-forearmL'].rotation.x += 0.40;
+      boneMap['DEF-forearmL'].rotation.x += 0.30;
+      boneMap['DEF-forearmL'].rotation.y += 0.36;
+      boneMap['DEF-forearmL'].rotation.z -= 0.75;
     }
     if (boneMap['DEF-handL']) {
       boneMap['DEF-handL'].rotation.y += 0.25;
       boneMap['DEF-handL'].rotation.z -= 0.20;
     }
 
-    // Right Arm: reaches forward and in to grip the broom handle
+    // Right Arm: reaches around the chest with wide elbow and forward to grip broom
     if (boneMap['DEF-upper_armR']) {
-      boneMap['DEF-upper_armR'].rotation.x -= 0.40;
-      boneMap['DEF-upper_armR'].rotation.y += 0.40;
-      boneMap['DEF-upper_armR'].rotation.z += 0.80;
+      boneMap['DEF-upper_armR'].rotation.x += 0.04;
+      boneMap['DEF-upper_armR'].rotation.y += 0.57;
+      boneMap['DEF-upper_armR'].rotation.z += 0.92;
     }
     if (boneMap['DEF-forearmR']) {
-      boneMap['DEF-forearmR'].rotation.x += 0.40;
+      boneMap['DEF-forearmR'].rotation.x += 0.22;
+      boneMap['DEF-forearmR'].rotation.y -= 0.52;
+      boneMap['DEF-forearmR'].rotation.z += 0.68;
     }
     if (boneMap['DEF-handR']) {
       boneMap['DEF-handR'].rotation.y -= 0.25;
