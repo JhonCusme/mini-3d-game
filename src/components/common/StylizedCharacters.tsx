@@ -548,8 +548,8 @@ export const WitchBroomModel: React.FC<{ scale?: number }> = ({ scale = 1 }) => 
     const pivot = new Group();
     pivot.add(cloned);
     // Rotate so handle points forward (+Z) and bristles point backward (-Z)
-    // Dynamic flight pitch: tilt broom up in front (~26 degrees), matching the classic witch riding reference
-    pivot.rotation.x = Math.PI / 2 - 0.45;
+    // Dynamic flight pitch: gentle upward tilt (~12 degrees), matching the classic witch flight illustration
+    pivot.rotation.x = Math.PI / 2 - 0.22;
 
     const wrapper = new Group();
     wrapper.add(pivot);
@@ -610,42 +610,40 @@ export const WitchCharacterModel: React.FC<{
     if (boneMap['DEF-spine006']) {
       if (hairMesh) boneMap['DEF-spine006'].attach(hairMesh);
       if (hatMesh) boneMap['DEF-spine006'].attach(hatMesh);
-    }
-
-    // Spine tilted forward into flight along the broom handle
+    }    // Spine tilted forward into flight along the broom handle
     if (boneMap['DEF-spine002']) {
-      boneMap['DEF-spine002'].rotation.x += 0.28;
+      boneMap['DEF-spine002'].rotation.x += 0.38;
     }
     if (boneMap['DEF-spine003']) {
-      boneMap['DEF-spine003'].rotation.x += 0.22;
+      boneMap['DEF-spine003'].rotation.x += 0.28;
     }
 
-    // Left Arm: reaches around the chest with wide elbow and forward to grip broom
+    // Left Arm: reaches forward along left side of broom handle (uncrossed)
     if (boneMap['DEF-upper_armL']) {
       boneMap['DEF-upper_armL'].rotation.x -= 0.20;
-      boneMap['DEF-upper_armL'].rotation.y -= 0.58;
-      boneMap['DEF-upper_armL'].rotation.z -= 0.71;
+      boneMap['DEF-upper_armL'].rotation.y -= 0.45;
+      boneMap['DEF-upper_armL'].rotation.z -= 0.60;
     }
     if (boneMap['DEF-forearmL']) {
-      boneMap['DEF-forearmL'].rotation.x += 0.30;
-      boneMap['DEF-forearmL'].rotation.y += 0.36;
-      boneMap['DEF-forearmL'].rotation.z -= 0.75;
+      boneMap['DEF-forearmL'].rotation.x += 0.35;
+      boneMap['DEF-forearmL'].rotation.y += 0.20;
+      boneMap['DEF-forearmL'].rotation.z -= 0.25;
     }
     if (boneMap['DEF-handL']) {
       boneMap['DEF-handL'].rotation.y += 0.25;
       boneMap['DEF-handL'].rotation.z -= 0.20;
     }
 
-    // Right Arm: reaches around the chest with wide elbow and forward to grip broom
+    // Right Arm: reaches forward along right side of broom handle (uncrossed)
     if (boneMap['DEF-upper_armR']) {
       boneMap['DEF-upper_armR'].rotation.x += 0.04;
-      boneMap['DEF-upper_armR'].rotation.y += 0.57;
-      boneMap['DEF-upper_armR'].rotation.z += 0.92;
+      boneMap['DEF-upper_armR'].rotation.y += 0.45;
+      boneMap['DEF-upper_armR'].rotation.z += 0.75;
     }
     if (boneMap['DEF-forearmR']) {
-      boneMap['DEF-forearmR'].rotation.x += 0.22;
-      boneMap['DEF-forearmR'].rotation.y -= 0.52;
-      boneMap['DEF-forearmR'].rotation.z += 0.68;
+      boneMap['DEF-forearmR'].rotation.x += 0.30;
+      boneMap['DEF-forearmR'].rotation.y -= 0.20;
+      boneMap['DEF-forearmR'].rotation.z += 0.25;
     }
     if (boneMap['DEF-handR']) {
       boneMap['DEF-handR'].rotation.y -= 0.25;
@@ -663,20 +661,20 @@ export const WitchCharacterModel: React.FC<{
       }
     });
 
-    // Broom Riding Pose: thighs straddling the broom shaft, knees bent, feet hanging down
+    // Seated Broom-Riding Flight Pose: thighs straddling broom forward, knees bent ~90°, boots trailing
     if (boneMap['DEF-thighL']) {
-      boneMap['DEF-thighL'].rotation.x -= 0.70;
-      boneMap['DEF-thighL'].rotation.z -= 0.15;
+      boneMap['DEF-thighL'].rotation.x -= 1.15;
+      boneMap['DEF-thighL'].rotation.z -= 0.18;
     }
     if (boneMap['DEF-shinL']) {
-      boneMap['DEF-shinL'].rotation.x += 0.85;
+      boneMap['DEF-shinL'].rotation.x += 1.35;
     }
     if (boneMap['DEF-thighR']) {
-      boneMap['DEF-thighR'].rotation.x -= 0.70;
-      boneMap['DEF-thighR'].rotation.z += 0.15;
+      boneMap['DEF-thighR'].rotation.x -= 1.15;
+      boneMap['DEF-thighR'].rotation.z += 0.18;
     }
     if (boneMap['DEF-shinR']) {
-      boneMap['DEF-shinR'].rotation.x += 0.85;
+      boneMap['DEF-shinR'].rotation.x += 1.35;
     }
 
     const wrap = new Group();
@@ -784,7 +782,7 @@ export const MageModel: React.FC<CharacterProps> = ({
       {/* --- UNIFIED FLYING MOUNT: 3D WITCH SITTING COMFORTABLY ON HER 3D BROOM --- */}
       <group ref={flightMountRef} position={[0, 0.62, 0]}>
         {/* Realistic 3D Witch's Broom Mount: positioned right through her hands and under her seat */}
-        <group position={[0, 0.13, -0.02]}>
+        <group position={[0, 0.05, 0]}>
           <React.Suspense fallback={null}>
             <WitchBroomModel scale={0.92} />
           </React.Suspense>
