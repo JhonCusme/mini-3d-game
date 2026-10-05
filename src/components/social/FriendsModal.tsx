@@ -30,6 +30,16 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({ onClose, onStartFrie
 
     const meSnapshot = PvpManager.buildSnapshot(state, user?.id);
 
+    const isSelf = (p: { id: string; name?: string; snapshot?: VillageSnapshot }) => {
+        if (!p) return true;
+        if (p.id === state.playerId) return true;
+        if (user?.id && p.snapshot?.userId && p.snapshot.userId === user.id) return true;
+        const myName = (state.playerName || '').trim().toLowerCase();
+        const pName = (p.name || '').trim().toLowerCase();
+        if (myName && pName && myName === pName) return true;
+        return false;
+    };
+
     const showMsg = (msg: string) => {
         setStatusMsg(msg);
         setTimeout(() => setStatusMsg(null), 3000);
@@ -46,9 +56,9 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({ onClose, onStartFrie
             setRequests(rList);
             setSentIds(FriendsManager.getSentRequestIds(state.playerId));
 
-            // Load suggestions in background
-            FriendsManager.getSuggestedPlayers(state.playerId).then(sug => {
-                setSuggestedPlayers(sug);
+            // Load suggestions in background, strictly excluding self
+            FriendsManager.getSuggestedPlayers(meSnapshot).then(sug => {
+                setSuggestedPlayers(sug.filter(p => !isSelf(p)));
             });
         } finally {
             setLoading(false);
@@ -66,10 +76,11 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({ onClose, onStartFrie
         if (!q) return;
         setSearching(true);
         try {
-            const res = await FriendsManager.searchPlayers(q, state.playerId);
-            setSearchResults(res);
-            if (res.length === 0) {
-                showMsg('No se encontraron jugadores con ese nombre o ID');
+            const res = await FriendsManager.searchPlayers(q, meSnapshot);
+            const filtered = res.filter(p => !isSelf(p));
+            setSearchResults(filtered);
+            if (filtered.length === 0) {
+                showMsg('No se encontraron otros jugadores con ese nombre o ID');
             }
         } finally {
             setSearching(false);
@@ -539,12 +550,12 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({ onClose, onStartFrie
                     </form>
 
                     {/* Search Results */}
-                    {searchResults.length > 0 && (
+                    {searchResults.filter(p => !isSelf(p)).length > 0 && (
                         <div className="flex-col gap-2">
                             <span style={{ fontSize: '11px', color: 'var(--accent-gold)', fontWeight: 800, textTransform: 'uppercase' }}>
                                 Resultados de Búsqueda:
                             </span>
-                            {searchResults.map(p => {
+                            {searchResults.filter(p => !isSelf(p)).map(p => {
                                 const isFriend = friends.some(f => f.id === p.id);
                                 const isSent = sentIds.includes(p.id);
                                 const kConfig = getKingdomConfig(p.kingdom);
@@ -596,7 +607,7 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({ onClose, onStartFrie
                     )}
 
                     {/* Suggested Real Players (registered in Supabase database) */}
-                    {suggestedPlayers.length > 0 && (
+                    {suggestedPlayers.filter(p => !isSelf(p)).length > 0 && (
                         <div className="flex-col gap-2" style={{ marginTop: '8px' }}>
                             <div className="flex-row gap-1" style={{ alignItems: 'center' }}>
                                 <span style={{ fontSize: '12px', color: '#74b9ff', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
@@ -604,7 +615,7 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({ onClose, onStartFrie
                                 </span>
                             </div>
                             <div className="flex-col gap-2">
-                                {suggestedPlayers.map(p => {
+                                {suggestedPlayers.filter(p => !isSelf(p)).map(p => {
                                     const isFriend = friends.some(f => f.id === p.id);
                                     const isSent = sentIds.includes(p.id);
                                     const kConfig = getKingdomConfig(p.kingdom);

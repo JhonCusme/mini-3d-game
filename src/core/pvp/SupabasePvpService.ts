@@ -215,13 +215,13 @@ export class SupabasePvpService implements PvpService {
             const byName = await this.request<{ snapshot: VillageSnapshot }[]>(
                 `/villages?id=neq.${encodeURIComponent(excludeId)}&name=ilike.*${encodeURIComponent(clean)}*&select=snapshot&limit=15`
             );
-            const list = (byName || []).map(r => r.snapshot).filter(Boolean);
+            const list = (byName || []).map(r => r.snapshot).filter(s => Boolean(s && s.playerId && s.playerId !== excludeId));
             if (list.length > 0) return list;
 
             const byId = await this.request<{ snapshot: VillageSnapshot }[]>(
                 `/villages?id=eq.${encodeURIComponent(clean)}&select=snapshot&limit=1`
             );
-            return (byId || []).map(r => r.snapshot).filter(Boolean);
+            return (byId || []).map(r => r.snapshot).filter(s => Boolean(s && s.playerId && s.playerId !== excludeId));
         } catch (e) {
             console.warn('PvP: player search failed', e);
             return [];

@@ -289,35 +289,58 @@ export class FriendsManager {
     }
 
     /**
-     * Searches for registered players by name or ID.
+     * Searches for registered players by name or ID (never returns self).
      */
-    static async searchPlayers(query: string, mePlayerId: string): Promise<FriendInfo[]> {
+    static async searchPlayers(query: string, me: VillageSnapshot | string): Promise<FriendInfo[]> {
+        const meId = typeof me === 'string' ? me : me.playerId;
+        const meName = typeof me === 'string' ? '' : (me.name || '').trim().toLowerCase();
+        const meUserId = typeof me === 'string' ? '' : (me.userId || '');
+
         if (!pvpService.searchPlayers) return [];
-        const snaps = await pvpService.searchPlayers(query, mePlayerId);
-        return snaps.map(s => ({
-            id: s.playerId,
-            name: s.name,
-            avatar: s.avatar,
-            kingdom: s.kingdom,
-            level: s.level,
-            trophies: s.trophies,
-            onlineUntil: s.onlineUntil,
-            updatedAt: s.updatedAt,
-            snapshot: s,
-        }));
+        const snaps = await pvpService.searchPlayers(query, meId);
+        return snaps
+            .filter(s => {
+                if (!s || !s.playerId) return false;
+                if (s.playerId === meId) return false;
+                if (meUserId && s.userId && s.userId === meUserId) return false;
+                if (meName && s.name && s.name.trim().toLowerCase() === meName) return false;
+                return true;
+            })
+            .map(s => ({
+                id: s.playerId,
+                name: s.name,
+                avatar: s.avatar,
+                kingdom: s.kingdom,
+                level: s.level,
+                trophies: s.trophies,
+                onlineUntil: s.onlineUntil,
+                updatedAt: s.updatedAt,
+                snapshot: s,
+            }));
     }
 
     /**
-     * Gets suggested active real players to easily add them with 1 tap.
+     * Gets suggested active real players to easily add them with 1 tap (never returns self or existing friends).
      */
-    static async getSuggestedPlayers(mePlayerId: string): Promise<FriendInfo[]> {
+    static async getSuggestedPlayers(me: VillageSnapshot | string): Promise<FriendInfo[]> {
+        const meId = typeof me === 'string' ? me : me.playerId;
+        const meName = typeof me === 'string' ? '' : (me.name || '').trim().toLowerCase();
+        const meUserId = typeof me === 'string' ? '' : (me.userId || '');
+
         if (!pvpService.getRecentRealPlayers) return [];
-        const snaps = await pvpService.getRecentRealPlayers(mePlayerId, 12);
-        const myFriends = this.getLocalFriends(mePlayerId);
+        const snaps = await pvpService.getRecentRealPlayers(meId, 15);
+        const myFriends = this.getLocalFriends(meId);
         const friendIds = new Set(myFriends.map(f => f.id));
 
         return snaps
-            .filter(s => !friendIds.has(s.playerId) && s.playerId !== mePlayerId)
+            .filter(s => {
+                if (!s || !s.playerId) return false;
+                if (s.playerId === meId) return false;
+                if (friendIds.has(s.playerId)) return false;
+                if (meUserId && s.userId && s.userId === meUserId) return false;
+                if (meName && s.name && s.name.trim().toLowerCase() === meName) return false;
+                return true;
+            })
             .map(s => ({
                 id: s.playerId,
                 name: s.name,
