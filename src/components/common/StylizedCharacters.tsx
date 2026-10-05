@@ -738,6 +738,7 @@ export const WitchCharacterModel: React.FC<{
 };
 
 useGLTF.preload('/models/Bruja.glb');
+useGLTF.preload('/models/Escoba.glb');
 
 export const MageModel: React.FC<CharacterProps> = ({
   teamColor = '#7b4dff',
