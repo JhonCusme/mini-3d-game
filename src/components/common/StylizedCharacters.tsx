@@ -1465,7 +1465,7 @@ export const SkeletonModel: React.FC<CharacterProps> = ({
       {/* Necromantic Shadow Aura on Ground */}
       <mesh position={[0, 0.015, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.18, 0.34, 24]} />
-        <meshBasicMaterial color="#a29bfe" transparent opacity={0.35} />
+        <meshBasicMaterial color={teamColor} transparent opacity={0.35} />
       </mesh>
       <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[0.22, 24]} />

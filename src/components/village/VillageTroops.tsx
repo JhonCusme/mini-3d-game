@@ -25,6 +25,7 @@ const EMPTY_COUNTS: TroopCounts = {
   mages: 0,
   catapults: 0,
   healers: 0,
+  skeletons: 0,
 };
 
 // ---------------------------------------------------------------------------
@@ -169,6 +170,12 @@ const GUARD_PHRASES: Record<TroopId, string[]> = {
     '¡Tropas con salud y ánimo pleno!',
     '¡Luz sagrada sobre el reino!',
     '¡La salud de los soldados está asegurada!'
+  ],
+  skeletons: [
+    '¡Huesos listos para el combate!',
+    '¡Vigilando desde las sombras!',
+    '¡Los no-muertos no duermen!',
+    '¡Ningún enemigo escapará a nuestro enjambre!'
   ],
 };
 
@@ -671,6 +678,12 @@ const PRACTICE_PHRASES: Record<TroopId, string[]> = {
     '¡El ejército no caerá en batalla!',
     '¡Bendición de combate lista!',
     '¡Sanan las heridas de los valientes!'
+  ],
+  skeletons: [
+    '¡Chasquido de huesos y espadas!',
+    '¡Afilando espadas del inframundo!',
+    '¡Practicando el asalto en horda!',
+    '¡Resucitados para la gloria!'
   ],
 };
 
