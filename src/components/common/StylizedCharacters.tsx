@@ -1374,77 +1374,118 @@ export const SkeletonCharacterModel: React.FC<{
   }, [scene, scale]);
 
   useFrame(({ clock }) => {
-    const t = clock.elapsedTime * 9 + animOffset;
+    if (isAttacking || isPracticing) {
+      // Rapid fierce bone slash & stab attack
+      const slashT = clock.elapsedTime * 13 + animOffset;
+      const slash = Math.sin(slashT);
+      if (bones['DEF-upper_arm.01.R'] && baseRot['DEF-upper_arm.01.R']) {
+        bones['DEF-upper_arm.01.R'].rotation.x = baseRot['DEF-upper_arm.01.R'].x - 0.75 + slash * 0.85;
+        bones['DEF-upper_arm.01.R'].rotation.z = baseRot['DEF-upper_arm.01.R'].z + Math.cos(slashT) * 0.35;
+      }
+      if (bones['DEF-forearm.01.R'] && baseRot['DEF-forearm.01.R']) {
+        bones['DEF-forearm.01.R'].rotation.x = baseRot['DEF-forearm.01.R'].x + 0.45 + slash * 0.4;
+      }
+      if (bones['DEF-spine'] && baseRot['DEF-spine']) {
+        bones['DEF-spine'].rotation.y = baseRot['DEF-spine'].y + Math.sin(slashT) * 0.25;
+        bones['DEF-spine'].rotation.x = baseRot['DEF-spine'].x + 0.15;
+      }
+      if (bones['DEF-head'] && baseRot['DEF-head']) {
+        bones['DEF-head'].rotation.y = baseRot['DEF-head'].y + Math.sin(slashT) * 0.2;
+      }
+    } else if (isMoving) {
+      // Rapid, frantic undead sprint!
+      const sprintT = clock.elapsedTime * 11 + animOffset;
+      const legSwing = Math.sin(sprintT) * 0.85;
 
-    if (isMoving) {
-      // Rapid skeletal sprint
-      const legSwing = Math.sin(t) * 0.65;
       if (bones['DEF-thigh.01.L'] && baseRot['DEF-thigh.01.L']) {
         bones['DEF-thigh.01.L'].rotation.x = baseRot['DEF-thigh.01.L'].x + legSwing;
       }
       if (bones['DEF-shin.01.L'] && baseRot['DEF-shin.01.L']) {
-        bones['DEF-shin.01.L'].rotation.x = baseRot['DEF-shin.01.L'].x + Math.max(0, -legSwing * 0.6);
+        bones['DEF-shin.01.L'].rotation.x = baseRot['DEF-shin.01.L'].x + Math.max(0, -legSwing * 0.9);
       }
       if (bones['DEF-thigh.01.R'] && baseRot['DEF-thigh.01.R']) {
         bones['DEF-thigh.01.R'].rotation.x = baseRot['DEF-thigh.01.R'].x - legSwing;
       }
       if (bones['DEF-shin.01.R'] && baseRot['DEF-shin.01.R']) {
-        bones['DEF-shin.01.R'].rotation.x = baseRot['DEF-shin.01.R'].x + Math.max(0, legSwing * 0.6);
+        bones['DEF-shin.01.R'].rotation.x = baseRot['DEF-shin.01.R'].x + Math.max(0, legSwing * 0.9);
       }
 
-      // Torso aggressive running lean
+      // Torso leaning forward into an energetic sprint
       if (bones['DEF-spine'] && baseRot['DEF-spine']) {
-        bones['DEF-spine'].rotation.x = baseRot['DEF-spine'].x + 0.18 + Math.sin(t * 2) * 0.04;
+        bones['DEF-spine'].rotation.x = baseRot['DEF-spine'].x + 0.26 + Math.sin(sprintT * 2) * 0.05;
+        bones['DEF-spine'].rotation.z = baseRot['DEF-spine'].z + Math.sin(sprintT) * 0.08;
       }
       if (bones['DEF-hips'] && baseRot['DEF-hips']) {
-        bones['DEF-hips'].position.y = Math.sin(t * 2) * 0.025;
+        bones['DEF-hips'].position.y = Math.abs(Math.sin(sprintT)) * 0.05;
       }
 
-      // Arm running pump
+      // Arms pumping hard in rhythm
       if (bones['DEF-upper_arm.01.L'] && baseRot['DEF-upper_arm.01.L']) {
-        bones['DEF-upper_arm.01.L'].rotation.x = baseRot['DEF-upper_arm.01.L'].x - legSwing * 0.8;
+        bones['DEF-upper_arm.01.L'].rotation.x = baseRot['DEF-upper_arm.01.L'].x - legSwing * 0.95;
       }
-      if (!isAttacking && bones['DEF-upper_arm.01.R'] && baseRot['DEF-upper_arm.01.R']) {
-        bones['DEF-upper_arm.01.R'].rotation.x = baseRot['DEF-upper_arm.01.R'].x + legSwing * 0.8;
+      if (bones['DEF-upper_arm.01.R'] && baseRot['DEF-upper_arm.01.R']) {
+        bones['DEF-upper_arm.01.R'].rotation.x = baseRot['DEF-upper_arm.01.R'].x + legSwing * 0.95;
+      }
+
+      // Calavera / Head bobbing energetically while running
+      if (bones['DEF-head'] && baseRot['DEF-head']) {
+        bones['DEF-head'].rotation.y = baseRot['DEF-head'].y + Math.sin(sprintT * 0.5) * 0.25;
+        bones['DEF-head'].rotation.x = baseRot['DEF-head'].x + Math.sin(sprintT) * 0.12;
       }
     } else {
-      // Idle skeletal rattle & breath
-      const idleT = clock.elapsedTime * 2.5 + animOffset;
-      if (bones['DEF-thigh.01.L'] && baseRot['DEF-thigh.01.L']) bones['DEF-thigh.01.L'].rotation.x = baseRot['DEF-thigh.01.L'].x;
-      if (bones['DEF-shin.01.L'] && baseRot['DEF-shin.01.L']) bones['DEF-shin.01.L'].rotation.x = baseRot['DEF-shin.01.L'].x;
-      if (bones['DEF-thigh.01.R'] && baseRot['DEF-thigh.01.R']) bones['DEF-thigh.01.R'].rotation.x = baseRot['DEF-thigh.01.R'].x;
-      if (bones['DEF-shin.01.R'] && baseRot['DEF-shin.01.R']) bones['DEF-shin.01.R'].rotation.x = baseRot['DEF-shin.01.R'].x;
-      if (bones['DEF-spine'] && baseRot['DEF-spine']) {
-        bones['DEF-spine'].rotation.x = baseRot['DEF-spine'].x + Math.sin(idleT) * 0.025;
+      // 🎶 SPOOKY SKELETON DANCE / RHYTHMIC GROOVE (Baile animado de la calavera y esqueleto!)
+      const danceT = clock.elapsedTime * 4.2 + animOffset;
+
+      // 1. Calavera / Head dance: energetic tilting, grooving side to side and nodding!
+      if (bones['DEF-head'] && baseRot['DEF-head']) {
+        bones['DEF-head'].rotation.z = baseRot['DEF-head'].z + Math.sin(danceT) * 0.32; // Side-to-side groove tilt
+        bones['DEF-head'].rotation.y = baseRot['DEF-head'].y + Math.cos(danceT * 0.5) * 0.42; // Rhythmic turn
+        bones['DEF-head'].rotation.x = baseRot['DEF-head'].x + Math.abs(Math.sin(danceT * 2)) * 0.16; // Head bop / nod
       }
+
+      // 2. Pelvis / Hips: joyful vertical bounce & hip shake to the beat
       if (bones['DEF-hips'] && baseRot['DEF-hips']) {
-        bones['DEF-hips'].position.y = 0;
+        bones['DEF-hips'].position.y = Math.abs(Math.sin(danceT)) * 0.07;
+        bones['DEF-hips'].rotation.z = Math.sin(danceT) * 0.15;
       }
+
+      // 3. Spine / Ribcage: funky body wave
+      if (bones['DEF-spine'] && baseRot['DEF-spine']) {
+        bones['DEF-spine'].rotation.z = baseRot['DEF-spine'].z + Math.sin(danceT) * 0.16;
+        bones['DEF-spine'].rotation.x = baseRot['DEF-spine'].x + Math.sin(danceT * 2) * 0.09;
+      }
+
+      // 4. Stepping legs / Tap-dance in place
+      const step = Math.sin(danceT);
+      if (bones['DEF-thigh.01.L'] && baseRot['DEF-thigh.01.L']) {
+        bones['DEF-thigh.01.L'].rotation.x = baseRot['DEF-thigh.01.L'].x + step * 0.38;
+      }
+      if (bones['DEF-shin.01.L'] && baseRot['DEF-shin.01.L']) {
+        bones['DEF-shin.01.L'].rotation.x = baseRot['DEF-shin.01.L'].x + Math.max(0, -step * 0.50);
+      }
+      if (bones['DEF-thigh.01.R'] && baseRot['DEF-thigh.01.R']) {
+        bones['DEF-thigh.01.R'].rotation.x = baseRot['DEF-thigh.01.R'].x - step * 0.38;
+      }
+      if (bones['DEF-shin.01.R'] && baseRot['DEF-shin.01.R']) {
+        bones['DEF-shin.01.R'].rotation.x = baseRot['DEF-shin.01.R'].x + Math.max(0, step * 0.50);
+      }
+
+      // 5. Left Arm: raised dancing and waving to the rhythm
       if (bones['DEF-upper_arm.01.L'] && baseRot['DEF-upper_arm.01.L']) {
-        bones['DEF-upper_arm.01.L'].rotation.x = baseRot['DEF-upper_arm.01.L'].x + Math.sin(idleT) * 0.03;
+        bones['DEF-upper_arm.01.L'].rotation.z = baseRot['DEF-upper_arm.01.L'].z - 0.42 + Math.sin(danceT) * 0.32;
+        bones['DEF-upper_arm.01.L'].rotation.x = baseRot['DEF-upper_arm.01.L'].x + Math.cos(danceT) * 0.36;
       }
-      if (!isAttacking && !isPracticing && bones['DEF-upper_arm.01.R'] && baseRot['DEF-upper_arm.01.R']) {
-        bones['DEF-upper_arm.01.R'].rotation.x = baseRot['DEF-upper_arm.01.R'].x + Math.cos(idleT) * 0.03;
+      if (bones['DEF-forearm.01.L'] && baseRot['DEF-forearm.01.L']) {
+        bones['DEF-forearm.01.L'].rotation.x = baseRot['DEF-forearm.01.L'].x + 0.55 + Math.sin(danceT) * 0.28;
       }
-    }
 
-    // Head subtle twitch / curiosity
-    if (bones['DEF-head'] && baseRot['DEF-head']) {
-      const headT = clock.elapsedTime * 1.8 + animOffset;
-      bones['DEF-head'].rotation.y = baseRot['DEF-head'].y + Math.sin(headT) * 0.12;
-      bones['DEF-head'].rotation.z = baseRot['DEF-head'].z + Math.cos(headT * 1.3) * 0.05;
-    }
-
-    // Attack / practice slash animation
-    if (isAttacking || isPracticing) {
-      const slashT = clock.elapsedTime * 12 + animOffset;
-      const slash = Math.sin(slashT);
+      // 6. Right Arm (Sword): brandishing sword to the beat in a triumphant groove
       if (bones['DEF-upper_arm.01.R'] && baseRot['DEF-upper_arm.01.R']) {
-        bones['DEF-upper_arm.01.R'].rotation.x = baseRot['DEF-upper_arm.01.R'].x - 0.7 + slash * 0.8;
-        bones['DEF-upper_arm.01.R'].rotation.z = baseRot['DEF-upper_arm.01.R'].z + Math.cos(slashT) * 0.3;
+        bones['DEF-upper_arm.01.R'].rotation.z = baseRot['DEF-upper_arm.01.R'].z + 0.42 - Math.sin(danceT) * 0.32;
+        bones['DEF-upper_arm.01.R'].rotation.x = baseRot['DEF-upper_arm.01.R'].x - 0.45 + Math.sin(danceT) * 0.42;
       }
       if (bones['DEF-forearm.01.R'] && baseRot['DEF-forearm.01.R']) {
-        bones['DEF-forearm.01.R'].rotation.x = baseRot['DEF-forearm.01.R'].x + 0.4 + slash * 0.35;
+        bones['DEF-forearm.01.R'].rotation.x = baseRot['DEF-forearm.01.R'].x + 0.38 + Math.cos(danceT) * 0.32;
       }
     }
   });

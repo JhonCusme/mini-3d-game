@@ -84,7 +84,8 @@ const TROOP_META: Record<TroopId, TroopMeta> = {
 const Troop3DStage: React.FC<{
   troopId: TroopId;
   isAttacking: boolean;
-}> = ({ troopId, isAttacking }) => {
+  isMoving?: boolean;
+}> = ({ troopId, isAttacking, isMoving = false }) => {
   const meta = TROOP_META[troopId] || TROOP_META.mages;
 
   return (
@@ -113,7 +114,7 @@ const Troop3DStage: React.FC<{
         enablePan={false}
         minPolarAngle={Math.PI / 6}
         maxPolarAngle={Math.PI / 2.05}
-        autoRotate={!isAttacking}
+        autoRotate={!isAttacking && !isMoving}
         autoRotateSpeed={0.9}
         makeDefault
       />
@@ -139,7 +140,7 @@ const Troop3DStage: React.FC<{
           <group position={[0, 0, 0]}>
             <StylizedTroop
               type={troopId}
-              isMoving={false}
+              isMoving={isMoving}
               isAttacking={isAttacking}
               animOffset={0}
               scale={meta.modelScale}
@@ -155,7 +156,10 @@ export const TrainTroopsInspector: React.FC = () => {
   const { state, trainTroop } = useGame();
   // Default to 'mages' so the Bruja is immediately highlighted and visible!
   const [selectedTroop, setSelectedTroop] = useState<TroopId>('mages');
-  const [isAttacking, setIsAttacking] = useState<boolean>(false);
+  const [animMode, setAnimMode] = useState<'idle' | 'run' | 'attack'>('idle');
+
+  const isAttacking = animMode === 'attack';
+  const isMoving = animMode === 'run';
 
   const total = PvpManager.totalTroops(state);
   const max = UpgradeManager.getTroopCapacity(state);
@@ -177,11 +181,6 @@ export const TrainTroopsInspector: React.FC = () => {
     for (let i = 0; i < count; i++) {
       trainTroop(selectedTroop);
     }
-  };
-
-  const triggerAttackAnim = () => {
-    setIsAttacking(true);
-    setTimeout(() => setIsAttacking(false), 2400);
   };
 
   return (
@@ -375,32 +374,79 @@ export const TrainTroopsInspector: React.FC = () => {
             </span>
           </div>
 
-          {/* Test Attack Action Button */}
-          <button
-            onClick={triggerAttackAnim}
+          {/* Animation Mode Action Buttons (Baile, Correr, Atacar) */}
+          <div
             style={{
               position: 'absolute',
               top: '10px',
               right: '10px',
               zIndex: 10,
-              background: 'rgba(255, 255, 255, 0.1)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              color: '#fff',
-              fontSize: '11px',
-              fontWeight: 700,
-              padding: '5px 10px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              backdropFilter: 'blur(4px)',
-              transition: 'background 0.2s',
+              display: 'flex',
+              gap: '6px',
             }}
-            title="Ver animación de combate"
           >
-            ⚔️ Animar
-          </button>
+            <button
+              onClick={() => setAnimMode('idle')}
+              style={{
+                background: animMode === 'idle' ? 'rgba(108, 92, 231, 0.85)' : 'rgba(0, 0, 0, 0.6)',
+                border: animMode === 'idle' ? '1px solid #a29bfe' : '1px solid rgba(255, 255, 255, 0.15)',
+                color: '#fff',
+                fontSize: '11px',
+                fontWeight: 700,
+                padding: '5px 9px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                backdropFilter: 'blur(4px)',
+                transition: 'all 0.2s',
+              }}
+              title="Baile / Rattle"
+            >
+              🕺 Baile
+            </button>
+            <button
+              onClick={() => setAnimMode('run')}
+              style={{
+                background: animMode === 'run' ? 'rgba(0, 184, 148, 0.85)' : 'rgba(0, 0, 0, 0.6)',
+                border: animMode === 'run' ? '1px solid #55efc4' : '1px solid rgba(255, 255, 255, 0.15)',
+                color: '#fff',
+                fontSize: '11px',
+                fontWeight: 700,
+                padding: '5px 9px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                backdropFilter: 'blur(4px)',
+                transition: 'all 0.2s',
+              }}
+              title="Carrera ágil"
+            >
+              🏃 Correr
+            </button>
+            <button
+              onClick={() => setAnimMode('attack')}
+              style={{
+                background: animMode === 'attack' ? 'rgba(214, 48, 49, 0.85)' : 'rgba(0, 0, 0, 0.6)',
+                border: animMode === 'attack' ? '1px solid #ff7675' : '1px solid rgba(255, 255, 255, 0.15)',
+                color: '#fff',
+                fontSize: '11px',
+                fontWeight: 700,
+                padding: '5px 9px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                backdropFilter: 'blur(4px)',
+                transition: 'all 0.2s',
+              }}
+              title="Ataque con espada"
+            >
+              ⚔️ Atacar
+            </button>
+          </div>
 
           {/* The Live 3D Scene */}
-          <Troop3DStage troopId={selectedTroop} isAttacking={isAttacking} />
+          <Troop3DStage
+            troopId={selectedTroop}
+            isAttacking={isAttacking}
+            isMoving={isMoving}
+          />
 
           {/* 360° Drag & Rotate Helper Hint */}
           <div
