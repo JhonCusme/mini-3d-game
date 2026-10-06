@@ -7,6 +7,7 @@ export const TROOP_ICONS: Record<TroopId, string> = {
   mages: '🧙',
   catapults: '💣',
   healers: '💚',
+  skeletons: '💀',
 };
 
 export const AVATAR_IMAGES: Record<string, string> = {

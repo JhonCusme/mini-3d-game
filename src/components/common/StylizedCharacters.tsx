@@ -1,7 +1,7 @@
 import React, { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
-import { Group, type Mesh } from 'three';
+import { Group, type Mesh, BoxGeometry, CylinderGeometry, MeshStandardMaterial, Mesh as ThreeMesh } from 'three';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 import type { TroopId } from '../../core/GameState';
 import { ProceduralTextures } from '../../core/textures/ProceduralTextures';
@@ -1281,6 +1281,211 @@ export const HealerModel: React.FC<CharacterProps> = ({
 };
 
 // ===========================================================================
+// 7. SKELETON WARRIOR (Guerrero Esqueleto No-Muerto con Espada y Animación Dinámica)
+// ===========================================================================
+export const SkeletonCharacterModel: React.FC<{
+  scale?: number;
+  isMoving?: boolean;
+  isAttacking?: boolean;
+  isPracticing?: boolean;
+  animOffset?: number;
+}> = ({ scale = 1, isMoving = false, isAttacking = false, isPracticing = false, animOffset = 0 }) => {
+  const { scene } = useGLTF('/models/Esqueleto.glb');
+
+  const { wrapper, bones, baseRot } = useMemo(() => {
+    const cloned = SkeletonUtils.clone(scene);
+    const boneMap: Record<string, any> = {};
+
+    cloned.traverse((child) => {
+      if (child.name.startsWith('DEF-') || child.name === 'head' || child.name === 'neck' || child.name === 'hips') {
+        boneMap[child.name] = child;
+      }
+      if ((child as ThreeMesh).isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+        child.frustumCulled = false;
+        child.visible = true;
+        const mesh = child as ThreeMesh;
+        if (mesh.material) {
+          const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+          mats.forEach((mat: any) => {
+            mat.side = 2; // DoubleSide
+            mat.needsUpdate = true;
+          });
+        }
+      }
+    });
+
+    // Attach a stylized bone/iron gladius sword to the right hand
+    if (boneMap['DEF-hand.R']) {
+      const sword = new Group();
+      const blade = new ThreeMesh(
+        new BoxGeometry(0.045, 0.38, 0.012),
+        new MeshStandardMaterial({ color: '#8892b0', metalness: 0.85, roughness: 0.25 })
+      );
+      blade.position.y = 0.21;
+      blade.castShadow = true;
+      sword.add(blade);
+
+      const crossguard = new ThreeMesh(
+        new BoxGeometry(0.12, 0.025, 0.03),
+        new MeshStandardMaterial({ color: '#3b3b44', metalness: 0.9, roughness: 0.3 })
+      );
+      crossguard.position.y = 0.04;
+      sword.add(crossguard);
+
+      const hilt = new ThreeMesh(
+        new CylinderGeometry(0.014, 0.014, 0.11, 6),
+        new MeshStandardMaterial({ color: '#2c1e18', roughness: 0.9 })
+      );
+      hilt.position.y = -0.03;
+      sword.add(hilt);
+
+      sword.rotation.x = Math.PI / 2;
+      sword.rotation.z = -Math.PI / 4;
+      sword.position.set(0.02, 0.02, 0.02);
+      boneMap['DEF-hand.R'].add(sword);
+    }
+
+    // Centering & Scaling:
+    // In raw Esqueleto.glb:
+    // Center X is 0.462, Center Z is 0.182, Bottom Y is 0.027, Height is 1.833
+    // Offset cloned mesh so feet bottom center sits right on (0, 0, 0):
+    cloned.position.set(-0.462, -0.027, -0.182);
+
+    const pivot = new Group();
+    pivot.add(cloned);
+
+    const wrap = new Group();
+    wrap.add(pivot);
+
+    // Normalize height to ~1.08 units in game
+    const normScale = (1.08 / 1.833) * scale;
+    wrap.scale.setScalar(normScale);
+
+    // Cache baseline rotations
+    const baseRotations: Record<string, { x: number; y: number; z: number }> = {};
+    Object.keys(boneMap).forEach((k) => {
+      const r = boneMap[k].rotation;
+      baseRotations[k] = { x: r.x, y: r.y, z: r.z };
+    });
+
+    return { wrapper: wrap, bones: boneMap, baseRot: baseRotations };
+  }, [scene, scale]);
+
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime * 9 + animOffset;
+
+    if (isMoving) {
+      // Rapid skeletal sprint
+      const legSwing = Math.sin(t) * 0.65;
+      if (bones['DEF-thigh.01.L'] && baseRot['DEF-thigh.01.L']) {
+        bones['DEF-thigh.01.L'].rotation.x = baseRot['DEF-thigh.01.L'].x + legSwing;
+      }
+      if (bones['DEF-shin.01.L'] && baseRot['DEF-shin.01.L']) {
+        bones['DEF-shin.01.L'].rotation.x = baseRot['DEF-shin.01.L'].x + Math.max(0, -legSwing * 0.6);
+      }
+      if (bones['DEF-thigh.01.R'] && baseRot['DEF-thigh.01.R']) {
+        bones['DEF-thigh.01.R'].rotation.x = baseRot['DEF-thigh.01.R'].x - legSwing;
+      }
+      if (bones['DEF-shin.01.R'] && baseRot['DEF-shin.01.R']) {
+        bones['DEF-shin.01.R'].rotation.x = baseRot['DEF-shin.01.R'].x + Math.max(0, legSwing * 0.6);
+      }
+
+      // Torso aggressive running lean
+      if (bones['DEF-spine'] && baseRot['DEF-spine']) {
+        bones['DEF-spine'].rotation.x = baseRot['DEF-spine'].x + 0.18 + Math.sin(t * 2) * 0.04;
+      }
+      if (bones['DEF-hips'] && baseRot['DEF-hips']) {
+        bones['DEF-hips'].position.y = Math.sin(t * 2) * 0.025;
+      }
+
+      // Arm running pump
+      if (bones['DEF-upper_arm.01.L'] && baseRot['DEF-upper_arm.01.L']) {
+        bones['DEF-upper_arm.01.L'].rotation.x = baseRot['DEF-upper_arm.01.L'].x - legSwing * 0.8;
+      }
+      if (!isAttacking && bones['DEF-upper_arm.01.R'] && baseRot['DEF-upper_arm.01.R']) {
+        bones['DEF-upper_arm.01.R'].rotation.x = baseRot['DEF-upper_arm.01.R'].x + legSwing * 0.8;
+      }
+    } else {
+      // Idle skeletal rattle & breath
+      const idleT = clock.elapsedTime * 2.5 + animOffset;
+      if (bones['DEF-thigh.01.L'] && baseRot['DEF-thigh.01.L']) bones['DEF-thigh.01.L'].rotation.x = baseRot['DEF-thigh.01.L'].x;
+      if (bones['DEF-shin.01.L'] && baseRot['DEF-shin.01.L']) bones['DEF-shin.01.L'].rotation.x = baseRot['DEF-shin.01.L'].x;
+      if (bones['DEF-thigh.01.R'] && baseRot['DEF-thigh.01.R']) bones['DEF-thigh.01.R'].rotation.x = baseRot['DEF-thigh.01.R'].x;
+      if (bones['DEF-shin.01.R'] && baseRot['DEF-shin.01.R']) bones['DEF-shin.01.R'].rotation.x = baseRot['DEF-shin.01.R'].x;
+      if (bones['DEF-spine'] && baseRot['DEF-spine']) {
+        bones['DEF-spine'].rotation.x = baseRot['DEF-spine'].x + Math.sin(idleT) * 0.025;
+      }
+      if (bones['DEF-hips'] && baseRot['DEF-hips']) {
+        bones['DEF-hips'].position.y = 0;
+      }
+      if (bones['DEF-upper_arm.01.L'] && baseRot['DEF-upper_arm.01.L']) {
+        bones['DEF-upper_arm.01.L'].rotation.x = baseRot['DEF-upper_arm.01.L'].x + Math.sin(idleT) * 0.03;
+      }
+      if (!isAttacking && !isPracticing && bones['DEF-upper_arm.01.R'] && baseRot['DEF-upper_arm.01.R']) {
+        bones['DEF-upper_arm.01.R'].rotation.x = baseRot['DEF-upper_arm.01.R'].x + Math.cos(idleT) * 0.03;
+      }
+    }
+
+    // Head subtle twitch / curiosity
+    if (bones['DEF-head'] && baseRot['DEF-head']) {
+      const headT = clock.elapsedTime * 1.8 + animOffset;
+      bones['DEF-head'].rotation.y = baseRot['DEF-head'].y + Math.sin(headT) * 0.12;
+      bones['DEF-head'].rotation.z = baseRot['DEF-head'].z + Math.cos(headT * 1.3) * 0.05;
+    }
+
+    // Attack / practice slash animation
+    if (isAttacking || isPracticing) {
+      const slashT = clock.elapsedTime * 12 + animOffset;
+      const slash = Math.sin(slashT);
+      if (bones['DEF-upper_arm.01.R'] && baseRot['DEF-upper_arm.01.R']) {
+        bones['DEF-upper_arm.01.R'].rotation.x = baseRot['DEF-upper_arm.01.R'].x - 0.7 + slash * 0.8;
+        bones['DEF-upper_arm.01.R'].rotation.z = baseRot['DEF-upper_arm.01.R'].z + Math.cos(slashT) * 0.3;
+      }
+      if (bones['DEF-forearm.01.R'] && baseRot['DEF-forearm.01.R']) {
+        bones['DEF-forearm.01.R'].rotation.x = baseRot['DEF-forearm.01.R'].x + 0.4 + slash * 0.35;
+      }
+    }
+  });
+
+  return <primitive object={wrapper} />;
+};
+
+export const SkeletonModel: React.FC<CharacterProps> = ({
+  teamColor = '#a29bfe',
+  isMoving = false,
+  isAttacking = false,
+  isPracticing = false,
+  animOffset = 0,
+  scale = 1,
+}) => {
+  return (
+    <group>
+      {/* Necromantic Shadow Aura on Ground */}
+      <mesh position={[0, 0.015, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.18, 0.34, 24]} />
+        <meshBasicMaterial color="#a29bfe" transparent opacity={0.35} />
+      </mesh>
+      <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[0.22, 24]} />
+        <meshBasicMaterial color="#2d132c" transparent opacity={0.4} />
+      </mesh>
+
+      <SkeletonCharacterModel
+        scale={scale}
+        isMoving={isMoving}
+        isAttacking={isAttacking}
+        isPracticing={isPracticing}
+        animOffset={animOffset}
+      />
+    </group>
+  );
+};
+
+useGLTF.preload('/models/Esqueleto.glb');
+
+// ===========================================================================
 // MAIN UNIFIED TROOP COMPONENT
 // ===========================================================================
 export const StylizedTroop: React.FC<{
@@ -1355,6 +1560,17 @@ export const StylizedTroop: React.FC<{
       return (
         <HealerModel
           teamColor={teamColor}
+          isAttacking={isAttacking}
+          isPracticing={isPracticing}
+          animOffset={animOffset}
+          scale={scale}
+        />
+      );
+    case 'skeletons':
+      return (
+        <SkeletonModel
+          teamColor={teamColor}
+          isMoving={isMoving}
           isAttacking={isAttacking}
           isPracticing={isPracticing}
           animOffset={animOffset}

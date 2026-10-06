@@ -18,6 +18,7 @@ export const UNIT_STATS: Record<TroopId, { hp: number; dps: number; speed: numbe
     mages: { hp: 45, dps: 50, speed: 1.4, range: 3, flying: true },
     catapults: { hp: 160, dps: 90, speed: 0.8, range: 5.5, siege: true },
     healers: { hp: 80, dps: 0, speed: 1.5, range: 3, healer: true },
+    skeletons: { hp: 35, dps: 18, speed: 2.1, range: 0.7 },
 };
 
 export const BATTLE_SECONDS = 120;
@@ -55,6 +56,7 @@ export interface SimUnit {
     targetId: number;
     heading: number;
     buffUntil: number;
+    summonTimer?: number;
 }
 
 export interface SimProjectile {
@@ -536,6 +538,17 @@ export class AttackSim {
         if (u.isHero) this.heroHp = Math.max(0, u.hp);
         if (u.hp <= 0) {
             u.dead = true;
+            if (u.type === 'mages') {
+                // Death rattle: Witch summons 3 skeletons upon falling
+                for (let i = 0; i < 3; i++) {
+                    const a = (i / 3) * Math.PI * 2;
+                    const sx = u.x + Math.cos(a) * 0.7;
+                    const sz = u.z + Math.sin(a) * 0.7;
+                    this.spawn(u.side, 'skeletons', sx, sz);
+                    this.addEffect('shadow', sx, sz, 0.7);
+                }
+                this.addFloatingText('💀 ¡Último Aliento!', u.x, u.z, '#a29bfe', 1.1, 1.6);
+            }
             if (u.isHero) {
                 this.heroDied = true;
                 this.heroHp = 0;
@@ -627,6 +640,28 @@ export class AttackSim {
             }
             if (this.army.kingdom === 'emerald') {
                 speedMult *= 1.10;
+            }
+        }
+
+        // Witch (mages): Periodically summon 3 skeletons around her in dark necromantic circles
+        if (u.type === 'mages' && !u.dead) {
+            if (u.summonTimer === undefined) {
+                u.summonTimer = 1.0; // First summon 1s after appearing
+            }
+            u.summonTimer -= dt;
+            if (u.summonTimer <= 0) {
+                u.summonTimer = 5.0; // Summon every 5 seconds
+                const summonCount = 3;
+                for (let i = 0; i < summonCount; i++) {
+                    const angle = (i / summonCount) * Math.PI * 2 + (this.rng() * 0.4 - 0.2);
+                    const dist = 0.8 + this.rng() * 0.4;
+                    const sx = u.x + Math.cos(angle) * dist;
+                    const sz = u.z + Math.sin(angle) * dist;
+                    this.spawn(u.side, 'skeletons', sx, sz);
+                    this.addEffect('shadow', sx, sz, 0.7);
+                }
+                this.addFloatingText('💀 ¡Invocación!', u.x, u.z, '#b48cff', 1.15, 1.8);
+                AudioManager.playMagic();
             }
         }
 
