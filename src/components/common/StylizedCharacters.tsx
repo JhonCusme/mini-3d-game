@@ -1297,7 +1297,7 @@ export const SkeletonCharacterModel: React.FC<{
     const boneMap: Record<string, any> = {};
 
     cloned.traverse((child) => {
-      if (child.name.startsWith('DEF-') || child.name === 'head' || child.name === 'neck' || child.name === 'hips') {
+      if ((child as any).isBone || child.name.startsWith('DEF-') || child.name.startsWith('ORG-') || child.name.startsWith('MCH-') || child.name === 'head' || child.name === 'neck' || child.name === 'hips') {
         boneMap[child.name] = child;
       }
       if ((child as ThreeMesh).isMesh) {
@@ -1317,7 +1317,8 @@ export const SkeletonCharacterModel: React.FC<{
     });
 
     // Attach a stylized bone/iron gladius sword to the right hand
-    if (boneMap['DEF-hand.R']) {
+    const swordHand = boneMap['DEF-hand.R'] || boneMap['ORG-hand.R'];
+    if (swordHand) {
       const sword = new Group();
       const blade = new ThreeMesh(
         new BoxGeometry(0.045, 0.38, 0.012),
@@ -1344,7 +1345,7 @@ export const SkeletonCharacterModel: React.FC<{
       sword.rotation.x = Math.PI / 2;
       sword.rotation.z = -Math.PI / 4;
       sword.position.set(0.02, 0.02, 0.02);
-      boneMap['DEF-hand.R'].add(sword);
+      swordHand.add(sword);
     }
 
     // Centering & Scaling:
@@ -1374,119 +1375,145 @@ export const SkeletonCharacterModel: React.FC<{
   }, [scene, scale]);
 
   useFrame(({ clock }) => {
+    const rotX = (name: string, delta: number) => {
+      const b = bones[name];
+      const r = baseRot[name];
+      if (b && r) b.rotation.x = r.x + delta;
+    };
+    const rotY = (name: string, delta: number) => {
+      const b = bones[name];
+      const r = baseRot[name];
+      if (b && r) b.rotation.y = r.y + delta;
+    };
+    const rotZ = (name: string, delta: number) => {
+      const b = bones[name];
+      const r = baseRot[name];
+      if (b && r) b.rotation.z = r.z + delta;
+    };
+
     if (isAttacking || isPracticing) {
       // Rapid fierce bone slash & stab attack
       const slashT = clock.elapsedTime * 13 + animOffset;
       const slash = Math.sin(slashT);
-      if (bones['DEF-upper_arm.01.R'] && baseRot['DEF-upper_arm.01.R']) {
-        bones['DEF-upper_arm.01.R'].rotation.x = baseRot['DEF-upper_arm.01.R'].x - 0.75 + slash * 0.85;
-        bones['DEF-upper_arm.01.R'].rotation.z = baseRot['DEF-upper_arm.01.R'].z + Math.cos(slashT) * 0.35;
-      }
-      if (bones['DEF-forearm.01.R'] && baseRot['DEF-forearm.01.R']) {
-        bones['DEF-forearm.01.R'].rotation.x = baseRot['DEF-forearm.01.R'].x + 0.45 + slash * 0.4;
-      }
-      if (bones['DEF-spine'] && baseRot['DEF-spine']) {
-        bones['DEF-spine'].rotation.y = baseRot['DEF-spine'].y + Math.sin(slashT) * 0.25;
-        bones['DEF-spine'].rotation.x = baseRot['DEF-spine'].x + 0.15;
-      }
-      if (bones['DEF-head'] && baseRot['DEF-head']) {
-        bones['DEF-head'].rotation.y = baseRot['DEF-head'].y + Math.sin(slashT) * 0.2;
-      }
+      rotX('ORG-upper_arm.R', -0.65 + slash * 0.75);
+      rotX('DEF-upper_arm.02.R', -0.65 + slash * 0.75);
+      rotX('DEF-upper_arm.01.R', -0.65 + slash * 0.75);
+      rotZ('ORG-upper_arm.R', Math.cos(slashT) * 0.3);
+      rotZ('DEF-upper_arm.02.R', Math.cos(slashT) * 0.3);
+
+      rotX('ORG-forearm.R', 0.45 + slash * 0.4);
+      rotX('DEF-forearm.01.R', 0.45 + slash * 0.4);
+
+      rotY('DEF-spine', Math.sin(slashT) * 0.25);
+      rotX('DEF-spine', 0.15);
+      rotY('DEF-head', Math.sin(slashT) * 0.2);
+
+      // Attack stance legs
+      rotX('ORG-thigh.L', 0.25);
+      rotX('DEF-thigh.02.L', 0.25);
+      rotX('ORG-shin.L', 0.2);
+      rotX('DEF-shin.02.L', 0.2);
+      rotX('ORG-thigh.R', -0.3);
+      rotX('DEF-thigh.02.R', -0.3);
     } else if (isMoving) {
-      // Rapid, frantic undead sprint!
+      // Rapid, frantic undead sprint with high knee kicking!
       const sprintT = clock.elapsedTime * 11 + animOffset;
       const legSwing = Math.sin(sprintT) * 0.85;
 
-      if (bones['DEF-thigh.01.L'] && baseRot['DEF-thigh.01.L']) {
-        bones['DEF-thigh.01.L'].rotation.x = baseRot['DEF-thigh.01.L'].x + legSwing;
-      }
-      if (bones['DEF-shin.01.L'] && baseRot['DEF-shin.01.L']) {
-        bones['DEF-shin.01.L'].rotation.x = baseRot['DEF-shin.01.L'].x + Math.max(0, -legSwing * 0.9);
-      }
-      if (bones['DEF-thigh.01.R'] && baseRot['DEF-thigh.01.R']) {
-        bones['DEF-thigh.01.R'].rotation.x = baseRot['DEF-thigh.01.R'].x - legSwing;
-      }
-      if (bones['DEF-shin.01.R'] && baseRot['DEF-shin.01.R']) {
-        bones['DEF-shin.01.R'].rotation.x = baseRot['DEF-shin.01.R'].x + Math.max(0, legSwing * 0.9);
-      }
+      // Left Leg full FK & deform swing
+      rotX('ORG-thigh.L', legSwing);
+      rotX('DEF-thigh.02.L', legSwing * 0.4);
+      rotX('DEF-thigh.01.L', legSwing * 0.4);
+      rotX('ORG-shin.L', Math.max(0, -legSwing * 1.05));
+      rotX('DEF-shin.02.L', Math.max(0, -legSwing * 0.4));
+      rotX('DEF-shin.01.L', Math.max(0, -legSwing * 0.4));
+
+      // Right Leg full FK & deform swing
+      rotX('ORG-thigh.R', -legSwing);
+      rotX('DEF-thigh.02.R', -legSwing * 0.4);
+      rotX('DEF-thigh.01.R', -legSwing * 0.4);
+      rotX('ORG-shin.R', Math.max(0, legSwing * 1.05));
+      rotX('DEF-shin.02.R', Math.max(0, legSwing * 0.4));
+      rotX('DEF-shin.01.R', Math.max(0, legSwing * 0.4));
 
       // Torso leaning forward into an energetic sprint
-      if (bones['DEF-spine'] && baseRot['DEF-spine']) {
-        bones['DEF-spine'].rotation.x = baseRot['DEF-spine'].x + 0.26 + Math.sin(sprintT * 2) * 0.05;
-        bones['DEF-spine'].rotation.z = baseRot['DEF-spine'].z + Math.sin(sprintT) * 0.08;
-      }
+      rotX('DEF-spine', 0.26 + Math.sin(sprintT * 2) * 0.05);
+      rotZ('DEF-spine', Math.sin(sprintT) * 0.08);
+
       if (bones['DEF-hips'] && baseRot['DEF-hips']) {
         bones['DEF-hips'].position.y = Math.abs(Math.sin(sprintT)) * 0.05;
       }
+      if (bones['ORG-hips'] && baseRot['ORG-hips']) {
+        bones['ORG-hips'].position.y = Math.abs(Math.sin(sprintT)) * 0.05;
+      }
 
       // Arms pumping hard in rhythm
-      if (bones['DEF-upper_arm.01.L'] && baseRot['DEF-upper_arm.01.L']) {
-        bones['DEF-upper_arm.01.L'].rotation.x = baseRot['DEF-upper_arm.01.L'].x - legSwing * 0.95;
-      }
-      if (bones['DEF-upper_arm.01.R'] && baseRot['DEF-upper_arm.01.R']) {
-        bones['DEF-upper_arm.01.R'].rotation.x = baseRot['DEF-upper_arm.01.R'].x + legSwing * 0.95;
-      }
+      rotX('ORG-upper_arm.L', -legSwing * 0.95);
+      rotX('DEF-upper_arm.02.L', -legSwing * 0.95);
+      rotX('DEF-upper_arm.01.L', -legSwing * 0.95);
+      rotX('ORG-upper_arm.R', legSwing * 0.95);
+      rotX('DEF-upper_arm.02.R', legSwing * 0.95);
+      rotX('DEF-upper_arm.01.R', legSwing * 0.95);
 
       // Calavera / Head bobbing energetically while running
-      if (bones['DEF-head'] && baseRot['DEF-head']) {
-        bones['DEF-head'].rotation.y = baseRot['DEF-head'].y + Math.sin(sprintT * 0.5) * 0.25;
-        bones['DEF-head'].rotation.x = baseRot['DEF-head'].x + Math.sin(sprintT) * 0.12;
-      }
+      rotY('DEF-head', Math.sin(sprintT * 0.5) * 0.25);
+      rotX('DEF-head', Math.sin(sprintT) * 0.12);
     } else {
-      // 🎶 SPOOKY SKELETON DANCE / RHYTHMIC GROOVE (Baile animado de la calavera y esqueleto!)
+      // 🎶 SPOOKY SKELETON DANCE / RHYTHMIC GROOVE (Baile animado con zapateo de piernas!)
       const danceT = clock.elapsedTime * 4.2 + animOffset;
 
       // 1. Calavera / Head dance: energetic tilting, grooving side to side and nodding!
-      if (bones['DEF-head'] && baseRot['DEF-head']) {
-        bones['DEF-head'].rotation.z = baseRot['DEF-head'].z + Math.sin(danceT) * 0.32; // Side-to-side groove tilt
-        bones['DEF-head'].rotation.y = baseRot['DEF-head'].y + Math.cos(danceT * 0.5) * 0.42; // Rhythmic turn
-        bones['DEF-head'].rotation.x = baseRot['DEF-head'].x + Math.abs(Math.sin(danceT * 2)) * 0.16; // Head bop / nod
-      }
+      rotZ('DEF-head', Math.sin(danceT) * 0.32); // Side-to-side groove tilt
+      rotY('DEF-head', Math.cos(danceT * 0.5) * 0.42); // Rhythmic turn
+      rotX('DEF-head', Math.abs(Math.sin(danceT * 2)) * 0.16); // Head bop / nod
 
       // 2. Pelvis / Hips: joyful vertical bounce & hip shake to the beat
       if (bones['DEF-hips'] && baseRot['DEF-hips']) {
         bones['DEF-hips'].position.y = Math.abs(Math.sin(danceT)) * 0.07;
         bones['DEF-hips'].rotation.z = Math.sin(danceT) * 0.15;
       }
+      if (bones['ORG-hips'] && baseRot['ORG-hips']) {
+        bones['ORG-hips'].position.y = Math.abs(Math.sin(danceT)) * 0.07;
+        bones['ORG-hips'].rotation.z = Math.sin(danceT) * 0.15;
+      }
 
       // 3. Spine / Ribcage: funky body wave
-      if (bones['DEF-spine'] && baseRot['DEF-spine']) {
-        bones['DEF-spine'].rotation.z = baseRot['DEF-spine'].z + Math.sin(danceT) * 0.16;
-        bones['DEF-spine'].rotation.x = baseRot['DEF-spine'].x + Math.sin(danceT * 2) * 0.09;
-      }
+      rotZ('DEF-spine', Math.sin(danceT) * 0.16);
+      rotX('DEF-spine', Math.sin(danceT * 2) * 0.09);
 
-      // 4. Stepping legs / Tap-dance in place
+      // 4. LEGS TAP-DANCE / STEPPING IN PLACE (Movimiento visible y continuo de piernas!)
       const step = Math.sin(danceT);
-      if (bones['DEF-thigh.01.L'] && baseRot['DEF-thigh.01.L']) {
-        bones['DEF-thigh.01.L'].rotation.x = baseRot['DEF-thigh.01.L'].x + step * 0.38;
-      }
-      if (bones['DEF-shin.01.L'] && baseRot['DEF-shin.01.L']) {
-        bones['DEF-shin.01.L'].rotation.x = baseRot['DEF-shin.01.L'].x + Math.max(0, -step * 0.50);
-      }
-      if (bones['DEF-thigh.01.R'] && baseRot['DEF-thigh.01.R']) {
-        bones['DEF-thigh.01.R'].rotation.x = baseRot['DEF-thigh.01.R'].x - step * 0.38;
-      }
-      if (bones['DEF-shin.01.R'] && baseRot['DEF-shin.01.R']) {
-        bones['DEF-shin.01.R'].rotation.x = baseRot['DEF-shin.01.R'].x + Math.max(0, step * 0.50);
-      }
+      // Left leg tap
+      rotX('ORG-thigh.L', step * 0.48);
+      rotX('DEF-thigh.02.L', step * 0.2);
+      rotX('DEF-thigh.01.L', step * 0.2);
+      rotX('ORG-shin.L', Math.max(0, -step * 0.65));
+      rotX('DEF-shin.02.L', Math.max(0, -step * 0.25));
+      rotX('DEF-shin.01.L', Math.max(0, -step * 0.25));
+
+      // Right leg tap
+      rotX('ORG-thigh.R', -step * 0.48);
+      rotX('DEF-thigh.02.R', -step * 0.2);
+      rotX('DEF-thigh.01.R', -step * 0.2);
+      rotX('ORG-shin.R', Math.max(0, step * 0.65));
+      rotX('DEF-shin.02.R', Math.max(0, step * 0.25));
+      rotX('DEF-shin.01.R', Math.max(0, step * 0.25));
 
       // 5. Left Arm: raised dancing and waving to the rhythm
-      if (bones['DEF-upper_arm.01.L'] && baseRot['DEF-upper_arm.01.L']) {
-        bones['DEF-upper_arm.01.L'].rotation.z = baseRot['DEF-upper_arm.01.L'].z - 0.42 + Math.sin(danceT) * 0.32;
-        bones['DEF-upper_arm.01.L'].rotation.x = baseRot['DEF-upper_arm.01.L'].x + Math.cos(danceT) * 0.36;
-      }
-      if (bones['DEF-forearm.01.L'] && baseRot['DEF-forearm.01.L']) {
-        bones['DEF-forearm.01.L'].rotation.x = baseRot['DEF-forearm.01.L'].x + 0.55 + Math.sin(danceT) * 0.28;
-      }
+      rotZ('ORG-upper_arm.L', -0.42 + Math.sin(danceT) * 0.32);
+      rotZ('DEF-upper_arm.02.L', -0.42 + Math.sin(danceT) * 0.32);
+      rotX('ORG-upper_arm.L', Math.cos(danceT) * 0.36);
+      rotX('DEF-upper_arm.02.L', Math.cos(danceT) * 0.36);
+      rotX('ORG-forearm.L', 0.55 + Math.sin(danceT) * 0.28);
+      rotX('DEF-forearm.01.L', 0.55 + Math.sin(danceT) * 0.28);
 
       // 6. Right Arm (Sword): brandishing sword to the beat in a triumphant groove
-      if (bones['DEF-upper_arm.01.R'] && baseRot['DEF-upper_arm.01.R']) {
-        bones['DEF-upper_arm.01.R'].rotation.z = baseRot['DEF-upper_arm.01.R'].z + 0.42 - Math.sin(danceT) * 0.32;
-        bones['DEF-upper_arm.01.R'].rotation.x = baseRot['DEF-upper_arm.01.R'].x - 0.45 + Math.sin(danceT) * 0.42;
-      }
-      if (bones['DEF-forearm.01.R'] && baseRot['DEF-forearm.01.R']) {
-        bones['DEF-forearm.01.R'].rotation.x = baseRot['DEF-forearm.01.R'].x + 0.38 + Math.cos(danceT) * 0.32;
-      }
+      rotZ('ORG-upper_arm.R', 0.42 - Math.sin(danceT) * 0.32);
+      rotZ('DEF-upper_arm.02.R', 0.42 - Math.sin(danceT) * 0.32);
+      rotX('ORG-upper_arm.R', -0.45 + Math.sin(danceT) * 0.42);
+      rotX('DEF-upper_arm.02.R', -0.45 + Math.sin(danceT) * 0.42);
+      rotX('ORG-forearm.R', 0.38 + Math.cos(danceT) * 0.32);
+      rotX('DEF-forearm.01.R', 0.38 + Math.cos(danceT) * 0.32);
     }
   });
 
