@@ -151,7 +151,7 @@ export const UnitActor: React.FC<{ u: SimUnit }> = ({ u }) => {
 
   const isAttacking = u.targetKind !== null && u.cooldown > 0;
   const isMoving = !u.dead && !isAttacking;
-  const scale = u.type === 'catapults' || u.type === 'cavalry' ? 1.35 : 1.25;
+  const scale = u.type === 'skeletons' ? 0.85 : (u.type === 'catapults' || u.type === 'cavalry' ? 1.35 : 1.25);
 
   return (
     <group ref={ref}>

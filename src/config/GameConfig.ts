@@ -125,7 +125,7 @@ export const GameConfig = {
         mages: { id: 'mages', name: 'Bruja', cost: 100, power: 15, hp: 5, unlockTerritory: 5, unlockBarracksLevel: 4 },
         catapults: { id: 'catapults', name: 'Catapulta', cost: 250, power: 40, hp: 30, unlockTerritory: 7, unlockBarracksLevel: 5 },
         healers: { id: 'healers', name: 'Curandera', cost: 150, power: 2, hp: 15, unlockTerritory: 9, unlockBarracksLevel: 6 },
-        skeletons: { id: 'skeletons', name: 'Esqueleto', cost: 15, power: 2, hp: 6, unlockTerritory: 2, unlockBarracksLevel: 2 }
+        skeletons: { id: 'skeletons', name: 'Esqueletos', cost: 5, power: 2, hp: 6, unlockTerritory: 0, unlockBarracksLevel: 1 }
     },
 
     // Quests

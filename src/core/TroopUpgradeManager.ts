@@ -29,7 +29,7 @@ const TROOP_UPGRADE_CONFIG: Record<TroopId, { baseCost: number; baseHp: number; 
     mages: { baseCost: 650, baseHp: 45, baseDps: 50, role: 'Unidad voladora con daño de área' },
     catapults: { baseCost: 1000, baseHp: 160, baseDps: 90, role: 'Asedio destructivo contra murallas' },
     healers: { baseCost: 800, baseHp: 80, baseDps: 25, role: 'Sana y acompaña a las tropas aliadas' },
-    skeletons: { baseCost: 180, baseHp: 35, baseDps: 18, role: 'Enjambre ágil cuerpo a cuerpo' },
+    skeletons: { baseCost: 120, baseHp: 30, baseDps: 18, role: 'Horda ágil de pequeños esqueletos' },
 };
 
 const RANK_TITLES = ['Recluta', 'Veterano', 'Élite', 'Campeón', 'Maestro', 'Gran Mariscal', 'Mítico'];

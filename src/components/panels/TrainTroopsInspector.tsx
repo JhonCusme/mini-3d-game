@@ -71,12 +71,12 @@ const TROOP_META: Record<TroopId, TroopMeta> = {
     cameraY: 0.65,
   },
   skeletons: {
-    role: 'Enjambre Ágil Cuerpo a Cuerpo',
-    targetType: 'Terrestre (Cuerpo a cuerpo)',
+    role: 'Horda Ágil de Esqueletos',
+    targetType: 'Terrestre (Cuerpo a cuerpo en enjambre)',
     speed: 'Muy Rápida (1.5x)',
-    description: 'Guerrero esqueleto no-muerto resucitado de las catacumbas ancestrales. Aunque frágil en solitario, ataca sin piedad con velocidad implacable y abruma al enemigo en masa.',
-    modelScale: 1.05,
-    cameraY: 0.55,
+    description: 'Enjambre de ágiles guerreros no-muertos resucitados de las catacumbas. Aunque frágiles individualmente, avanzan en horda implacable y abruman a las defensas enemigas con ataques masivos.',
+    modelScale: 1.15,
+    cameraY: 0.48,
   },
 };
 

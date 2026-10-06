@@ -1348,10 +1348,10 @@ export const SkeletonCharacterModel: React.FC<{
     }
 
     // Centering & Scaling:
-    // In raw Esqueleto.glb:
-    // Center X is 0.462, Center Z is 0.182, Bottom Y is 0.027, Height is 1.833
+    // With complete mirrored Esqueleto.glb:
+    // X is symmetrically centered [-0.924, 0.924], Center Z is 0.182, Bottom Y is 0.027, Height is 1.833
     // Offset cloned mesh so feet bottom center sits right on (0, 0, 0):
-    cloned.position.set(-0.462, -0.027, -0.182);
+    cloned.position.set(0, -0.027, -0.182);
 
     const pivot = new Group();
     pivot.add(cloned);
@@ -1460,25 +1460,53 @@ export const SkeletonModel: React.FC<CharacterProps> = ({
   animOffset = 0,
   scale = 1,
 }) => {
+  // Swarm scale for little skeletons (Clash Royale Skeleton Army style)
+  const swarmScale = scale * 0.72;
+
   return (
     <group>
       {/* Necromantic Shadow Aura on Ground */}
       <mesh position={[0, 0.015, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.18, 0.34, 24]} />
+        <ringGeometry args={[0.26, 0.50, 28]} />
         <meshBasicMaterial color={teamColor} transparent opacity={0.35} />
       </mesh>
       <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[0.22, 24]} />
+        <circleGeometry args={[0.40, 28]} />
         <meshBasicMaterial color="#2d132c" transparent opacity={0.4} />
       </mesh>
 
-      <SkeletonCharacterModel
-        scale={scale}
-        isMoving={isMoving}
-        isAttacking={isAttacking}
-        isPracticing={isPracticing}
-        animOffset={animOffset}
-      />
+      {/* Leader Small Skeleton (Front Center) */}
+      <group position={[0, 0, 0.12]}>
+        <SkeletonCharacterModel
+          scale={swarmScale * 1.05}
+          isMoving={isMoving}
+          isAttacking={isAttacking}
+          isPracticing={isPracticing}
+          animOffset={animOffset}
+        />
+      </group>
+
+      {/* Flank Left Small Skeleton */}
+      <group position={[-0.24, 0, -0.14]}>
+        <SkeletonCharacterModel
+          scale={swarmScale * 0.95}
+          isMoving={isMoving}
+          isAttacking={isAttacking}
+          isPracticing={isPracticing}
+          animOffset={animOffset + 0.9}
+        />
+      </group>
+
+      {/* Flank Right Small Skeleton */}
+      <group position={[0.24, 0, -0.14]}>
+        <SkeletonCharacterModel
+          scale={swarmScale * 0.95}
+          isMoving={isMoving}
+          isAttacking={isPracticing || isAttacking}
+          isPracticing={isPracticing}
+          animOffset={animOffset + 1.8}
+        />
+      </group>
     </group>
   );
 };
