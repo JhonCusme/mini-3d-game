@@ -1624,11 +1624,25 @@ export const KnightCharacterModel: React.FC<{
     const cloned = SkeletonUtils.clone(scene);
     const boneMap: Record<string, any> = {};
 
+    // 1. Remove duplicate knight rig (Knight_rig.001 / Knight_rig001) so only one knight exists!
+    const rig001 = cloned.getObjectByName('Knight_rig001') || cloned.getObjectByName('Knight_rig.001');
+    if (rig001) {
+      cloned.remove(rig001);
+    }
+
+    // 2. Remove floating hair particle cloud and ground plane
+    const toRemove: any[] = [];
     cloned.traverse((child) => {
-      // Hide the giant Blender ground plane
-      if (child.name === 'Plane' || child.name.includes('Plane')) {
-        child.visible = false;
+      if (child.name.includes('particle') || child.name === 'Plane' || child.name.includes('Plane')) {
+        toRemove.push(child);
       }
+    });
+    toRemove.forEach((c) => {
+      if (c.parent) c.parent.remove(c);
+    });
+
+    // 3. Register bones of Knight_rig and set up double-sided rendering for armor plates
+    cloned.traverse((child) => {
       if (child.name) {
         boneMap[child.name] = child;
         const noDot = child.name.replace(/\./g, '');
@@ -1640,7 +1654,7 @@ export const KnightCharacterModel: React.FC<{
         child.castShadow = true;
         child.receiveShadow = true;
         child.frustumCulled = false;
-        child.visible = child.name !== 'Plane';
+        child.visible = true;
         const mesh = child as ThreeMesh;
         if (mesh.material) {
           const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
@@ -1661,17 +1675,23 @@ export const KnightCharacterModel: React.FC<{
       return undefined;
     };
 
-    // Attach Longsword to right hand so it swings and animates in hand
+    // 4. Attach Longsword firmly into Knight_rig's right hand (Rhand)
+    const rig = cloned.getObjectByName('Knight_rig');
     const sword = cloned.getObjectByName('Longsword');
-    const rHand = resolver('Rhand_1') || resolver('Rhand') || resolver('Rlowerarm_1');
+    const rHand = rig ? (rig.getObjectByName('Rhand') || rig.getObjectByName('R.hand')) : (resolver('Rhand') || resolver('R.hand'));
+
     if (sword && rHand) {
-      cloned.updateMatrixWorld(true);
-      rHand.attach(sword);
+      rHand.add(sword);
+      // Place the hilt naturally inside the fist, angled ready in guard
+      sword.position.set(0.04, 0.22, 0.02);
+      sword.rotation.set(Math.PI / 2, 0, -Math.PI / 4);
+      sword.scale.set(0.08, 0.08, 0.08);
     }
 
-    // Centering & Scaling:
-    // Model bounds without Plane: center X: 5.66, feet bottom Y: -2.80, center Z: 0.37, height: 7.48
-    cloned.position.set(-5.66, 2.80, -0.37);
+    // 5. Centering & Scaling:
+    // Knight_rig clean bounds: center X: 6.057, feet bottom Y: -2.803, center Z: 0.396, height: 5.333
+    // Offset cloned mesh so feet bottom center sits right on (0, 0, 0):
+    cloned.position.set(-6.057, 2.803, -0.396);
 
     const pivot = new Group();
     pivot.add(cloned);
@@ -1680,7 +1700,7 @@ export const KnightCharacterModel: React.FC<{
     wrap.add(pivot);
 
     // Normalize to standard unit height ~1.28
-    const normScale = (1.28 / 7.48) * scale;
+    const normScale = (1.28 / 5.333) * scale;
     wrap.scale.setScalar(normScale);
 
     // Cache baseline rotations and positions
@@ -1720,40 +1740,29 @@ export const KnightCharacterModel: React.FC<{
     };
 
     if (isAttacking || isPracticing) {
-      // Heavy wide two-handed sword slash & cleave
+      // Heavy wide sword slash & cleave
       const attackT = clock.elapsedTime * 9 + animOffset;
       const slash = Math.sin(attackT);
 
       // Torso twists into the swing
-      rotY('spine1_1', slash * 0.45);
       rotY('spine1', slash * 0.45);
-      rotX('spine1_1', 0.12);
       rotX('spine1', 0.12);
 
       // Right arm overhead / horizontal greatsword strike
-      rotX('Rupperarm_1', -0.6 + slash * 0.9);
       rotX('Rupperarm', -0.6 + slash * 0.9);
-      rotZ('Rupperarm_1', Math.cos(attackT) * 0.4);
       rotZ('Rupperarm', Math.cos(attackT) * 0.4);
-      rotX('Rlowerarm_1', 0.5 + slash * 0.5);
       rotX('Rlowerarm', 0.5 + slash * 0.5);
 
-      // Left arm balance / supporting two-handed motion
-      rotX('Lupperarm_1', 0.2 - slash * 0.4);
+      // Left arm balance
       rotX('Lupperarm', 0.2 - slash * 0.4);
 
       // Braced combat stance with legs
-      rotX('Lthigh_1', 0.35);
       rotX('Lthigh', 0.35);
-      rotX('Lshin_1', 0.25);
       rotX('Lshin', 0.25);
-      rotX('Rthigh_1', -0.35);
       rotX('Rthigh', -0.35);
-      rotX('Rshin_1', 0.2);
       rotX('Rshin', 0.2);
 
       // Head tracks forward target
-      rotY('head_1', -slash * 0.25);
       rotY('head', -slash * 0.25);
     } else if (isMoving) {
       // Resolute armored stride / running with drawn blade
@@ -1761,54 +1770,41 @@ export const KnightCharacterModel: React.FC<{
       const legStride = Math.sin(runT) * 0.85;
 
       // Legs alternating strides with knee flexion
-      rotX('Lthigh_1', legStride);
       rotX('Lthigh', legStride);
-      rotX('Lshin_1', Math.max(0, -legStride * 1.1));
       rotX('Lshin', Math.max(0, -legStride * 1.1));
 
-      rotX('Rthigh_1', -legStride);
       rotX('Rthigh', -legStride);
-      rotX('Rshin_1', Math.max(0, legStride * 1.1));
       rotX('Rshin', Math.max(0, legStride * 1.1));
 
       // Armored torso leaning into charge
-      rotX('spine1_1', 0.18 + Math.sin(runT * 2) * 0.04);
       rotX('spine1', 0.18 + Math.sin(runT * 2) * 0.04);
-      rotZ('spine1_1', Math.sin(runT) * 0.06);
+      rotZ('spine1', Math.sin(runT) * 0.06);
 
       // Arms swinging firmly in pace
-      rotX('Lupperarm_1', -legStride * 0.9);
       rotX('Lupperarm', -legStride * 0.9);
-      rotX('Rupperarm_1', legStride * 0.7);
       rotX('Rupperarm', legStride * 0.7);
 
       // Head steady forward
-      rotY('head_1', Math.sin(runT * 0.5) * 0.1);
       rotY('head', Math.sin(runT * 0.5) * 0.1);
     } else {
       // Noble Guard Stance: Vigilant breathing, shifting weight and looking around
       const idleT = clock.elapsedTime * 2.5 + animOffset;
 
       // Breathing in heavy plate armor
-      rotX('spine1_1', Math.sin(idleT) * 0.04);
       rotX('spine1', Math.sin(idleT) * 0.04);
 
       // Head observing the perimeter
-      rotY('head_1', Math.sin(idleT * 0.6) * 0.25);
       rotY('head', Math.sin(idleT * 0.6) * 0.25);
 
-      // Sword poised at rest
-      rotX('Rupperarm_1', -0.25 + Math.sin(idleT) * 0.05);
+      // Sword poised at rest in hand
       rotX('Rupperarm', -0.25 + Math.sin(idleT) * 0.05);
-      rotX('Rlowerarm_1', 0.45);
       rotX('Rlowerarm', 0.45);
 
       // Left arm at side / on hip
-      rotZ('Lupperarm_1', -0.2 + Math.sin(idleT) * 0.04);
       rotZ('Lupperarm', -0.2 + Math.sin(idleT) * 0.04);
 
       // Subtle weight shift
-      rotZ('spine1_1', Math.sin(idleT * 0.5) * 0.03);
+      rotZ('spine1', Math.sin(idleT * 0.5) * 0.03);
     }
   });
 
