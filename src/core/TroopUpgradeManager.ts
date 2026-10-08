@@ -25,7 +25,8 @@ export interface TroopDetails {
 const TROOP_UPGRADE_CONFIG: Record<TroopId, { baseCost: number; baseHp: number; baseDps: number; role: string }> = {
     infantry: { baseCost: 150, baseHp: 60, baseDps: 16, role: 'Guerrero de combate cuerpo a cuerpo' },
     archers: { baseCost: 250, baseHp: 30, baseDps: 14, role: 'Tiradores de largo alcance' },
-    cavalry: { baseCost: 400, baseHp: 170, baseDps: 20, role: 'Veloz, prioriza defensas enemigas' },
+    knight: { baseCost: 300, baseHp: 130, baseDps: 18, role: 'Tanque noble con armadura de placas y mandoble' },
+    cavalry: { baseCost: 400, baseHp: 170, baseDps: 20, role: 'Carga veloz a caballo, flanqueo de defensas' },
     mages: { baseCost: 650, baseHp: 45, baseDps: 50, role: 'Unidad voladora con daño de área' },
     catapults: { baseCost: 1000, baseHp: 160, baseDps: 90, role: 'Asedio destructivo contra murallas' },
     healers: { baseCost: 800, baseHp: 80, baseDps: 25, role: 'Sana y acompaña a las tropas aliadas' },
@@ -89,7 +90,7 @@ export class TroopUpgradeManager {
         return {
             id: troopId,
             name: baseInfo.name,
-            icon: troopId === 'infantry' ? '⚔️' : troopId === 'archers' ? '🏹' : troopId === 'cavalry' ? '🐎' : troopId === 'mages' ? '🧙' : troopId === 'catapults' ? '💣' : troopId === 'skeletons' ? '💀' : '✨',
+            icon: troopId === 'infantry' ? '⚔️' : troopId === 'archers' ? '🏹' : troopId === 'knight' ? '🛡️' : troopId === 'cavalry' ? '🐎' : troopId === 'mages' ? '🧙' : troopId === 'catapults' ? '💣' : troopId === 'skeletons' ? '💀' : '✨',
             role: config.role,
             level: currentLevel,
             maxLevel,

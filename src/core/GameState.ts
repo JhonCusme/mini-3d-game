@@ -130,11 +130,11 @@ export const getInitialState = (): GameState => ({
 });
 
 export function emptyTroops(): TroopCounts {
-    return { infantry: 0, archers: 0, cavalry: 0, mages: 0, catapults: 0, healers: 0, skeletons: 0 };
+    return { infantry: 0, archers: 0, knight: 0, cavalry: 0, mages: 0, catapults: 0, healers: 0, skeletons: 0 };
 }
 
 export function defaultTroopLevels(): Record<TroopId, number> {
-    return { infantry: 1, archers: 1, cavalry: 1, mages: 1, catapults: 1, healers: 1, skeletons: 1 };
+    return { infantry: 1, archers: 1, knight: 1, cavalry: 1, mages: 1, catapults: 1, healers: 1, skeletons: 1 };
 }
 
 export function newPlayerId(): string {

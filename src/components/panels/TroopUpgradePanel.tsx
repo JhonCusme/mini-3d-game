@@ -11,7 +11,7 @@ import { panel } from './Panels';
 import { AudioManager } from '../../core/AudioManager';
 import { formatDuration } from '../village/VillageScene';
 
-const TROOP_ORDER: TroopId[] = ['infantry', 'archers', 'cavalry', 'mages', 'catapults', 'healers', 'skeletons'];
+const TROOP_ORDER: TroopId[] = ['infantry', 'archers', 'knight', 'cavalry', 'mages', 'catapults', 'healers', 'skeletons'];
 
 export const TroopUpgradePanel: React.FC<{ initialTab?: 'troops' | 'hero' }> = ({ initialTab = 'troops' }) => {
   const { state, upgradeTroop, finishTroopUpgradeWithGems, upgradeHero } = useGame();

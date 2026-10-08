@@ -1609,6 +1609,246 @@ export const SkeletonModel: React.FC<CharacterProps> = ({
 useGLTF.preload('/models/Esqueleto.glb');
 
 // ===========================================================================
+// 8. MEDIEVAL KNIGHT (Caballero Pesado con Armadura de Placas Completa y Mandoble)
+// ===========================================================================
+export const KnightCharacterModel: React.FC<{
+  scale?: number;
+  isMoving?: boolean;
+  isAttacking?: boolean;
+  isPracticing?: boolean;
+  animOffset?: number;
+}> = ({ scale = 1, isMoving = false, isAttacking = false, isPracticing = false, animOffset = 0 }) => {
+  const { scene } = useGLTF('/models/Caballero.glb');
+
+  const { wrapper, baseRot, getBone } = useMemo(() => {
+    const cloned = SkeletonUtils.clone(scene);
+    const boneMap: Record<string, any> = {};
+
+    cloned.traverse((child) => {
+      // Hide the giant Blender ground plane
+      if (child.name === 'Plane' || child.name.includes('Plane')) {
+        child.visible = false;
+      }
+      if (child.name) {
+        boneMap[child.name] = child;
+        const noDot = child.name.replace(/\./g, '');
+        boneMap[noDot] = child;
+        const simple = child.name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        boneMap[simple] = child;
+      }
+      if ((child as ThreeMesh).isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+        child.frustumCulled = false;
+        child.visible = child.name !== 'Plane';
+        const mesh = child as ThreeMesh;
+        if (mesh.material) {
+          const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+          mats.forEach((mat: any) => {
+            mat.side = 2; // DoubleSide
+            mat.needsUpdate = true;
+          });
+        }
+      }
+    });
+
+    const resolver = (name: string): any => {
+      if (boneMap[name]) return boneMap[name];
+      const noDot = name.replace(/\./g, '');
+      if (boneMap[noDot]) return boneMap[noDot];
+      const simple = name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+      if (boneMap[simple]) return boneMap[simple];
+      return undefined;
+    };
+
+    // Attach Longsword to right hand so it swings and animates in hand
+    const sword = cloned.getObjectByName('Longsword');
+    const rHand = resolver('Rhand_1') || resolver('Rhand') || resolver('Rlowerarm_1');
+    if (sword && rHand) {
+      cloned.updateMatrixWorld(true);
+      rHand.attach(sword);
+    }
+
+    // Centering & Scaling:
+    // Model bounds without Plane: center X: 5.66, feet bottom Y: -2.80, center Z: 0.37, height: 7.48
+    cloned.position.set(-5.66, 2.80, -0.37);
+
+    const pivot = new Group();
+    pivot.add(cloned);
+
+    const wrap = new Group();
+    wrap.add(pivot);
+
+    // Normalize to standard unit height ~1.28
+    const normScale = (1.28 / 7.48) * scale;
+    wrap.scale.setScalar(normScale);
+
+    // Cache baseline rotations and positions
+    const baseRotations: Record<string, { x: number; y: number; z: number; posY: number }> = {};
+    cloned.traverse((child) => {
+      if (child.name) {
+        baseRotations[child.name] = {
+          x: child.rotation.x,
+          y: child.rotation.y,
+          z: child.rotation.z,
+          posY: child.position.y,
+        };
+      }
+    });
+
+    return { wrapper: wrap, baseRot: baseRotations, getBone: resolver };
+  }, [scene, scale]);
+
+  useFrame(({ clock }) => {
+    const rotX = (name: string, delta: number) => {
+      const b = getBone(name);
+      if (!b) return;
+      const r = baseRot[b.name] || { x: 0, y: 0, z: 0, posY: 0 };
+      b.rotation.x = r.x + delta;
+    };
+    const rotY = (name: string, delta: number) => {
+      const b = getBone(name);
+      if (!b) return;
+      const r = baseRot[b.name] || { x: 0, y: 0, z: 0, posY: 0 };
+      b.rotation.y = r.y + delta;
+    };
+    const rotZ = (name: string, delta: number) => {
+      const b = getBone(name);
+      if (!b) return;
+      const r = baseRot[b.name] || { x: 0, y: 0, z: 0, posY: 0 };
+      b.rotation.z = r.z + delta;
+    };
+
+    if (isAttacking || isPracticing) {
+      // Heavy wide two-handed sword slash & cleave
+      const attackT = clock.elapsedTime * 9 + animOffset;
+      const slash = Math.sin(attackT);
+
+      // Torso twists into the swing
+      rotY('spine1_1', slash * 0.45);
+      rotY('spine1', slash * 0.45);
+      rotX('spine1_1', 0.12);
+      rotX('spine1', 0.12);
+
+      // Right arm overhead / horizontal greatsword strike
+      rotX('Rupperarm_1', -0.6 + slash * 0.9);
+      rotX('Rupperarm', -0.6 + slash * 0.9);
+      rotZ('Rupperarm_1', Math.cos(attackT) * 0.4);
+      rotZ('Rupperarm', Math.cos(attackT) * 0.4);
+      rotX('Rlowerarm_1', 0.5 + slash * 0.5);
+      rotX('Rlowerarm', 0.5 + slash * 0.5);
+
+      // Left arm balance / supporting two-handed motion
+      rotX('Lupperarm_1', 0.2 - slash * 0.4);
+      rotX('Lupperarm', 0.2 - slash * 0.4);
+
+      // Braced combat stance with legs
+      rotX('Lthigh_1', 0.35);
+      rotX('Lthigh', 0.35);
+      rotX('Lshin_1', 0.25);
+      rotX('Lshin', 0.25);
+      rotX('Rthigh_1', -0.35);
+      rotX('Rthigh', -0.35);
+      rotX('Rshin_1', 0.2);
+      rotX('Rshin', 0.2);
+
+      // Head tracks forward target
+      rotY('head_1', -slash * 0.25);
+      rotY('head', -slash * 0.25);
+    } else if (isMoving) {
+      // Resolute armored stride / running with drawn blade
+      const runT = clock.elapsedTime * 10 + animOffset;
+      const legStride = Math.sin(runT) * 0.85;
+
+      // Legs alternating strides with knee flexion
+      rotX('Lthigh_1', legStride);
+      rotX('Lthigh', legStride);
+      rotX('Lshin_1', Math.max(0, -legStride * 1.1));
+      rotX('Lshin', Math.max(0, -legStride * 1.1));
+
+      rotX('Rthigh_1', -legStride);
+      rotX('Rthigh', -legStride);
+      rotX('Rshin_1', Math.max(0, legStride * 1.1));
+      rotX('Rshin', Math.max(0, legStride * 1.1));
+
+      // Armored torso leaning into charge
+      rotX('spine1_1', 0.18 + Math.sin(runT * 2) * 0.04);
+      rotX('spine1', 0.18 + Math.sin(runT * 2) * 0.04);
+      rotZ('spine1_1', Math.sin(runT) * 0.06);
+
+      // Arms swinging firmly in pace
+      rotX('Lupperarm_1', -legStride * 0.9);
+      rotX('Lupperarm', -legStride * 0.9);
+      rotX('Rupperarm_1', legStride * 0.7);
+      rotX('Rupperarm', legStride * 0.7);
+
+      // Head steady forward
+      rotY('head_1', Math.sin(runT * 0.5) * 0.1);
+      rotY('head', Math.sin(runT * 0.5) * 0.1);
+    } else {
+      // Noble Guard Stance: Vigilant breathing, shifting weight and looking around
+      const idleT = clock.elapsedTime * 2.5 + animOffset;
+
+      // Breathing in heavy plate armor
+      rotX('spine1_1', Math.sin(idleT) * 0.04);
+      rotX('spine1', Math.sin(idleT) * 0.04);
+
+      // Head observing the perimeter
+      rotY('head_1', Math.sin(idleT * 0.6) * 0.25);
+      rotY('head', Math.sin(idleT * 0.6) * 0.25);
+
+      // Sword poised at rest
+      rotX('Rupperarm_1', -0.25 + Math.sin(idleT) * 0.05);
+      rotX('Rupperarm', -0.25 + Math.sin(idleT) * 0.05);
+      rotX('Rlowerarm_1', 0.45);
+      rotX('Rlowerarm', 0.45);
+
+      // Left arm at side / on hip
+      rotZ('Lupperarm_1', -0.2 + Math.sin(idleT) * 0.04);
+      rotZ('Lupperarm', -0.2 + Math.sin(idleT) * 0.04);
+
+      // Subtle weight shift
+      rotZ('spine1_1', Math.sin(idleT * 0.5) * 0.03);
+    }
+  });
+
+  return <primitive object={wrapper} />;
+};
+
+export const KnightModel: React.FC<CharacterProps> = ({
+  teamColor = '#74b9ff',
+  isMoving = false,
+  isAttacking = false,
+  isPracticing = false,
+  animOffset = 0,
+  scale = 1,
+}) => {
+  return (
+    <group>
+      {/* Heavy knight shadow base */}
+      <mesh position={[0, 0.012, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[0.42, 28]} />
+        <meshBasicMaterial color={teamColor} transparent opacity={0.3} />
+      </mesh>
+      <mesh position={[0, 0.008, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[0.34, 28]} />
+        <meshBasicMaterial color="#1a202c" transparent opacity={0.45} />
+      </mesh>
+
+      <KnightCharacterModel
+        scale={scale}
+        isMoving={isMoving}
+        isAttacking={isAttacking}
+        isPracticing={isPracticing}
+        animOffset={animOffset}
+      />
+    </group>
+  );
+};
+
+useGLTF.preload('/models/Caballero.glb');
+
+// ===========================================================================
 // MAIN UNIFIED TROOP COMPONENT
 // ===========================================================================
 export const StylizedTroop: React.FC<{
@@ -1632,6 +1872,17 @@ export const StylizedTroop: React.FC<{
           isPracticing={isPracticing}
           practiceType={practiceType}
           aimAngle={aimAngle}
+          animOffset={animOffset}
+          scale={scale}
+        />
+      );
+    case 'knight':
+      return (
+        <KnightModel
+          teamColor={teamColor}
+          isMoving={isMoving}
+          isAttacking={isAttacking}
+          isPracticing={isPracticing}
           animOffset={animOffset}
           scale={scale}
         />

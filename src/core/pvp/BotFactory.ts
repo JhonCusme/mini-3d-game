@@ -21,8 +21,8 @@ export function hashString(s: string): number {
 function buildTroops(power: number, rng: () => number, defensive: boolean): TroopCounts {
     const troops = emptyTroops();
     const weights: [keyof TroopCounts, number][] = defensive
-        ? [['infantry', 3], ['archers', 4], ['cavalry', 1], ['mages', 1.5], ['catapults', 0.5], ['healers', 1], ['skeletons', 2]]
-        : [['infantry', 3], ['archers', 2], ['cavalry', 2], ['mages', 1.5], ['catapults', 1], ['healers', 1], ['skeletons', 2.5]];
+        ? [['infantry', 3], ['archers', 4], ['knight', 1.5], ['cavalry', 1], ['mages', 1.5], ['catapults', 0.5], ['healers', 1], ['skeletons', 2]]
+        : [['infantry', 3], ['archers', 2], ['knight', 2], ['cavalry', 2], ['mages', 1.5], ['catapults', 1], ['healers', 1], ['skeletons', 2.5]];
     const total = weights.reduce((s, [, w]) => s + w * (0.5 + rng()), 0);
     for (const [id, w] of weights) {
         const share = power * (w * (0.5 + rng())) / total;

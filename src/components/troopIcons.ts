@@ -3,6 +3,7 @@ import type { TroopId } from '../core/GameState';
 export const TROOP_ICONS: Record<TroopId, string> = {
   infantry: '🗡️',
   archers: '🏹',
+  knight: '🛡️',
   cavalry: '🐴',
   mages: '🧙',
   catapults: '💣',

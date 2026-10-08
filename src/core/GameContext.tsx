@@ -24,7 +24,7 @@ import { useAuth } from './AuthContext';
 import { CAMPAIGN_MISSIONS } from './campaign/CampaignVillages';
 import { EffectManager } from './EffectManager';
 
-const TROOP_IDS: TroopId[] = ['infantry', 'archers', 'cavalry', 'mages', 'catapults', 'healers', 'skeletons'];
+const TROOP_IDS: TroopId[] = ['infantry', 'archers', 'knight', 'cavalry', 'mages', 'catapults', 'healers', 'skeletons'];
 
 interface GameContextType {
     state: GameState;

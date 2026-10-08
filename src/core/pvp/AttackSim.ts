@@ -14,6 +14,7 @@ import { HeroManager } from '../HeroManager';
 export const UNIT_STATS: Record<TroopId, { hp: number; dps: number; speed: number; range: number; flying?: boolean; prefers?: 'defense'; healer?: boolean; siege?: boolean }> = {
     infantry: { hp: 60, dps: 16, speed: 1.7, range: 0.7 },
     archers: { hp: 30, dps: 14, speed: 1.6, range: 3.5 },
+    knight: { hp: 140, dps: 18, speed: 1.5, range: 0.8 },
     cavalry: { hp: 170, dps: 20, speed: 2.4, range: 0.9, prefers: 'defense' },
     mages: { hp: 45, dps: 50, speed: 1.4, range: 3, flying: true },
     catapults: { hp: 160, dps: 90, speed: 0.8, range: 5.5, siege: true },

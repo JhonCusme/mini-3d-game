@@ -21,6 +21,7 @@ interface VillageTroopsProps {
 const EMPTY_COUNTS: TroopCounts = {
   infantry: 0,
   archers: 0,
+  knight: 0,
   cavalry: 0,
   mages: 0,
   catapults: 0,
@@ -146,6 +147,12 @@ const GUARD_PHRASES: Record<TroopId, string[]> = {
     '¡Flechas en el carcaj listas!',
     '¡Ningún invasor pasará este muro!',
     '¡Vista de lince en las almenas!'
+  ],
+  knight: [
+    '¡Por el honor y la gloria del reino!',
+    '¡Acero templado y escudo en guardia!',
+    '¡Nadie quebrantará nuestras líneas!',
+    '¡La armadura reluce bajo el sol!'
   ],
   cavalry: [
     '¡Patrulla rápida por los caminos!',
@@ -655,6 +662,12 @@ const PRACTICE_PHRASES: Record<TroopId, string[]> = {
     '¡Diez flechas seguidas al centro del blanco!',
     '¡Listas para cubrir el avance!'
   ],
+  knight: [
+    '¡Ensayando estocadas y guardias con el mandoble!',
+    '¡La armadura de placas resistirá cualquier impacto!',
+    '¡Por el Rey y el Reino!',
+    '¡Cortes precisos y defensa impenetrable!'
+  ],
   cavalry: [
     '¡Calentando para la carga!',
     '¡Jinetes listos para el asalto!',
@@ -875,6 +888,18 @@ export const VillageTroops: React.FC<VillageTroopsProps> = ({
           practiceType: 'bow',
         });
       }
+    }
+
+    // Knight practicing heavy sword strikes
+    if ((troops.knight || 0) > 0) {
+      list.push({
+        id: 'train_knight',
+        type: 'knight',
+        x: cx + 0.35,
+        z: cz - 0.45,
+        rot: -0.85,
+        practiceType: 'sword',
+      });
     }
 
     // Cavalry practicing trotting/lance
