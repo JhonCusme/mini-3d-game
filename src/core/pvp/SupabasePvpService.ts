@@ -83,17 +83,18 @@ export class SupabasePvpService implements PvpService {
             }),
         });
 
-        // 2. Automatic duplicate cleanup: If any older village shares the same name or user,
-        // keep only the one with the highest town hall level!
+        // 2. Automatic duplicate cleanup: other villages of the SAME account (same Supabase user)
+        // are retired so only the highest town hall level stays active. Guests have no account,
+        // so nothing is cleaned for them. Never match by name: different players can share names.
         try {
-            const cleanName = (snapshot.name || '').trim().toLowerCase();
-            if (cleanName) {
-                const existing = await this.request<{ id: string; snapshot: VillageSnapshot; name: string }[]>(
-                    `/villages?id=neq.${encodeURIComponent(snapshot.playerId)}&name=ilike.*${encodeURIComponent(cleanName)}*&select=id,snapshot,name&limit=5`
+            const userId = snapshot.userId;
+            if (userId) {
+                const existing = await this.request<{ id: string; snapshot: VillageSnapshot }[]>(
+                    `/villages?id=neq.${encodeURIComponent(snapshot.playerId)}&snapshot->>userId=eq.${encodeURIComponent(userId)}&select=id,snapshot&limit=5`
                 );
                 for (const row of existing || []) {
                     const snap = row.snapshot;
-                    if (snap && !snap.isDeleted) {
+                    if (snap && !snap.isDeleted && snap.userId === userId) {
                         const oldLvl = snap.level || 1;
                         const newLvl = snapshot.level || 1;
                         if (newLvl >= oldLvl) {
