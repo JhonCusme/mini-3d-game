@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { type GameState, type AvatarType, type KingdomType, type GodId, type TroopId, getInitialState, newPlayerId } from './GameState';
+import { type GameState, type AvatarType, type KingdomType, type GodId, type TroopId, getInitialState, newPlayerId, newVillageToken } from './GameState';
 import { GodManager } from './GodManager';
 import { VillageManager } from './VillageManager';
 import type { BuildingType } from '../config/BuildingsConfig';
@@ -77,6 +77,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
         delete loaded._isFirstOpen;
         if (!loaded.playerId) loaded.playerId = newPlayerId();
+        if (!loaded.villageToken) loaded.villageToken = newVillageToken();
         return TroopUpgradeManager.completeTroopUpgrades(VillageManager.completeUpgrades(VillageManager.ensureVillage(loaded as GameState)));
     });
     const stateRef = useRef(state);
@@ -168,6 +169,17 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const id = setInterval(check, 2 * 60 * 1000);
         return () => clearInterval(id);
     }, []);
+
+    // PvP: the online service signs every write with this village's secret token
+    useEffect(() => {
+        let token = state.villageToken;
+        if (!token) {
+            // Cloud saves from before the token existed: give them one
+            token = newVillageToken();
+            setState(prev => (prev.villageToken ? prev : { ...prev, villageToken: token }));
+        }
+        pvpService.setIdentity?.(state.playerId, token);
+    }, [state.playerId, state.villageToken]);
 
     // PvP: publish what this village leaves prepared for defense and keep online protection active
     const snapshotKey = JSON.stringify([state.hasCompletedSetup, state.garrison, state.defenseGod, state.gods, state.upgrades,
@@ -611,6 +623,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             next.playerAvatar = prev.playerAvatar;
             next.playerKingdom = prev.playerKingdom;
             next.playerId = prev.playerId;
+            next.villageToken = prev.villageToken;
             next.trophies = prev.trophies;
             next.pvpWins = prev.pvpWins;
             next.pvpLosses = prev.pvpLosses;
@@ -627,7 +640,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const resetGame = () => {
         SaveManager.clear();
-        setState(VillageManager.ensureVillage({ ...getInitialState(), playerId: newPlayerId() }));
+        setState(VillageManager.ensureVillage({ ...getInitialState(), playerId: newPlayerId(), villageToken: newVillageToken() }));
     };
 
     return (

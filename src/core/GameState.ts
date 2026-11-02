@@ -66,6 +66,7 @@ export interface GameState {
 
     // Online PvP
     playerId: string;
+    villageToken: string;          // secret that proves ownership of the online village (never published)
     trophies: number;
     pvpWins: number;
     pvpLosses: number;
@@ -114,6 +115,7 @@ export const getInitialState = (): GameState => ({
     lastSaveTime: 0,
 
     playerId: '',
+    villageToken: '',
     trophies: GameConfig.pvp.startingTrophies,
     pvpWins: 0,
     pvpLosses: 0,
@@ -135,6 +137,13 @@ export function emptyTroops(): TroopCounts {
 
 export function defaultTroopLevels(): Record<TroopId, number> {
     return { infantry: 1, archers: 1, knight: 1, cavalry: 1, mages: 1, catapults: 1, healers: 1, skeletons: 1 };
+}
+
+/** Random secret used to prove ownership of the online village. */
+export function newVillageToken(): string {
+    const bytes = new Uint8Array(24);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
 }
 
 export function newPlayerId(): string {

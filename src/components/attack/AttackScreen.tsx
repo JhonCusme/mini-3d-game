@@ -99,6 +99,10 @@ export const AttackScreen: React.FC<{
     setSim(null);
 
     if (customOpponent) {
+      // Revenge attacks are real attacks: they need the battle lock too
+      if (!isFriendly) pvpService.lockVillageForAttack(customOpponent.playerId).then(locked => {
+        if (!locked && !cancelled) setMessage('Este jugador tiene escudo o ya está en batalla');
+      });
       const seed = hashString(`${customOpponent.playerId}:${Date.now()}:${refresh}`);
       seedRef.current = seed;
       setOpponent(customOpponent);
@@ -134,14 +138,22 @@ export const AttackScreen: React.FC<{
           opp = createSystemVillage(sysSeed, state.trophies, state.playerKingdom);
         }
 
-        const seed = hashString(`${opp.playerId}:${Date.now()}`);
-        seedRef.current = seed;
-        setOpponent(opp);
-        // Lock this village so other players cannot attack it concurrently
-        pvpService.lockVillageForAttack(opp.playerId);
-        setSim(new AttackSim(PvpManager.buildArmy(state, state.troops), opp, seed));
-        const first = TROOP_IDS.find(id => state.troops[id] > 0);
-        setSelected(first ?? null);
+        // Lock this village so nobody else attacks it at the same time. If someone
+        // already is, look for another rival (or fall back to a system village).
+        return pvpService.lockVillageForAttack(opp.playerId).then(locked => {
+          if (cancelled) return;
+          if (!locked) {
+            setMessage('Ese rival ya está en batalla, buscando otro…');
+            const sysSeed = hashString(`${state.playerId}:${Date.now()}:${refresh}:busy`);
+            opp = createSystemVillage(sysSeed, state.trophies, state.playerKingdom);
+          }
+          const seed = hashString(`${opp.playerId}:${Date.now()}`);
+          seedRef.current = seed;
+          setOpponent(opp);
+          setSim(new AttackSim(PvpManager.buildArmy(state, state.troops), opp, seed));
+          const first = TROOP_IDS.find(id => state.troops[id] > 0);
+          setSelected(first ?? null);
+        });
       })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };

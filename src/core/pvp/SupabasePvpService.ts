@@ -1,7 +1,7 @@
-import type { PvpService } from './PvpService';
+import type { FriendshipRow, PvpService } from './PvpService';
+import { supabase } from '../supabaseClient';
 import type { AttackRecord, VillageSnapshot } from './PvpTypes';
 import { createSystemVillage, hashString, isSameOrCloneVillage } from './BotFactory';
-import { GameConfig } from '../../config/GameConfig';
 
 /**
  * Online backend using Supabase's REST API (tables defined in supabase/schema.sql).
@@ -12,10 +12,47 @@ export class SupabasePvpService implements PvpService {
     private readonly baseUrl: string;
     private readonly key: string;
 
+    private playerId = '';
+    private villageToken = '';
+    private warnedMigration = false;
+
     constructor(url: string, key: string) {
         // Accept both the project URL and the REST URL (.../rest/v1/)
         this.baseUrl = url.trim().replace(/\/+$/, '').replace(/\/rest\/v1$/, '') + '/rest/v1';
         this.key = key;
+    }
+
+    setIdentity(playerId: string, villageToken: string) {
+        this.playerId = playerId;
+        this.villageToken = villageToken;
+    }
+
+    /** Signed-in players send their session so the server knows their account (auth.uid()). */
+    private async authHeader(): Promise<Record<string, string>> {
+        try {
+            const session = supabase ? (await supabase.auth.getSession()).data.session : null;
+            if (session?.access_token) return { Authorization: `Bearer ${session.access_token}` };
+        } catch { /* no session */ }
+        // Legacy anon keys are JWTs and go in Authorization too;
+        // new publishable keys (sb_publishable_...) only go in apikey.
+        return this.key.startsWith('eyJ') ? { Authorization: `Bearer ${this.key}` } : {};
+    }
+
+    /** Calls a secure database function (see supabase/migrations/002_secure_writes.sql). */
+    private async rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
+        try {
+            return await this.request<T>(`/rpc/${fn}`, { method: 'POST', body: JSON.stringify(args) });
+        } catch (e) {
+            if (!this.warnedMigration && String(e).includes('PGRST202')) {
+                this.warnedMigration = true;
+                console.error('PvP: faltan las funciones seguras en Supabase. Ejecuta supabase/migrations/002_secure_writes.sql en el SQL Editor.');
+            }
+            throw e;
+        }
+    }
+
+    private static isClientOnlyVillage(id: string): boolean {
+        return !id || id.startsWith('bot_') || id.startsWith('system_') || id.startsWith('rival_') || id.startsWith('campaign_');
     }
 
     private async request<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -23,9 +60,7 @@ export class SupabasePvpService implements PvpService {
             ...init,
             headers: {
                 apikey: this.key,
-                // Legacy anon keys are JWTs and go in Authorization too;
-                // new publishable keys (sb_publishable_...) only go in apikey.
-                ...(this.key.startsWith('eyJ') ? { Authorization: `Bearer ${this.key}` } : {}),
+                ...(await this.authHeader()),
                 'Content-Type': 'application/json',
                 ...(init.headers || {}),
             },
@@ -59,63 +94,21 @@ export class SupabasePvpService implements PvpService {
      */
     async publishVillage(snapshot: VillageSnapshot, isOnline = true): Promise<void> {
         const now = Date.now();
-        const onlineUntil = isOnline ? now + 90_000 : 0;
-        // Shield only applies if explicitly granted (post-defeat defense shield or store protection)
-        const effectiveShield = snapshot.shieldUntil || 0;
-
         const payloadSnapshot: VillageSnapshot = {
             ...snapshot,
-            onlineUntil,
+            onlineUntil: isOnline ? now + 90_000 : 0,
             updatedAt: now,
         };
-
-        // 1. Publish or update current village
-        await this.request('/villages?on_conflict=id', {
-            method: 'POST',
-            headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
-            body: JSON.stringify({
-                id: snapshot.playerId,
-                name: snapshot.name,
-                trophies: snapshot.trophies,
-                shield_until: new Date(effectiveShield).toISOString(),
-                snapshot: payloadSnapshot,
-                updated_at: new Date(now).toISOString(),
-            }),
+        // The server keeps any longer shield or battle lock, and retires this
+        // account's other (lower level) villages.
+        await this.rpc('publish_village', {
+            p_id: snapshot.playerId,
+            p_token: this.villageToken,
+            p_name: (snapshot.name || 'Héroe').slice(0, 40),
+            p_trophies: Math.max(0, Math.floor(snapshot.trophies || 0)),
+            p_shield: new Date(snapshot.shieldUntil || 0).toISOString(),
+            p_snapshot: payloadSnapshot,
         });
-
-        // 2. Automatic duplicate cleanup: other villages of the SAME account (same Supabase user)
-        // are retired so only the highest town hall level stays active. Guests have no account,
-        // so nothing is cleaned for them. Never match by name: different players can share names.
-        try {
-            const userId = snapshot.userId;
-            if (userId) {
-                const existing = await this.request<{ id: string; snapshot: VillageSnapshot }[]>(
-                    `/villages?id=neq.${encodeURIComponent(snapshot.playerId)}&snapshot->>userId=eq.${encodeURIComponent(userId)}&select=id,snapshot&limit=5`
-                );
-                for (const row of existing || []) {
-                    const snap = row.snapshot;
-                    if (snap && !snap.isDeleted && snap.userId === userId) {
-                        const oldLvl = snap.level || 1;
-                        const newLvl = snapshot.level || 1;
-                        if (newLvl >= oldLvl) {
-                            // Deactivate duplicate so only the highest level village remains active
-                            await this.request(`/villages?id=eq.${encodeURIComponent(row.id)}`, {
-                                method: 'PATCH',
-                                headers: { Prefer: 'return=minimal' },
-                                body: JSON.stringify({
-                                    name: `[BORRADO_DUPLICADO_${row.id.slice(0, 6)}]`,
-                                    shield_until: '3000-01-01T00:00:00.000Z',
-                                    snapshot: { ...snap, isDeleted: true, level: 0 },
-                                    updated_at: new Date().toISOString(),
-                                }),
-                            });
-                        }
-                    }
-                }
-            }
-        } catch (e) {
-            console.warn('PvP: duplicate cleanup check error', e);
-        }
     }
 
     /**
@@ -196,38 +189,27 @@ export class SupabasePvpService implements PvpService {
     }
 
     /**
-     * Locks a village when an attack starts so other players cannot attack it concurrently.
+     * Locks a village when an attack starts so other players cannot attack it at the same time.
+     * Returns false when someone else is already attacking it (or it is shielded).
      */
     async lockVillageForAttack(defenderId: string): Promise<boolean> {
-        if (!defenderId || defenderId.startsWith('bot_') || defenderId.startsWith('system_') || defenderId.startsWith('rival_')) {
-            return true;
-        }
+        if (SupabasePvpService.isClientOnlyVillage(defenderId)) return true;
         try {
-            const lockUntil = new Date(Date.now() + 180_000).toISOString(); // 3-minute battle lock
-            await this.request(`/villages?id=eq.${encodeURIComponent(defenderId)}`, {
-                method: 'PATCH',
-                headers: { Prefer: 'return=minimal' },
-                body: JSON.stringify({ shield_until: lockUntil }),
+            return await this.rpc<boolean>('lock_village', {
+                p_defender: defenderId, p_attacker: this.playerId, p_token: this.villageToken,
             });
-            return true;
         } catch (e) {
             console.warn('PvP: could not lock village for attack', e);
             return false;
         }
     }
 
-    /**
-     * Unlocks a village if the attacker retreats early or cancels.
-     */
+    /** Releases our battle lock if we leave before attacking. */
     async unlockVillage(defenderId: string): Promise<void> {
-        if (!defenderId || defenderId.startsWith('bot_') || defenderId.startsWith('system_') || defenderId.startsWith('rival_')) {
-            return;
-        }
+        if (SupabasePvpService.isClientOnlyVillage(defenderId)) return;
         try {
-            await this.request(`/villages?id=eq.${encodeURIComponent(defenderId)}`, {
-                method: 'PATCH',
-                headers: { Prefer: 'return=minimal' },
-                body: JSON.stringify({ shield_until: new Date().toISOString() }),
+            await this.rpc('unlock_village', {
+                p_defender: defenderId, p_attacker: this.playerId, p_token: this.villageToken,
             });
         } catch (e) {
             console.warn('PvP: could not unlock village', e);
@@ -278,50 +260,37 @@ export class SupabasePvpService implements PvpService {
         }
     }
 
-    async updateVillageSnapshot(playerId: string, patch: Partial<VillageSnapshot>): Promise<boolean> {
-        try {
-            const current = await this.fetchVillage(playerId);
-            if (!current) return false;
-            const updated: VillageSnapshot = { ...current, ...patch, updatedAt: Date.now() };
-            await this.request(`/villages?id=eq.${encodeURIComponent(playerId)}`, {
-                method: 'PATCH',
-                headers: { Prefer: 'return=minimal' },
-                body: JSON.stringify({
-                    snapshot: updated,
-                    updated_at: new Date().toISOString(),
-                }),
-            });
-            return true;
-        } catch (e) {
-            console.warn('PvP: could not update village snapshot', e);
-            return false;
-        }
+    async reportAttack(record: AttackRecord): Promise<void> {
+        if (SupabasePvpService.isClientOnlyVillage(record.defenderId)) return;
+        // The server checks we hold the battle lock, caps the loot and sets the defender's shield
+        await this.rpc('report_attack', {
+            p_attacker: this.playerId, p_token: this.villageToken, p_record: record,
+        });
     }
 
-    async reportAttack(record: AttackRecord): Promise<void> {
-        if (record.defenderId.startsWith('bot_') || record.defenderId.startsWith('system_')) return;
-        await this.request('/attacks', {
-            method: 'POST',
-            headers: { Prefer: 'return=minimal' },
-            body: JSON.stringify({
-                id: record.id,
-                attacker_id: record.attackerId,
-                defender_id: record.defenderId,
-                record,
-                created_at: new Date(record.createdAt).toISOString(),
-            }),
+    // ---------- Friends ----------
+
+    async sendFriendRequest(targetId: string, info: Record<string, unknown>): Promise<void> {
+        await this.rpc('send_friend_request', {
+            p_from: this.playerId, p_token: this.villageToken, p_to: targetId, p_info: info,
         });
-        // Protect the defender right away so they aren't farmed before they come back
-        if (record.attackerWon) {
-            await this.request(`/villages?id=eq.${encodeURIComponent(record.defenderId)}`, {
-                method: 'PATCH',
-                headers: { Prefer: 'return=minimal' },
-                body: JSON.stringify({ shield_until: new Date(record.createdAt + GameConfig.pvp.shieldMs).toISOString() }),
-            });
-        } else {
-            // Unlock if defender won
-            await this.unlockVillage(record.defenderId);
-        }
+    }
+
+    async respondFriendRequest(requestId: string, accept: boolean): Promise<void> {
+        await this.rpc('respond_friend_request', {
+            p_me: this.playerId, p_token: this.villageToken, p_request_id: requestId, p_accept: accept,
+        });
+    }
+
+    async removeFriend(friendId: string): Promise<void> {
+        await this.rpc('remove_friend', { p_me: this.playerId, p_token: this.villageToken, p_friend: friendId });
+    }
+
+    async fetchFriendships(playerId: string): Promise<FriendshipRow[]> {
+        const id = encodeURIComponent(playerId);
+        return await this.request<FriendshipRow[]>(
+            `/friendships?or=(sender_id.eq.${id},receiver_id.eq.${id})&select=id,sender_id,receiver_id,status,sender_info,created_at&order=created_at.desc&limit=200`
+        ) || [];
     }
 
     async fetchAttacksAgainst(playerId: string, since: number): Promise<AttackRecord[]> {

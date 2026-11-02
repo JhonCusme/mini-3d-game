@@ -1,4 +1,8 @@
 -- Online PvP backend for Mini Kingdom.
+--
+-- IMPORTANT: after this file, run every file in supabase/migrations/ in order.
+-- 002_secure_writes.sql locks the tables down so players can only change
+-- their own village through secure functions.
 -- Run this in the Supabase SQL editor, then set VITE_SUPABASE_URL and
 -- VITE_SUPABASE_ANON_KEY in .env (Project Settings -> API).
 

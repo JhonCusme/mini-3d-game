@@ -34,7 +34,7 @@ Sin configuración, los rivales son aldeas simuladas cerca de tus trofeos y, mie
 ### Modo online con Supabase
 
 1. Crea un proyecto gratis en [supabase.com](https://supabase.com).
-2. En **SQL Editor**, ejecuta [`supabase/schema.sql`](supabase/schema.sql).
+2. En **SQL Editor**, ejecuta [`supabase/schema.sql`](supabase/schema.sql) y después [`supabase/migrations/002_secure_writes.sql`](supabase/migrations/002_secure_writes.sql).
 3. En **Project Settings → API Keys**, copia la URL del proyecto y la clave pública (`sb_publishable_...` o la antigua `anon` que empieza por `eyJ`) y añádelas a `.env.local` (no se sube a git):
 
    ```
@@ -46,7 +46,7 @@ Sin configuración, los rivales son aldeas simuladas cerca de tus trofeos y, mie
 
 4. Reinicia `npm run dev`. La pestaña Guerra mostrará "🌐 En línea". Si hay pocos jugadores reales cerca de tus trofeos, la lista se completa con bots (marcados con 🤖).
 
-**Importante antes de publicar:** en este modo cada cliente calcula sus batallas y escribe directamente en la base de datos, así que un jugador con conocimientos podría hacer trampa. Para producción, añade Supabase Auth, restringe las políticas RLS a `auth.uid()` y mueve la simulación (`src/core/pvp/PvpBattle.ts`, que es código puro) a una Edge Function.
+**Seguridad:** las tablas son de solo lectura para los clientes; todas las escrituras pasan por funciones del servidor que comprueban que la aldea es tuya (token secreto por aldea o tu cuenta de Supabase), bloquean la aldea atacada y limitan el botín. **Pendiente:** cada cliente sigue calculando su propia batalla, así que un jugador con conocimientos podría inventarse el resultado. Para producción, añade Supabase Auth, restringe las políticas RLS a `auth.uid()` y mueve la simulación (`src/core/pvp/PvpBattle.ts`, que es código puro) a una Edge Function.
 
 ### Código
 

@@ -17,7 +17,22 @@ export interface PvpService {
     fetchVillage?(playerId: string): Promise<VillageSnapshot | null>;
     searchPlayers?(query: string, excludeId: string): Promise<VillageSnapshot[]>;
     getRecentRealPlayers?(excludeId: string, limit?: number): Promise<VillageSnapshot[]>;
-    updateVillageSnapshot?(playerId: string, patch: Partial<VillageSnapshot>): Promise<boolean>;
+    /** Who is playing on this device: every online write is signed with the village token. */
+    setIdentity?(playerId: string, villageToken: string): void;
+    // Friends (online only)
+    sendFriendRequest?(targetId: string, info: Record<string, unknown>): Promise<void>;
+    respondFriendRequest?(requestId: string, accept: boolean): Promise<void>;
+    removeFriend?(friendId: string): Promise<void>;
+    fetchFriendships?(playerId: string): Promise<FriendshipRow[]>;
+}
+
+export interface FriendshipRow {
+    id: string;
+    sender_id: string;
+    receiver_id: string;
+    status: 'pending' | 'accepted';
+    sender_info: Record<string, unknown> | null;
+    created_at: string;
 }
 
 function createService(): PvpService {

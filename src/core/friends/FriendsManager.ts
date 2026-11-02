@@ -92,12 +92,27 @@ export class FriendsManager {
         const local = this.getLocalFriends(myPlayerId);
         if (!pvpService.fetchVillage) return local;
 
-        // Refresh stats for each friend from Supabase
-        const updated: FriendInfo[] = [];
-        for (const f of local) {
+        // Accepted friendships live on the server: whoever sent or accepted the request
+        let ids = local.map(f => f.id);
+        if (pvpService.fetchFriendships) {
             try {
-                const snap = await pvpService.fetchVillage(f.id);
-                if (snap) {
+                const rows = await pvpService.fetchFriendships(myPlayerId);
+                const accepted = rows
+                    .filter(r => r.status === 'accepted')
+                    .map(r => (r.sender_id === myPlayerId ? r.receiver_id : r.sender_id));
+                ids = Array.from(new Set([...ids, ...accepted]));
+            } catch (e) {
+                console.warn('Friends: could not load friendships', e);
+            }
+        }
+
+        // Refresh stats for each friend
+        const updated: FriendInfo[] = [];
+        for (const id of ids) {
+            const cached = local.find(f => f.id === id);
+            try {
+                const snap = await pvpService.fetchVillage(id);
+                if (snap && !snap.isDeleted) {
                     updated.push({
                         id: snap.playerId,
                         name: snap.name,
@@ -109,11 +124,11 @@ export class FriendsManager {
                         updatedAt: snap.updatedAt,
                         snapshot: snap,
                     });
-                } else {
-                    updated.push(f);
+                } else if (cached) {
+                    updated.push(cached);
                 }
             } catch {
-                updated.push(f);
+                if (cached) updated.push(cached);
             }
         }
         this.setLocalFriends(myPlayerId, updated);
@@ -125,21 +140,28 @@ export class FriendsManager {
      */
     static async loadIncomingRequests(myPlayerId: string): Promise<FriendRequest[]> {
         const local = this.getLocalRequests(myPlayerId);
-        if (!pvpService.fetchVillage) return local;
+        if (!pvpService.fetchFriendships) return local;
 
         try {
-            const mySnap = await pvpService.fetchVillage(myPlayerId);
-            if (mySnap && mySnap.pendingFriendRequests) {
-                const combined = [...mySnap.pendingFriendRequests];
-                // Deduplicate with local
-                const map = new Map<string, FriendRequest>();
-                for (const r of [...local, ...combined]) {
-                    map.set(r.id || r.fromId, r);
-                }
-                const merged = Array.from(map.values());
-                this.setLocalRequests(myPlayerId, merged);
-                return merged;
-            }
+            const rows = await pvpService.fetchFriendships(myPlayerId);
+            const incoming: FriendRequest[] = rows
+                .filter(r => r.status === 'pending' && r.receiver_id === myPlayerId)
+                .map(r => {
+                    const info = (r.sender_info || {}) as Partial<FriendRequest>;
+                    return {
+                        id: r.id,
+                        fromId: r.sender_id,
+                        fromName: String(info.fromName || 'Jugador').slice(0, 40),
+                        fromAvatar: info.fromAvatar || 'warrior',
+                        fromKingdom: info.fromKingdom || 'emerald',
+                        fromLevel: Number(info.fromLevel) || 1,
+                        fromTrophies: Number(info.fromTrophies) || 0,
+                        createdAt: Date.parse(r.created_at) || Date.now(),
+                    };
+                });
+            // The server is the source of truth for pending requests
+            this.setLocalRequests(myPlayerId, incoming);
+            return incoming;
         } catch (e) {
             console.warn('Friends: could not load online requests', e);
         }
@@ -166,32 +188,19 @@ export class FriendsManager {
 
         this.addSentRequestId(me.playerId, targetPlayerId);
 
-        if (pvpService.fetchVillage && pvpService.updateVillageSnapshot) {
+        if (pvpService.sendFriendRequest) {
             try {
-                const targetSnap = await pvpService.fetchVillage(targetPlayerId);
-                if (!targetSnap) {
-                    return { success: false, message: 'No se encontró la aldea del jugador' };
-                }
-
-                const existingReqs = targetSnap.pendingFriendRequests || [];
-                if (!existingReqs.some(r => r.fromId === me.playerId)) {
-                    const newReq: FriendRequest = {
-                        id: `req_${me.playerId}_${Date.now()}`,
-                        fromId: me.playerId,
-                        fromName: me.name,
-                        fromAvatar: me.avatar,
-                        fromKingdom: me.kingdom,
-                        fromLevel: me.level,
-                        fromTrophies: me.trophies,
-                        createdAt: Date.now(),
-                    };
-                    await pvpService.updateVillageSnapshot(targetPlayerId, {
-                        pendingFriendRequests: [...existingReqs, newReq],
-                    });
-                }
-                return { success: true, message: `¡Solicitud enviada a ${targetSnap.name}!` };
+                await pvpService.sendFriendRequest(targetPlayerId, {
+                    fromName: me.name,
+                    fromAvatar: me.avatar,
+                    fromKingdom: me.kingdom,
+                    fromLevel: me.level,
+                    fromTrophies: me.trophies,
+                });
+                return { success: true, message: '¡Solicitud enviada!' };
             } catch (e) {
                 console.warn('Friends: failed to send request online', e);
+                return { success: false, message: 'No se pudo enviar la solicitud. Inténtalo de nuevo.' };
             }
         }
 
@@ -221,27 +230,10 @@ export class FriendsManager {
         const currentReqs = this.getLocalRequests(me.playerId).filter(r => r.fromId !== req.fromId && r.id !== req.id);
         this.setLocalRequests(me.playerId, currentReqs);
 
-        // 3. Sync to Supabase
-        if (pvpService.updateVillageSnapshot) {
+        // 3. Sync to the server (both players will see each other as friends)
+        if (pvpService.respondFriendRequest) {
             try {
-                // Update my village snapshot
-                await pvpService.updateVillageSnapshot(me.playerId, {
-                    pendingFriendRequests: currentReqs,
-                    friends: currentFriends.map(f => f.id),
-                });
-
-                // Also update the sender's village so they see me in their friends list
-                if (pvpService.fetchVillage) {
-                    const senderSnap = await pvpService.fetchVillage(req.fromId);
-                    if (senderSnap) {
-                        const senderFriends = senderSnap.friends || [];
-                        if (!senderFriends.includes(me.playerId)) {
-                            await pvpService.updateVillageSnapshot(req.fromId, {
-                                friends: [...senderFriends, me.playerId],
-                            });
-                        }
-                    }
-                }
+                await pvpService.respondFriendRequest(req.id, true);
             } catch (e) {
                 console.warn('Friends: failed to sync accept online', e);
             }
@@ -257,11 +249,9 @@ export class FriendsManager {
         const currentReqs = this.getLocalRequests(mePlayerId).filter(r => r.id !== requestId && r.fromId !== requestId);
         this.setLocalRequests(mePlayerId, currentReqs);
 
-        if (pvpService.updateVillageSnapshot) {
+        if (pvpService.respondFriendRequest) {
             try {
-                await pvpService.updateVillageSnapshot(mePlayerId, {
-                    pendingFriendRequests: currentReqs,
-                });
+                await pvpService.respondFriendRequest(requestId, false);
             } catch (e) {
                 console.warn('Friends: failed to sync reject online', e);
             }
@@ -276,11 +266,9 @@ export class FriendsManager {
         const filtered = this.getLocalFriends(mePlayerId).filter(f => f.id !== friendId);
         this.setLocalFriends(mePlayerId, filtered);
 
-        if (pvpService.updateVillageSnapshot) {
+        if (pvpService.removeFriend) {
             try {
-                await pvpService.updateVillageSnapshot(mePlayerId, {
-                    friends: filtered.map(f => f.id),
-                });
+                await pvpService.removeFriend(friendId);
             } catch (e) {
                 console.warn('Friends: failed to sync remove online', e);
             }

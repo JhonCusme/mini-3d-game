@@ -110,7 +110,4 @@ export class LocalPvpService implements PvpService {
         return [];
     }
 
-    async updateVillageSnapshot(): Promise<boolean> {
-        return true;
-    }
 }

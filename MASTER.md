@@ -94,7 +94,8 @@ Prioridad: **P0** = imprescindible antes de publicar, **P1** = muy importante, *
 - [ ] **Anti-trampas**: ahora cada teléfono calcula su batalla y escribe directo en la base de datos. Mover la validación de batallas a una Edge Function de Supabase (el motor `AttackSim` ya es determinista y se puede reutilizar en el servidor).
 - [x] **Cuentas de usuario** con Supabase Auth (email/contraseña + sesión persistente y opción de jugar como invitado).
 - [x] **Guardado en la nube**: sincronización de partida en Supabase (`player_saves`) con fallback a almacenamiento local.
-- [ ] **Permisos de la base de datos (RLS)**: hoy cualquiera puede modificar o borrar cualquier aldea (`villages`) y cualquier amistad (`friendships`). Restringir a `auth.uid()` y decidir qué pueden hacer los invitados.
+- [x] **Permisos de la base de datos**: tablas de solo lectura para los clientes; las escrituras pasan por funciones seguras (`supabase/migrations/002_secure_writes.sql`) que exigen el token secreto de la aldea o la cuenta dueña. Bloqueo de ataque atómico, botín limitado a lo disponible, escudo puesto por el servidor.
+- [x] Solicitudes de amistad en su propia tabla (antes se guardaban dentro de la aldea del otro y se borraban cada 45 s); quien envía la solicitud también ve al amigo al ser aceptada.
 - [ ] **Probar el modo online real** con varios jugadores y dispositivos.
 - [ ] Ejecutar `supabase/schema.sql` en el proyecto (si no se ha hecho) y revocar la clave secreta expuesta.
 - [x] Modelos 3D reducidos de ~113 MB a ~22 MB (texturas WebP de 1024 px).
@@ -153,7 +154,7 @@ Prioridad: **P0** = imprescindible antes de publicar, **P1** = muy importante, *
 
 | Fase | Objetivo | Contenido |
 |---|---|---|
-| **1. Alfa cerrada** (en curso) | Que el online sea seguro y estable | ✅ Cuentas y guardado en la nube · Pendiente: permisos RLS, validación de batallas en servidor, probar con amigos |
+| **1. Alfa cerrada** (en curso) | Que el online sea seguro y estable | ✅ Cuentas, guardado en la nube y escrituras seguras · Pendiente: validación de batallas en servidor, probar con amigos |
 | **2. Beta** | Que se vea y suene como un juego de verdad | Parcial: gráficos, sonido y almacenes hechos · Pendiente: música, tutorial, 2–3 defensas nuevas, resto de modelos 3D |
 | **3. Lanzamiento suave** | Retener jugadores | Clanes y chat, clasificaciones, temporadas, notificaciones, compras y anuncios reales |
 | **4. Lanzamiento global** | Crecer | Guerras de clanes, eventos, pase de temporada, más contenido cada mes |
